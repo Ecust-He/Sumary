@@ -1117,3 +1117,288 @@ ublic class TwoThreadsCompetition implements Runnable {
 }
 ```
 
+## Final关键字和不可变性
+
+### 
+
+## 并发容器
+
+### 1、演示组合操作并不保证线程安全，以ConcurrentHashMap为例
+
+```java
+public class OptionsNotSafe implements Runnable {
+
+    private static ConcurrentHashMap<String, Integer> scores = new ConcurrentHashMap<String, Integer>();
+
+    public static void main(String[] args) throws InterruptedException {
+        scores.put("小明", 0);
+        Thread t1 = new Thread(new OptionsNotSafe());
+        Thread t2 = new Thread(new OptionsNotSafe());
+        t1.start();
+        t2.start();
+        t1.join();
+        t2.join();
+        System.out.println(scores);
+    }
+
+
+    @Override
+    public void run() {
+        for (int i = 0; i < 1000; i++) {
+            while (true) {
+                Integer score = scores.get("小明");
+                Integer newScore = score + 1;
+                boolean b = scores.replace("小明", score, newScore);
+                if (b) {
+                    break;
+                }
+            }
+        }
+
+    }
+}
+```
+
+### 2、演示CopyOnWriteArrayList可以在迭代的过程中修改数组内容，但是ArrayList不行，对比
+
+```java
+public class CopyOnWriteArrayListDemo1 {
+
+    public static void main(String[] args) {
+//        ArrayList<String> list = new ArrayList<>();
+        CopyOnWriteArrayList<String> list = new CopyOnWriteArrayList<>();
+
+        list.add("1");
+        list.add("2");
+        list.add("3");
+        list.add("4");
+        list.add("5");
+
+        Iterator<String> iterator = list.iterator();
+
+        while (iterator.hasNext()) {
+            System.out.println("list is" + list);
+            String next = iterator.next();
+            System.out.println(next);
+
+            if (next.equals("2")) {
+                list.remove("5");
+            }
+            if (next.equals("3")) {
+                list.add("3 found");
+            }
+        }
+    }
+}
+```
+
+## 控制并发流程工具类
+
+### CountDownLatch门闩
+
+#### 1、模拟100米跑步，5名选手都准备好了，只等裁判员一声令下，所有人同时开始跑步；当所有人都到终点后，比赛结束。
+
+```java
+public class CountDownLatchDemo1And2 {
+
+    public static void main(String[] args) throws InterruptedException {
+        CountDownLatch begin = new CountDownLatch(1);
+
+        CountDownLatch end = new CountDownLatch(5);
+        ExecutorService service = Executors.newFixedThreadPool(5);
+        for (int i = 0; i < 5; i++) {
+            final int no = i + 1;
+            Runnable runnable = new Runnable() {
+                @Override
+                public void run() {
+                    System.out.println("No." + no + "准备完毕，等待发令枪");
+                    try {
+                        begin.await();
+                        System.out.println("No." + no + "开始跑步了");
+                        Thread.sleep((long) (Math.random() * 10000));
+                        System.out.println("No." + no + "跑到终点了");
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    } finally {
+                        end.countDown();
+                    }
+                }
+            };
+            service.submit(runnable);
+        }
+        //裁判员检查发令枪...
+        Thread.sleep(5000);
+        System.out.println("发令枪响，比赛开始！");
+        begin.countDown();
+
+        end.await();
+        System.out.println("所有人到达终点，比赛结束");
+    }
+}
+```
+
+### Semaphore信号量
+
+#### 1、演示Semaphore用法
+
+```java
+public class SemaphoreDemo {
+
+    static Semaphore semaphore = new Semaphore(5, true);
+
+    public static void main(String[] args) {
+        ExecutorService service = Executors.newFixedThreadPool(50);
+        for (int i = 0; i < 100; i++) {
+            service.submit(new Task());
+        }
+        service.shutdown();
+    }
+
+    static class Task implements Runnable {
+
+        @Override
+        public void run() {
+            try {
+                semaphore.acquire(3);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            System.out.println(Thread.currentThread().getName() + "拿到了许可证");
+            try {
+                Thread.sleep(2000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            System.out.println(Thread.currentThread().getName() + "释放了许可证");
+            semaphore.release(2);
+        }
+    }
+}
+```
+
+### Condition接口
+
+#### 1、演示Condition的基本用法
+
+```java
+public class ConditionDemo1 {
+    private ReentrantLock lock = new ReentrantLock();
+    private Condition condition = lock.newCondition();
+
+    void method1() throws InterruptedException {
+        lock.lock();
+        try{
+            System.out.println("条件不满足，开始await");
+            condition.await();
+            System.out.println("条件满足了，开始执行后续的任务");
+        }finally {
+            lock.unlock();
+        }
+    }
+
+    void method2() {
+        lock.lock();
+        try{
+            System.out.println("准备工作完成，唤醒其他的线程");
+            condition.signal();
+        }finally {
+            lock.unlock();
+        }
+    }
+
+    public static void main(String[] args) throws InterruptedException {
+        ConditionDemo1 conditionDemo1 = new ConditionDemo1();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Thread.sleep(1000);
+                    conditionDemo1.method2();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
+        conditionDemo1.method1();
+    }
+}
+```
+
+#### 2、演示用Condition实现生产者消费者模式
+
+```java
+public class ConditionDemo2 {
+
+    private int queueSize = 10;
+    private PriorityQueue<Integer> queue = new PriorityQueue<Integer>(queueSize);
+    private Lock lock = new ReentrantLock();
+    private Condition notFull = lock.newCondition();
+    private Condition notEmpty = lock.newCondition();
+
+    public static void main(String[] args) {
+        ConditionDemo2 conditionDemo2 = new ConditionDemo2();
+        Producer producer = conditionDemo2.new Producer();
+        Consumer consumer = conditionDemo2.new Consumer();
+        producer.start();
+        consumer.start();
+    }
+
+    class Consumer extends Thread {
+
+        @Override
+        public void run() {
+            consume();
+        }
+
+        private void consume() {
+            while (true) {
+                lock.lock();
+                try {
+                    while (queue.size() == 0) {
+                        System.out.println("队列空，等待数据");
+                        try {
+                            notEmpty.await();
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                    queue.poll();
+                    notFull.signalAll();
+                    System.out.println("从队列里取走了一个数据，队列剩余" + queue.size() + "个元素");
+                } finally {
+                    lock.unlock();
+                }
+            }
+        }
+    }
+
+    class Producer extends Thread {
+
+        @Override
+        public void run() {
+            produce();
+        }
+
+        private void produce() {
+            while (true) {
+                lock.lock();
+                try {
+                    while (queue.size() == queueSize) {
+                        System.out.println("队列满，等待有空余");
+                        try {
+                            notFull.await();
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                    queue.offer(1);
+                    notEmpty.signalAll();
+                    System.out.println("向队列插入了一个元素，队列剩余空间" + (queueSize - queue.size()));
+                } finally {
+                    lock.unlock();
+                }
+            }
+        }
+    }
+}
+```
