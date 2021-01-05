@@ -1,4 +1,6 @@
-# `玩转Java并发工具精通JUC`
+[TOC]
+
+
 
 ## 线程池【线程治理】
 
@@ -659,6 +661,458 @@ class PrintQueue {
         } finally {
             queueLock.unlock();
         }
+    }
+}
+```
+
+### 4、读写锁，以ReentrantReadWriteLock为例代码演示（电影院买票升级）
+
+```java
+public class CinemaReadWrite {
+
+    private static ReentrantReadWriteLock reentrantReadWriteLock = new ReentrantReadWriteLock();
+    private static ReentrantReadWriteLock.ReadLock readLock = reentrantReadWriteLock.readLock();
+    private static ReentrantReadWriteLock.WriteLock writeLock = reentrantReadWriteLock.writeLock();
+
+    private static void read() {
+        readLock.lock();
+        try {
+            System.out.println(Thread.currentThread().getName() + "得到了读锁，正在读取");
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally {
+            System.out.println(Thread.currentThread().getName() + "释放读锁");
+            readLock.unlock();
+        }
+    }
+
+    private static void write() {
+        writeLock.lock();
+        try {
+            System.out.println(Thread.currentThread().getName() + "得到了写锁，正在写入");
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally {
+            System.out.println(Thread.currentThread().getName() + "释放写锁");
+            writeLock.unlock();
+        }
+    }
+
+    public static void main(String[] args) {
+        new Thread(()->read(),"Thread1").start();
+        new Thread(()->read(),"Thread2").start();
+        new Thread(()->write(),"Thread3").start();
+        new Thread(()->write(),"Thread4").start();
+         new Thread(()->write(),"Thread1").start();
+//        new Thread(()->read(),"Thread2").start();
+//        new Thread(()->read(),"Thread3").start();
+//        new Thread(()->write(),"Thread4").start();
+//        new Thread(()->read(),"Thread5").start();
+    }
+}
+```
+
+### 5、演示非公平和公平的ReentrantReadWriteLock的策略
+
+```java
+public class NonfairBargeDemo {
+
+    private static ReentrantReadWriteLock reentrantReadWriteLock = new ReentrantReadWriteLock(
+            true);
+
+    private static ReentrantReadWriteLock.ReadLock readLock = reentrantReadWriteLock.readLock();
+    private static ReentrantReadWriteLock.WriteLock writeLock = reentrantReadWriteLock.writeLock();
+
+    private static void read() {
+        System.out.println(Thread.currentThread().getName() + "开始尝试获取读锁");
+        readLock.lock();
+        try {
+            System.out.println(Thread.currentThread().getName() + "得到读锁，正在读取");
+            try {
+                Thread.sleep(20);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        } finally {
+            System.out.println(Thread.currentThread().getName() + "释放读锁");
+            readLock.unlock();
+        }
+    }
+
+    private static void write() {
+        System.out.println(Thread.currentThread().getName() + "开始尝试获取写锁");
+        writeLock.lock();
+        try {
+            System.out.println(Thread.currentThread().getName() + "得到写锁，正在写入");
+            try {
+                Thread.sleep(40);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        } finally {
+            System.out.println(Thread.currentThread().getName() + "释放写锁");
+            writeLock.unlock();
+        }
+    }
+
+    public static void main(String[] args) {
+        new Thread(()->write(),"Thread1").start();
+        new Thread(()->read(),"Thread2").start();
+        new Thread(()->read(),"Thread3").start();
+        new Thread(()->write(),"Thread4").start();
+        new Thread(()->read(),"Thread5").start();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                Thread thread[] = new Thread[1000];
+                for (int i = 0; i < 1000; i++) {
+                    thread[i] = new Thread(() -> read(), "子线程创建的Thread" + i);
+                }
+                for (int i = 0; i < 1000; i++) {
+                    thread[i].start();
+                }
+            }
+        }).start();
+    }
+}
+```
+
+### 6、演示ReentrantReadWriteLock可以降级，不能升级
+
+```java
+public class Upgrading {
+
+    private static ReentrantReadWriteLock reentrantReadWriteLock = new ReentrantReadWriteLock(
+            false);
+    private static ReentrantReadWriteLock.ReadLock readLock = reentrantReadWriteLock.readLock();
+    private static ReentrantReadWriteLock.WriteLock writeLock = reentrantReadWriteLock.writeLock();
+
+    private static void readUpgrading() {
+        readLock.lock();
+        try {
+            System.out.println(Thread.currentThread().getName() + "得到了读锁，正在读取");
+            Thread.sleep(1000);
+            System.out.println("升级会带来阻塞");
+            writeLock.lock();
+            System.out.println(Thread.currentThread().getName() + "获取到了写锁，升级成功");
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally {
+            System.out.println(Thread.currentThread().getName() + "释放读锁");
+            readLock.unlock();
+        }
+    }
+
+    private static void writeDowngrading() {
+        writeLock.lock();
+        try {
+            System.out.println(Thread.currentThread().getName() + "得到了写锁，正在写入");
+            Thread.sleep(1000);
+            readLock.lock();
+            System.out.println("在不释放写锁的情况下，直接获取读锁，成功降级");
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally {
+            readLock.unlock();
+            System.out.println(Thread.currentThread().getName() + "释放写锁");
+            writeLock.unlock();
+        }
+    }
+
+    public static void main(String[] args) throws InterruptedException {
+//        System.out.println("先演示降级是可以的");
+//        Thread thread1 = new Thread(() -> writeDowngrading(), "Thread1");
+//        thread1.start();
+//        thread1.join();
+//        System.out.println("------------------");
+//        System.out.println("演示升级是不行的");
+        Thread thread2 = new Thread(() -> readUpgrading(), "Thread2");
+        thread2.start();
+    }
+}
+```
+
+## 原子类
+
+### 1、演示AtomicInteger的基本用法，对比非原子类的线程安全问题，使用了原子类之后，不需要加锁，也可以保证线程安全。
+
+```java
+public class AtomicIntegerDemo1 implements Runnable {
+
+    private static final AtomicInteger atomicInteger = new AtomicInteger();
+
+    public void incrementAtomic() {
+        atomicInteger.getAndAdd(-90);
+    }
+
+    private static volatile int basicCount = 0;
+
+    public synchronized void incrementBasic() {
+        basicCount++;
+    }
+
+    public static void main(String[] args) throws InterruptedException {
+        AtomicIntegerDemo1 r = new AtomicIntegerDemo1();
+        Thread t1 = new Thread(r);
+        Thread t2 = new Thread(r);
+        t1.start();
+        t2.start();
+        t1.join();
+        t2.join();
+        System.out.println("原子类的结果：" + atomicInteger.get());
+        System.out.println("普通变量的结果：" + basicCount);
+    }
+
+    @Override
+    public void run() {
+        for (int i = 0; i < 10000; i++) {
+            incrementAtomic();
+            incrementBasic();
+        }
+    }
+}
+```
+
+### 2、演示原始数组的使用方法
+
+```java
+public class AtomicArrayDemo {
+
+    public static void main(String[] args) {
+        AtomicIntegerArray atomicIntegerArray = new AtomicIntegerArray(1000);
+        Incrementer incrementer = new Incrementer(atomicIntegerArray);
+        Decrementer decrementer = new Decrementer(atomicIntegerArray);
+        Thread[] threadsIncrementer = new Thread[100];
+        Thread[] threadsDecrementer = new Thread[100];
+        for (int i = 0; i < 100; i++) {
+            threadsDecrementer[i] = new Thread(decrementer);
+            threadsIncrementer[i] = new Thread(incrementer);
+            threadsDecrementer[i].start();
+            threadsIncrementer[i].start();
+        }
+
+//        Thread.sleep(10000);
+        for (int i = 0; i < 100; i++) {
+            try {
+                threadsDecrementer[i].join();
+                threadsIncrementer[i].join();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+
+        for (int i = 0; i < atomicIntegerArray.length(); i++) {
+//            if (atomicIntegerArray.get(i)!=0) {
+//                System.out.println("发现了错误"+i);
+//            }
+            System.out.println(atomicIntegerArray.get(i));
+        }
+        System.out.println("运行结束");
+    }
+}
+
+class Decrementer implements Runnable {
+
+    private AtomicIntegerArray array;
+
+    public Decrementer(AtomicIntegerArray array) {
+        this.array = array;
+    }
+
+    @Override
+    public void run() {
+        for (int i = 0; i < array.length(); i++) {
+            array.getAndDecrement(i);
+        }
+    }
+}
+
+class Incrementer implements Runnable {
+
+    private AtomicIntegerArray array;
+
+    public Incrementer(AtomicIntegerArray array) {
+        this.array = array;
+    }
+
+    @Override
+    public void run() {
+        for (int i = 0; i < array.length(); i++) {
+            array.getAndIncrement(i);
+        }
+    }
+}
+```
+
+### 3、演示高并发场景下，LongAdder比AtomicLong性能好
+
+```java
+public class LongAdderDemo {
+
+    public static void main(String[] args) throws InterruptedException {
+        LongAdder counter = new LongAdder();
+        ExecutorService service = Executors.newFixedThreadPool(20);
+        long start = System.currentTimeMillis();
+        for (int i = 0; i < 10000; i++) {
+            service.submit(new Task(counter));
+        }
+        service.shutdown();
+        while (!service.isTerminated()) {
+
+        }
+        long end = System.currentTimeMillis();
+        System.out.println(counter.sum());
+        System.out.println("LongAdder耗时：" + (end - start));
+    }
+
+    private static class Task implements Runnable {
+
+        private LongAdder counter;
+
+        public Task(LongAdder counter) {
+            this.counter = counter;
+        }
+
+        @Override
+        public void run() {
+            for (int i = 0; i < 10000; i++) {
+                counter.increment();
+            }
+        }
+    }
+}
+```
+
+```java
+public class AtomicLongDemo {
+
+    public static void main(String[] args) throws InterruptedException {
+        AtomicLong counter = new AtomicLong(0);
+        ExecutorService service = Executors.newFixedThreadPool(20);
+        long start = System.currentTimeMillis();
+        for (int i = 0; i < 10000; i++) {
+            service.submit(new Task(counter));
+        }
+        service.shutdown();
+        while (!service.isTerminated()) {
+
+        }
+        long end = System.currentTimeMillis();
+        System.out.println(counter.get());
+        System.out.println("AtomicLong耗时：" + (end - start));
+    }
+
+    private static class Task implements Runnable {
+
+        private AtomicLong counter;
+
+        public Task(AtomicLong counter) {
+            this.counter = counter;
+        }
+
+        @Override
+        public void run() {
+            for (int i = 0; i < 10000; i++) {
+                counter.incrementAndGet();
+            }
+        }
+    }
+}
+```
+
+### 4、演示LongAccumulator的用法
+
+```java
+public class LongAccumulatorDemo {
+
+    public static void main(String[] args) {
+        LongAccumulator accumulator = new LongAccumulator((x, y) -> 2 + x * y, 1);
+        ExecutorService executor = Executors.newFixedThreadPool(8);
+        IntStream.range(1, 10).forEach(i -> executor.submit(() -> accumulator.accumulate(i)));
+
+        executor.shutdown();
+        while (!executor.isTerminated()) {
+
+        }
+        System.out.println(accumulator.getThenReset());
+    }
+}
+```
+
+### 5、演示AtomicIntegerFieldUpdater的用法
+
+```java
+public class AtomicIntegerFieldUpdaterDemo implements Runnable{
+
+    static Candidate tom;
+    static Candidate peter;
+
+    public static AtomicIntegerFieldUpdater<Candidate> scoreUpdater = AtomicIntegerFieldUpdater
+            .newUpdater(Candidate.class, "score");
+
+    @Override
+    public void run() {
+        for (int i = 0; i < 10000; i++) {
+            peter.score++;
+            scoreUpdater.getAndIncrement(tom);
+        }
+    }
+
+    public static class Candidate {
+
+        volatile int score;
+    }
+
+    public static void main(String[] args) throws InterruptedException {
+        tom=new Candidate();
+        peter=new Candidate();
+        AtomicIntegerFieldUpdaterDemo r = new AtomicIntegerFieldUpdaterDemo();
+        Thread t1 = new Thread(r);
+        Thread t2 = new Thread(r);
+        t1.start();
+        t2.start();
+        t1.join();
+        t2.join();
+        System.out.println("普通变量："+peter.score);
+        System.out.println("升级后的结果"+ tom.score);
+    }
+}
+```
+
+## CAS
+
+### 1、模拟CAS操作，等价代码
+
+```java
+ublic class TwoThreadsCompetition implements Runnable {
+
+    private volatile int value;
+
+    public synchronized int compareAndSwap(int expectedValue, int newValue) {
+        int oldValue = value;
+        if (oldValue == expectedValue) {
+            value = newValue;
+        }
+        return oldValue;
+    }
+
+    public static void main(String[] args) throws InterruptedException {
+        TwoThreadsCompetition r = new TwoThreadsCompetition();
+        r.value = 0;
+        Thread t1 = new Thread(r,"Thread 1");
+        Thread t2 = new Thread(r,"Thread 2");
+        t1.start();
+        t2.start();
+        t1.join();
+        t2.join();
+        System.out.println(r.value);
+    }
+
+    @Override
+    public void run() {
+        compareAndSwap(0, 1);
     }
 }
 ```
