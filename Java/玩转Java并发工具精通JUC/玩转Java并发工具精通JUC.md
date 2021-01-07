@@ -1641,3 +1641,546 @@ public class Timeout {
     }
 }
 ```
+
+### 高性能缓存
+
+#### 1、最简单的缓存形式：HashMap
+
+```java
+public class ImoocCache1 {
+
+    private final HashMap<String,Integer> cache = new HashMap<>();
+
+    public synchronized Integer computer(String userId) throws InterruptedException {
+        Integer result = cache.get(userId);
+        //先检查HashMap里面有没有保存过之前的计算结果
+        if (result == null) {
+            //如果缓存中找不到，那么需要现在计算一下结果，并且保存到HashMap中
+            result = doCompute(userId);
+            cache.put(userId, result);
+        }
+        return result;
+    }
+
+    private Integer doCompute(String userId) throws InterruptedException {
+        TimeUnit.SECONDS.sleep(5);
+        return new Integer(userId);
+    }
+
+    public static void main(String[] args) throws InterruptedException {
+        ImoocCache1 imoocCache1 = new ImoocCache1();
+        System.out.println("开始计算了");
+        Integer result = imoocCache1.computer("13");
+        System.out.println("第一次计算结果："+result);
+        result = imoocCache1.computer("13");
+        System.out.println("第二次计算结果："+result);
+
+    }
+}
+```
+
+### 2、 用装饰者模式，给计算器自动添加缓存功能
+
+```java
+public class ImoocCache2<A,V> implements Computable<A,V> {
+
+    private final Map<A, V> cache = new HashMap();
+
+    private  final Computable<A,V> c;
+
+    public ImoocCache2(Computable<A, V> c) {
+        this.c = c;
+    }
+
+    @Override
+    public synchronized V compute(A arg) throws Exception {
+        System.out.println("进入缓存机制");
+        V result = cache.get(arg);
+        if (result == null) {
+            result = c.compute(arg);
+            cache.put(arg, result);
+        }
+        return result;
+    }
+
+    public static void main(String[] args) throws Exception {
+        ImoocCache2<String, Integer> expensiveComputer = new ImoocCache2<>(
+                new ExpensiveFunction());
+        Integer result = expensiveComputer.compute("666");
+        System.out.println("第一次计算结果："+result);
+        result = expensiveComputer.compute("13");
+        System.out.println("第二次计算结果："+result);
+    }
+}
+```
+
+```java
+/**
+ * 描述：     有一个计算函数computer，用来代表耗时计算，每个计算器都要实现这个接口，这样就可以无侵入实现缓存功能
+ */
+public interface Computable <A,V>{
+
+    V compute(A arg) throws Exception;
+}
+```
+
+```java
+/**
+ * 描述：     耗时计算的实现类，实现了Computable接口，但是本身不具备缓存能力，不需要考虑缓存的事情
+ */
+public class ExpensiveFunction implements Computable<String, Integer>{
+
+    @Override
+    public Integer compute(String arg) throws Exception {
+        Thread.sleep(5000);
+        return Integer.valueOf(arg);
+    }
+}
+```
+
+### 3、缩小了synchronized的粒度，提高性能，但是依然并发不安全
+
+```java
+public class ImoocCache4<A, V> implements Computable<A, V> {
+
+    private final Map<A, V> cache = new HashMap();
+
+    private final Computable<A, V> c;
+
+    public ImoocCache4(Computable<A, V> c) {
+        this.c = c;
+    }
+
+    @Override
+    public V compute(A arg) throws Exception {
+        System.out.println("进入缓存机制");
+        V result = cache.get(arg);
+        if (result == null) {
+            result = c.compute(arg);
+            synchronized (this) {
+                cache.put(arg, result);
+            }
+        }
+        return result;
+    }
+
+    public static void main(String[] args) throws Exception {
+        ImoocCache4<String, Integer> expensiveComputer = new ImoocCache4<>(
+                new ExpensiveFunction());
+        Integer result = expensiveComputer.compute("666");
+        System.out.println("第一次计算结果：" + result);
+        result = expensiveComputer.compute("666");
+        System.out.println("第二次计算结果：" + result);
+    }
+}
+```
+
+### 4、使用ConcurrentHashMap，提高性能，但是依然并发不安全
+
+```java
+public class ImoocCache5<A, V> implements Computable<A, V> {
+
+    private final Map<A, V> cache = new ConcurrentHashMap<>();
+
+    private final Computable<A, V> c;
+
+    public ImoocCache5(Computable<A, V> c) {
+        this.c = c;
+    }
+
+    @Override
+    public V compute(A arg) throws Exception {
+        System.out.println("进入缓存机制");
+        V result = cache.get(arg);
+        if (result == null) {
+            result = c.compute(arg);
+            cache.put(arg, result);
+        }
+        return result;
+    }
+
+    public static void main(String[] args) throws Exception {
+        ImoocCache5<String, Integer> expensiveComputer = new ImoocCache5<>(
+                new ExpensiveFunction());
+        Integer result = expensiveComputer.compute("666");
+        System.out.println("第一次计算结果：" + result);
+        result = expensiveComputer.compute("666");
+        System.out.println("第二次计算结果：" + result);
+    }
+}
+```
+
+### 5、 利用Future，避免重复计算
+
+```java
+public class ImoocCache7<A, V> implements Computable<A, V> {
+
+    private final Map<A, Future<V>> cache = new ConcurrentHashMap<>();
+
+    private final Computable<A, V> c;
+
+    public ImoocCache7(Computable<A, V> c) {
+        this.c = c;
+    }
+
+    @Override
+    public V compute(A arg) throws Exception {
+        Future<V> f = cache.get(arg);
+        if (f == null) {
+            Callable<V> callable = new Callable<V>() {
+                @Override
+                public V call() throws Exception {
+                    return c.compute(arg);
+                }
+            };
+            FutureTask<V> ft = new FutureTask<>(callable);
+            f = ft;
+            cache.put(arg, ft);
+            System.out.println("从FutureTask调用了计算函数");
+            ft.run();
+        }
+        return f.get();
+    }
+
+    public static void main(String[] args) throws Exception {
+        ImoocCache7<String, Integer> expensiveComputer = new ImoocCache7<>(
+                new ExpensiveFunction());
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Integer result = expensiveComputer.compute("666");
+                    System.out.println("第一次的计算结果：" + result);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Integer result = expensiveComputer.compute("666");
+                    System.out.println("第三次的计算结果：" + result);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Integer result = expensiveComputer.compute("667");
+                    System.out.println("第二次的计算结果：" + result);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
+    }
+}
+```
+
+### 6、 利用Future，避免重复计算（优化）
+
+```java
+public class ImoocCache8<A, V> implements Computable<A, V> {
+
+    private final Map<A, Future<V>> cache = new ConcurrentHashMap<>();
+
+    private final Computable<A, V> c;
+
+    public ImoocCache8(Computable<A, V> c) {
+        this.c = c;
+    }
+
+    @Override
+    public V compute(A arg) throws Exception {
+        Future<V> f = cache.get(arg);
+        if (f == null) {
+            Callable<V> callable = new Callable<V>() {
+                @Override
+                public V call() throws Exception {
+                    return c.compute(arg);
+                }
+            };
+            FutureTask<V> ft = new FutureTask<>(callable);
+            f = cache.putIfAbsent(arg, ft);
+            if (f == null) {
+                f = ft;
+                System.out.println("从FutureTask调用了计算函数");
+                ft.run();
+            }
+        }
+        return f.get();
+    }
+
+    public static void main(String[] args) throws Exception {
+        ImoocCache8<String, Integer> expensiveComputer = new ImoocCache8<>(
+                new ExpensiveFunction());
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Integer result = expensiveComputer.compute("666");
+                    System.out.println("第一次的计算结果：" + result);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Integer result = expensiveComputer.compute("666");
+                    System.out.println("第三次的计算结果：" + result);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Integer result = expensiveComputer.compute("667");
+                    System.out.println("第二次的计算结果：" + result);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
+    }
+}
+```
+
+### 7、利用Future，避免重复计算（考虑计算抛出异常情况）
+
+```java
+public class ImoocCache9<A, V> implements Computable<A, V> {
+
+    private final Map<A, Future<V>> cache = new ConcurrentHashMap<>();
+
+    private final Computable<A, V> c;
+
+    public ImoocCache9(Computable<A, V> c) {
+        this.c = c;
+    }
+
+    @Override
+    public V compute(A arg) throws InterruptedException, ExecutionException {
+        while (true) {
+            Future<V> f = cache.get(arg);
+            if (f == null) {
+                Callable<V> callable = new Callable<V>() {
+                    @Override
+                    public V call() throws Exception {
+                        return c.compute(arg);
+                    }
+                };
+                FutureTask<V> ft = new FutureTask<>(callable);
+                f = cache.putIfAbsent(arg, ft);
+                if (f == null) {
+                    f = ft;
+                    System.out.println("从FutureTask调用了计算函数");
+                    ft.run();
+                }
+            }
+            try {
+                return f.get();
+            } catch (CancellationException e) {
+                System.out.println("被取消了");
+                cache.remove(arg);
+                throw e;
+            } catch (InterruptedException e) {
+                cache.remove(arg);
+                throw e;
+            } catch (ExecutionException e) {
+                System.out.println("计算错误，需要重试");
+                cache.remove(arg);
+            }
+        }
+    }
+
+    public static void main(String[] args) throws Exception {
+        ImoocCache9<String, Integer> expensiveComputer = new ImoocCache9<>(
+                new MayFail());
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Integer result = expensiveComputer.compute("666");
+                    System.out.println("第一次的计算结果：" + result);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Integer result = expensiveComputer.compute("666");
+                    System.out.println("第三次的计算结果：" + result);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Integer result = expensiveComputer.compute("667");
+                    System.out.println("第二次的计算结果：" + result);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
+    }
+}
+```
+
+```java
+/**
+ * 描述：     耗时计算的实现类，有概率计算失败
+ */
+public class MayFail implements Computable<String, Integer>{
+
+    @Override
+    public Integer compute(String arg) throws Exception {
+        double random = Math.random();
+        if (random > 0.5) {
+            throw new IOException("读取文件出错");
+        }
+        Thread.sleep(3000);
+        return Integer.valueOf(arg);
+    }
+}
+```
+
+### 8、出于安全性考虑，缓存需要设置有效期，到期自动失效，否则如果缓存一直不失效，那么带来缓存不一致等问题
+
+```java
+public class ImoocCache10<A, V> implements Computable<A, V> {
+
+    private final Map<A, Future<V>> cache = new ConcurrentHashMap<>();
+
+    private final Computable<A, V> c;
+
+    public ImoocCache10(Computable<A, V> c) {
+        this.c = c;
+    }
+
+    @Override
+    public V compute(A arg) throws InterruptedException, ExecutionException {
+        while (true) {
+            Future<V> f = cache.get(arg);
+            if (f == null) {
+                Callable<V> callable = new Callable<V>() {
+                    @Override
+                    public V call() throws Exception {
+                        return c.compute(arg);
+                    }
+                };
+                FutureTask<V> ft = new FutureTask<>(callable);
+                f = cache.putIfAbsent(arg, ft);
+                if (f == null) {
+                    f = ft;
+                    System.out.println("从FutureTask调用了计算函数");
+                    ft.run();
+                }
+            }
+            try {
+                return f.get();
+            } catch (CancellationException e) {
+                System.out.println("被取消了");
+                cache.remove(arg);
+                throw e;
+            } catch (InterruptedException e) {
+                cache.remove(arg);
+                throw e;
+            } catch (ExecutionException e) {
+                System.out.println("计算错误，需要重试");
+                cache.remove(arg);
+            }
+        }
+    }
+
+    public V computeRandomExpire(A arg) throws ExecutionException, InterruptedException {
+        long randomExpire = (long) (Math.random() * 10000);
+        return compute(arg, randomExpire);
+    }
+
+    public final static ScheduledExecutorService executor = Executors.newScheduledThreadPool(5);
+
+    public V compute(A arg, long expire) throws ExecutionException, InterruptedException {
+        if (expire>0) {
+            executor.schedule(new Runnable() {
+                @Override
+                public void run() {
+                    expire(arg);
+                }
+            }, expire, TimeUnit.MILLISECONDS);
+        }
+        return compute(arg);
+    }
+
+    public synchronized void expire(A key) {
+        Future<V> future = cache.get(key);
+        if (future != null) {
+            if (!future.isDone()) {
+                System.out.println("Future任务被取消");
+                future.cancel(true);
+            }
+            System.out.println("过期时间到，缓存被清除");
+            cache.remove(key);
+        }
+    }
+    public static void main(String[] args) throws Exception {
+        ImoocCache10<String, Integer> expensiveComputer = new ImoocCache10<>(
+                new MayFail());
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Integer result = expensiveComputer.compute("666",5000L);
+                    System.out.println("第一次的计算结果：" + result);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Integer result = expensiveComputer.compute("666");
+                    System.out.println("第三次的计算结果：" + result);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Integer result = expensiveComputer.compute("667");
+                    System.out.println("第二次的计算结果：" + result);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
+
+
+        Thread.sleep(6000L);
+        Integer result = expensiveComputer.compute("666");
+        System.out.println("主线程的计算结果：" + result);
+    }
+}
+```
