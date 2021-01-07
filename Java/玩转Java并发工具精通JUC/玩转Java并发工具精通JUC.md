@@ -1461,3 +1461,183 @@ public class OneShotLatch {
     }
 }
 ```
+
+### 获取子线程执行结果
+
+#### 1、演示FutureTask的用法
+
+```java
+public class FutureTaskDemo {
+
+    public static void main(String[] args) {
+        Task task = new Task();
+        FutureTask<Integer> integerFutureTask = new FutureTask<>(task);
+//        new Thread(integerFutureTask).start();
+        ExecutorService service = Executors.newCachedThreadPool();
+        service.submit(integerFutureTask);
+
+        try {
+            System.out.println("task运行结果："+integerFutureTask.get());
+
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } catch (ExecutionException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+class Task implements Callable<Integer> {
+
+    @Override
+    public Integer call() throws Exception {
+        System.out.println("子线程正在计算");
+        Thread.sleep(3000);
+        int sum = 0;
+        for (int i = 0; i < 100; i++) {
+            sum += i;
+        }
+        return sum;
+    }
+}
+```
+
+### 2、 演示批量提交任务时，用List来批量接收结果
+
+```java
+public class MultiFutures {
+
+    public static void main(String[] args) throws InterruptedException {
+        ExecutorService service = Executors.newFixedThreadPool(20);
+        ArrayList<Future> futures = new ArrayList<>();
+        for (int i = 0; i < 20; i++) {
+            Future<Integer> future = service.submit(new CallableTask());
+            futures.add(future);
+        }
+        Thread.sleep(5000);
+        for (int i = 0; i < 20; i++) {
+            Future<Integer> future = futures.get(i);
+            try {
+                Integer integer = future.get();
+                System.out.println(integer);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            } catch (ExecutionException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    static class CallableTask implements Callable<Integer> {
+
+        @Override
+        public Integer call() throws Exception {
+            Thread.sleep(3000);
+            return new Random().nextInt();
+        }
+    }
+}
+```
+
+### 3、演示get方法过程中抛出异常，for循环为了演示抛出Exception的时机：并不是说一产生异常就抛出，直到我们get执行时，才会抛出。
+
+```java
+public class GetException {
+
+    public static void main(String[] args) {
+        ExecutorService service = Executors.newFixedThreadPool(20);
+        Future<Integer> future = service.submit(new CallableTask());
+
+
+        try {
+            for (int i = 0; i < 5; i++) {
+                System.out.println(i);
+                Thread.sleep(500);
+            }
+            System.out.println(future.isDone());
+            future.get();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+            System.out.println("InterruptedException异常");
+        } catch (ExecutionException e) {
+            e.printStackTrace();
+            System.out.println("ExecutionException异常");
+        }
+    }
+
+
+    static class CallableTask implements Callable<Integer> {
+
+        @Override
+        public Integer call() throws Exception {
+            throw new IllegalArgumentException("Callable抛出异常");
+        }
+    }
+}
+```
+
+### 4、 演示get的超时方法，需要注意超时后处理，调用future.cancel()。演示cancel传入true和false的区别，代表是否中断正在执行的任务。
+
+```java
+public class Timeout {
+
+    private static final Ad DEFAULT_AD = new Ad("无网络时候的默认广告");
+    private static final ExecutorService exec = Executors.newFixedThreadPool(10);
+
+    static class Ad {
+
+        String name;
+
+        public Ad(String name) {
+            this.name = name;
+        }
+
+        @Override
+        public String toString() {
+            return "Ad{" +
+                    "name='" + name + '\'' +
+                    '}';
+        }
+    }
+
+
+    static class FetchAdTask implements Callable<Ad> {
+
+        @Override
+        public Ad call() throws Exception {
+            try {
+                Thread.sleep(3000);
+            } catch (InterruptedException e) {
+                System.out.println("sleep期间被中断了");
+                return new Ad("被中断时候的默认广告");
+            }
+            return new Ad("旅游订票哪家强？找某程");
+        }
+    }
+
+
+    public void printAd() {
+        Future<Ad> f = exec.submit(new FetchAdTask());
+        Ad ad;
+        try {
+            ad = f.get(2000, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            ad = new Ad("被中断时候的默认广告");
+        } catch (ExecutionException e) {
+            ad = new Ad("异常时候的默认广告");
+        } catch (TimeoutException e) {
+            ad = new Ad("超时时候的默认广告");
+            System.out.println("超时，未获取到广告");
+            boolean cancel = f.cancel(true);
+            System.out.println("cancel的结果：" + cancel);
+        }
+        exec.shutdown();
+        System.out.println(ad);
+    }
+
+    public static void main(String[] args) {
+        Timeout timeout = new Timeout();
+        timeout.printAd();
+    }
+}
+```
