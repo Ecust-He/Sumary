@@ -1462,9 +1462,9 @@ public class OneShotLatch {
 }
 ```
 
-### 获取子线程执行结果
+## 获取子线程执行结果
 
-#### 1、演示FutureTask的用法
+### 1、演示FutureTask的用法
 
 ```java
 public class FutureTaskDemo {
@@ -1642,9 +1642,9 @@ public class Timeout {
 }
 ```
 
-### 高性能缓存
+## 高性能缓存
 
-#### 1、最简单的缓存形式：HashMap
+### 1、最简单的缓存形式：HashMap
 
 ```java
 public class ImoocCache1 {
@@ -1738,7 +1738,7 @@ public class ExpensiveFunction implements Computable<String, Integer>{
 }
 ```
 
-### 3、缩小了synchronized的粒度，提高性能，但是依然并发不安全
+### 3、缩小synchronized加锁粒度，但性能差，存在线程安全问题
 
 ```java
 public class ImoocCache4<A, V> implements Computable<A, V> {
@@ -1775,7 +1775,7 @@ public class ImoocCache4<A, V> implements Computable<A, V> {
 }
 ```
 
-### 4、使用ConcurrentHashMap，提高性能，但是依然并发不安全
+### 4、使用ConcurrentHashMap解决线程安全问题
 
 ```java
 public class ImoocCache5<A, V> implements Computable<A, V> {
@@ -1882,7 +1882,7 @@ public class ImoocCache7<A, V> implements Computable<A, V> {
 }
 ```
 
-### 6、 利用Future，避免重复计算（优化）
+### 6、 利用Future，避免重复计算（使用putIfAbsent优化）
 
 ```java
 public class ImoocCache8<A, V> implements Computable<A, V> {
