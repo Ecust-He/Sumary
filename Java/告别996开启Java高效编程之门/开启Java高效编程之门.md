@@ -269,7 +269,7 @@ public class FileService {
 }
 ```
 
-##### 测试
+##### 演示
 
 ```java
 @Test
@@ -288,7 +288,7 @@ public void fileHandle() throws IOException {
 
 ### 方法引用
 
-#### 文件处理案例（自定义函数式接口实现）
+#### 演示
 
 ```java
 public class MethodReferenceTest {
