@@ -355,7 +355,728 @@ public class MethodReferenceTest {
 
 ## 流式编程
 
-### 实战（lambda+stream处理业务)
+### 1、原始集合操作与Stream集合操作
+
+```java
+/**
+ * 对比：原始集合操作与Stream集合操作
+ */
+public class StreamVs {
+
+    /**
+     * 1 想看看购物车中都有什么商品
+     * 2 图书类商品都给买
+     * 3 其余的商品中买两件最贵的
+     * 4 只需要两件商品的名称和总价
+     */
+
+    /**
+     * 以原始集合操作实现需求
+     */
+    @Test
+    public void oldCartHandle() {
+        List<Sku> cartSkuList = CartService.getCartSkuList();
+
+        /**
+         * 1 打印所有商品
+         */
+        for (Sku sku: cartSkuList) {
+            System.out.println(JSON.toJSONString(sku, true));
+        }
+
+        /**
+         * 2 图书类过滤掉
+         */
+        List<Sku> notBooksSkuList = new ArrayList<Sku>();
+        for (Sku sku: cartSkuList) {
+            if (!SkuCategoryEnum.BOOKS.equals(sku.getSkuCategory())) {
+                notBooksSkuList.add(sku);
+            }
+        }
+
+        /**
+         * 排序
+         */
+        notBooksSkuList.sort(new Comparator<Sku>() {
+            @Override
+            public int compare(Sku sku1, Sku sku2) {
+                if (sku1.getTotalPrice() > sku2.getTotalPrice()) {
+                    return -1;
+                } else if (sku1.getTotalPrice() < sku2.getTotalPrice()) {
+                    return 1;
+                } else {
+                    return 0;
+                }
+            }
+        });
+
+        /**
+         * TOP2
+         */
+        List<Sku> top2SkuList = new ArrayList<Sku>();
+        for (int i = 0; i < 2; i++) {
+            top2SkuList.add(notBooksSkuList.get(i));
+        }
+
+        /**
+         * 4 求两件商品的总价
+         */
+        Double money = 0.0;
+        for (Sku sku: top2SkuList) {
+            // money = money + sku.getTotalPrice();
+            money += sku.getTotalPrice();
+        }
+
+        /**
+         * 获取两件商品的名称
+         */
+        List<String> resultSkuNameList = new ArrayList<String>();
+        for (Sku sku: top2SkuList) {
+            resultSkuNameList.add(sku.getSkuName());
+        }
+
+        /**
+         * 打印输入结果
+         */
+        System.out.println(
+                JSON.toJSONString(resultSkuNameList, true));
+        System.out.println("商品总价：" + money);
+
+    }
+
+    /**
+     * 以Stream流方式实现需求
+     */
+    @Test
+    public void newCartHandle() {
+        AtomicReference<Double> money =
+                new AtomicReference<>(Double.valueOf(0.0));
+
+        List<String> resultSkuNameList =
+                CartService.getCartSkuList()
+                .stream()
+                /**
+                 * 1 打印商品信息
+                 */
+                .peek(sku -> System.out.println(
+                        JSON.toJSONString(sku, true)))
+                /**
+                 * 2 过滤掉所有图书类商品
+                 */
+                .filter(sku -> !SkuCategoryEnum.BOOKS.equals(
+                        sku.getSkuCategory()))
+                /**
+                 * 排序
+                 */
+                .sorted(Comparator.
+                        comparing(Sku::getTotalPrice).reversed())
+                /**
+                 * TOP2
+                 */
+                .limit(2)
+
+                /**
+                 * 累加商品总金额
+                 */
+                .peek(sku -> money.set(money.get() + sku.getTotalPrice()))
+
+                /**
+                 * 获取商品名称
+                 */
+                .map(sku -> sku.getSkuName())
+
+                /**
+                 * 收集结果
+                 */
+                .collect(Collectors.toList());
+
+
+        /**
+         * 打印输入结果
+         */
+        System.out.println(
+                JSON.toJSONString(resultSkuNameList, true));
+        System.out.println("商品总价：" + money.get());
+    }
+
+}
+```
+
+### 2、流的各种操作
+
+```java
+/**
+ * 演示流的各种操作
+ */
+public class StreamOperator {
+
+    List<Sku> list;
+
+    @Before
+    public void init() {
+        list = CartService.getCartSkuList();
+    }
+
+    /**
+     * filter使用：过滤掉不符合断言判断的数据
+     */
+    @Test
+    public void filterTest() {
+        list.stream()
+
+                // filter
+                .filter(sku ->
+                        SkuCategoryEnum.BOOKS
+                                .equals(sku.getSkuCategory()))
+
+                .forEach(item ->
+                        System.out.println(
+                                JSON.toJSONString(
+                                        item, true)));
+    }
+
+    /**
+     * map使用：将一个元素转换成另一个元素
+     */
+    @Test
+    public void mapTest() {
+        list.stream()
+
+                // map
+                .map(sku -> sku.getSkuName())
+
+                .forEach(item ->
+                        System.out.println(
+                                JSON.toJSONString(
+                                        item, true)));
+    }
+
+    /**
+     * flatMap使用：将一个对象转换成流
+     */
+    @Test
+    public void flatMapTest() {
+        list.stream()
+
+                // flatMap
+                .flatMap(sku -> Arrays.stream(
+                        sku.getSkuName().split("")))
+
+                .forEach(item ->
+                        System.out.println(
+                                JSON.toJSONString(
+                                        item, true)));
+    }
+
+    /**
+     * peek使用：对流中元素进行遍历操作，与forEach类似，但不会销毁流元素
+     */
+    @Test
+    public void peek() {
+        list.stream()
+
+                // peek
+                .peek(sku -> System.out.println(sku.getSkuName()))
+
+                .forEach(item ->
+                        System.out.println(
+                                JSON.toJSONString(
+                                        item, true)));
+    }
+
+    /**
+     * sort使用：对流中元素进行排序，可选则自然排序或指定排序规则。有状态操作
+     */
+    @Test
+    public void sortTest() {
+        list.stream()
+
+                .peek(sku -> System.out.println(sku.getSkuName()))
+
+                //sort
+                .sorted(Comparator.comparing(Sku::getTotalPrice))
+
+                .forEach(item ->
+                        System.out.println(
+                                JSON.toJSONString(
+                                        item, true)));
+    }
+
+    /**
+     * distinct使用：对流元素进行去重。有状态操作
+     */
+    @Test
+    public void distinctTest() {
+        list.stream()
+                .map(sku -> sku.getSkuCategory())
+
+                // distinct
+                .distinct()
+
+                .forEach(item ->
+                        System.out.println(
+                                JSON.toJSONString(
+                                        item, true)));
+
+
+    }
+
+    /**
+     * skip使用：跳过前N条记录。有状态操作
+     */
+    @Test
+    public void skipTest() {
+        list.stream()
+
+                .sorted(Comparator.comparing(Sku::getTotalPrice))
+
+                // skip
+                .skip(3)
+
+                .forEach(item ->
+                        System.out.println(
+                                JSON.toJSONString(
+                                        item, true)));
+    }
+
+    /**
+     * limit使用：截断前N条记录。有状态操作
+     */
+    @Test
+    public void limitTest() {
+        list.stream()
+                .sorted(Comparator.comparing(Sku::getTotalPrice))
+
+                .skip(2 * 3)
+
+                // limit
+                .limit(3)
+
+                .forEach(item ->
+                        System.out.println(
+                                JSON.toJSONString(
+                                        item, true)));
+    }
+
+    /**
+     * allMatch使用：终端操作，短路操作。所有元素匹配，返回true
+     */
+    @Test
+    public void allMatchTest() {
+        boolean match = list.stream()
+
+                .peek(sku -> System.out.println(sku.getSkuName()))
+
+                // allMatch
+                .allMatch(sku -> sku.getTotalPrice() > 100);
+
+        System.out.println(match);
+    }
+
+    /**
+     * anyMatch使用：任何元素匹配，返回true
+     */
+    @Test
+    public void anyMatchTest() {
+        boolean match = list.stream()
+
+                .peek(sku -> System.out.println(sku.getSkuName()))
+
+                // anyMatch
+                .anyMatch(sku -> sku.getTotalPrice() > 100);
+
+        System.out.println(match);
+    }
+
+    /**
+     * noneMatch使用：任何元素都不匹配，返回true
+     */
+    @Test
+    public void noneMatchTest() {
+        boolean match = list.stream()
+
+                .peek(sku -> System.out.println(sku.getSkuName()))
+
+                // noneMatch
+                .noneMatch(sku -> sku.getTotalPrice() > 10_000);
+
+        System.out.println(match);
+    }
+
+    /**
+     * 找到第一个
+     */
+    @Test
+    public void findFirstTest() {
+        Optional<Sku> optional = list.stream()
+
+                .peek(sku -> System.out.println(sku.getSkuName()))
+
+                // findFirst
+                .findFirst();
+
+        System.out.println(
+                JSON.toJSONString(optional.get(), true));
+    }
+
+    /**
+     * 找任意一个
+     */
+    @Test
+    public void findAnyTest() {
+        Optional<Sku> optional = list.stream()
+
+                .peek(sku -> System.out.println(sku.getSkuName()))
+
+                // findAny
+                .findAny();
+
+        System.out.println(
+                JSON.toJSONString(optional.get(), true));
+    }
+
+    /**
+     * max使用：
+     */
+    @Test
+    public void maxTest() {
+        OptionalDouble optionalDouble = list.stream()
+                // 获取总价
+                .mapToDouble(Sku::getTotalPrice)
+
+                .max();
+
+        System.out.println(optionalDouble.getAsDouble());
+    }
+
+    /**
+     * min使用
+     */
+    @Test
+    public void minTest() {
+        OptionalDouble optionalDouble = list.stream()
+                // 获取总价
+                .mapToDouble(Sku::getTotalPrice)
+
+                .min();
+
+        System.out.println(optionalDouble.getAsDouble());
+    }
+
+    /**
+     * count使用
+     */
+    @Test
+    public void countTest() {
+        long count = list.stream()
+                .count();
+
+        System.out.println(count);
+    }
+
+}
+```
+
+### 3、流的四种构建形式
+
+```java
+/**
+ * 流的四种构建形式
+ */
+public class StreamConstructor {
+
+    /**
+     * 由数值直接构建流
+     */
+    @Test
+    public void streamFromValue() {
+        Stream stream = Stream.of(1, 2, 3, 4, 5);
+
+        stream.forEach(System.out::println);
+    }
+
+    /**
+     * 通过数组构建流
+     */
+    @Test
+    public void streamFromArray() {
+        int[] numbers = {1, 2, 3, 4, 5};
+
+        IntStream stream = Arrays.stream(numbers);
+        stream.forEach(System.out::println);
+    }
+
+    /**
+     * 通过文件生成流
+     * @throws IOException
+     */
+    @Test
+    public void streamFromFile() throws IOException {
+        // TODO 此处替换为本地文件的地址全路径
+        String filePath = "";
+
+        Stream<String> stream = Files.lines(
+                Paths.get(filePath));
+
+        stream.forEach(System.out::println);
+    }
+
+    /**
+     * 通过函数生成流（无限流）
+     */
+    @Test
+    public void streamFromFunction() {
+
+//        Stream stream = Stream.iterate(0, n -> n + 2);
+
+        Stream stream = Stream.generate(Math::random);
+
+        stream.limit(100)
+                .forEach(System.out::println);
+
+    }
+
+}
+```
+
+### 4、常见收集器使用
+
+```java
+**
+ * 常见预定义收集器使用
+ */
+public class StreamCollector {
+
+    /**
+     * 集合收集器
+     */
+    @Test
+    public void toList() {
+
+        List<Sku> list = CartService.getCartSkuList();
+
+        List<Sku> result = list.stream()
+                .filter(sku -> sku.getTotalPrice() > 100)
+
+                .collect(Collectors.toList());
+
+        System.out.println(
+                JSON.toJSONString(result, true));
+
+    }
+
+    /**
+     * 分组
+     */
+    @Test
+    public void group() {
+        List<Sku> list = CartService.getCartSkuList();
+
+        // Map<分组条件，结果集合>
+        Map<Object, List<Sku>> group = list.stream()
+                .collect(
+                        Collectors.groupingBy(
+                                sku -> sku.getSkuCategory()));
+
+        System.out.println(
+                JSON.toJSONString(group, true));
+    }
+
+    /**
+     * 分区
+     */
+    @Test
+    public void partition() {
+        List<Sku> list = CartService.getCartSkuList();
+
+        Map<Boolean, List<Sku>> partition = list.stream()
+                .collect(Collectors.partitioningBy(
+                        sku -> sku.getTotalPrice() > 100));
+
+        System.out.println(
+                JSON.toJSONString(partition, true));
+    }
+
+}
+```
+
+### 5、规约和汇总操作
+
+```java
+public class ReduceAndCollectTest {
+
+
+    @Test
+    public void reduceTest() {
+
+        /**
+         * 订单对象
+         */
+        @Data
+        @AllArgsConstructor
+        class Order {
+            /**
+             * 订单编号
+             */
+            private Integer id;
+            /**
+             * 商品数量
+             */
+            private Integer productCount;
+            /**
+             * 消费总金额
+             */
+            private Double totalAmount;
+        }
+
+        /*
+            准备数据
+         */
+        ArrayList<Order> list = Lists.newArrayList();
+        list.add(new Order(1, 2, 25.12));
+        list.add(new Order(2, 5, 257.23));
+        list.add(new Order(3, 3, 23332.12));
+
+        /*
+            以前的方式：
+            1. 计算商品数量
+            2. 计算消费总金额
+         */
+
+        /*
+            汇总商品数量和总金额
+         */
+        Order order = list.stream()
+                .parallel()
+                .reduce(
+                        // 初始化值
+                        new Order(0, 0, 0.0),
+
+                        // Stream中两个元素的计算逻辑
+                        (Order order1, Order order2) -> {
+                            System.out.println("执行 计算逻辑 方法！！！");
+
+                            int productCount =
+                                    order1.getProductCount()
+                                            + order2.getProductCount();
+
+                            double totalAmount =
+                                    order1.getTotalAmount()
+                                            + order2.getTotalAmount();
+
+                            return new Order(0, productCount, totalAmount);
+                        },
+
+                        // 并行情况下，多个并行结果如何合并
+                        (Order order1, Order order2) -> {
+                            System.out.println("执行 合并 方法！！！");
+
+                            int productCount =
+                                    order1.getProductCount()
+                                            + order2.getProductCount();
+
+                            double totalAmount =
+                                    order1.getTotalAmount()
+                                            + order2.getTotalAmount();
+
+                            return new Order(0, productCount, totalAmount);
+                        });
+
+        System.out.println(JSON.toJSONString(order, true));
+    }
+
+
+    @Test
+    public void collectTest() {
+        /**
+         * 订单对象
+         */
+        @Data
+        @AllArgsConstructor
+        class Order {
+            /**
+             * 订单编号
+             */
+            private Integer id;
+            /**
+             * 用户账号
+             */
+            private String account;
+            /**
+             * 商品数量
+             */
+            private Integer productCount;
+            /**
+             * 消费总金额
+             */
+            private Double totalAmount;
+        }
+
+        /*
+            准备数据
+         */
+        ArrayList<Order> list = Lists.newArrayList();
+        list.add(new Order(1, "zhangxiaoxi", 2, 25.12));
+        list.add(new Order(2, "zhangxiaoxi",5, 257.23));
+        list.add(new Order(3, "lisi",3, 23332.12));
+
+        /*
+            Map<用户账号, 订单(数量和金额)>
+         */
+
+        Map<String, Order> collect = list.stream()
+                .parallel()
+                .collect(
+                        () -> {
+                            System.out.println("执行 初始化容器 操作！！！");
+
+                            return new HashMap<String, Order>();
+                        },
+                        (HashMap<String, Order> map, Order newOrder) -> {
+                            System.out.println("执行 新元素添加到容器 操作！！！");
+
+                            /*
+                                新元素的account已经在map中存在了
+                                不存在
+                             */
+                            String account = newOrder.getAccount();
+
+                            // 如果此账号已存在，将新订单数据累加上
+                            if (map.containsKey(account)) {
+                                Order order = map.get(account);
+                                order.setProductCount(
+                                        newOrder.getProductCount()
+                                                + order.getProductCount());
+                                order.setTotalAmount(
+                                        newOrder.getTotalAmount()
+                                                + order.getTotalAmount());
+                            } else {
+                                // 如果不存在，直接将新订单存入map
+                                map.put(account, newOrder);
+                            }
+
+                        }, (HashMap<String, Order> map1, HashMap<String, Order> map2) -> {
+                            System.out.println("执行 并行结果合并 操作！！！");
+
+                            map2.forEach((key, value) -> {
+                                map1.merge(key, value, (order1, order2) -> {
+
+                                    // TODO 注意：一定要用map1做合并，因为最后collect返回的是map1
+                                    return new Order(0, key,
+                                            order1.getProductCount()
+                                                    + order2.getProductCount(),
+                                            order1.getTotalAmount()
+                                                    + order2.getTotalAmount());
+                                });
+                            });
+                        });
+
+        System.out.println(JSON.toJSONString(collect, true));
+    }
+}
+```
+
+### 6、实战案例（lambda+stream处理业务)
 
 #### 案例一：anyMatch的使用方式
 
