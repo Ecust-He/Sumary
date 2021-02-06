@@ -353,5 +353,144 @@ public class MethodReferenceTest {
 }
 ```
 
+## 流式编程
 
+### 实战（lambda+stream处理业务)
 
+#### 案例一：anyMatch的使用方式
+
+```java
+    @Test
+    public void findStudent() {
+
+        studentMap.forEach((studentName, scoreList) -> {
+
+            boolean bool = scoreList.stream()
+                    .anyMatch(score -> {
+                        // TODO anyMatch找到任意一条符合条件的数据后就停止
+//                        System.out.println(score);
+
+                        return score.getScoreValue() == null;
+                    });
+
+            if (bool) {
+                System.out.println("此学生[ " + studentName + " ]有缺考情况！");
+            }
+        });
+    }
+```
+
+#### 案例二：filter和distinct的使用方式
+
+```java
+@Test
+public void distinctTag() {
+
+    tagListFromReq.stream()
+
+            // TODO true:通过测试，数据不过滤；false:未通过测试，数据被过滤
+            .filter(tag -> !tagListFromDB.contains(tag.getName()))
+
+            // TODO 使用equals对元素进行比较
+            .distinct()
+            .forEach(tag -> System.out.println(tag));
+
+}
+```
+
+#### 案例三：flatMap的使用方式
+
+```java
+    @Test
+    public void findPermission() {
+        roleList.stream()
+
+                // TODO 扁平化MAP 获取对象中的集合类属性，组成一个新的流
+                .flatMap(role -> role.getPermissions().stream())
+
+                // peek 与 forEach 类似，区别是用在中间过程中，后面可以接其他操作
+                .peek(permission ->
+                        System.out.println("新的流元素：" + permission))
+
+                .distinct()
+//                .forEach(permission -> System.out.println(permission));
+                .collect(Collectors.toList());
+    }
+```
+
+#### 案例四：group的使用方式
+
+```java
+/**
+ * 接口
+ * @param accountIds
+ * @return
+ */
+public Map<String, List<Order>> queryOrderByAccountIds(
+        List<String> accountIds) {
+
+    return Optional.ofNullable(selectFromDB(accountIds))
+            .map(List::stream)
+            .orElseGet(Stream::empty)
+
+            // TODO group分组功能
+            .collect(Collectors.groupingBy(
+                    order -> order.getAccountId()));
+}
+
+@Test
+public void test() {
+    Map<String, List<Order>> orders =
+            queryOrderByAccountIds(
+                    Lists.newArrayList("张三", "李四", "王五"));
+
+    System.out.println(JSON.toJSONString(orders, true));
+}
+```
+
+#### 案例五：sort和compare的使用方式
+
+```java
+@Test
+public void sortTrade() {
+
+    System.out.println("排序前数据~~~\n" + JSON.toJSONString(trades, true));
+
+    List<Trade> sorted = trades.stream()
+            .sorted(
+                    Comparator
+                            // 首先按照价格排序
+                            .comparing(
+                                    Trade::getPrice,
+                                    // TODO 进行排序调整，将自然排序翻转
+                                    Comparator.reverseOrder())
+
+                            // 时间先后进行排序，自然排序
+                            .thenComparing(Trade::getTime)
+
+                            // 交易量排序，自然排序翻转
+                            .thenComparing(
+                                    Trade::getCount,
+                                    Comparator.reverseOrder())
+
+                            // 自定义排序规则
+                            .thenComparing(
+                                    // 要排序的字段值
+                                    Trade::getType,
+
+                                    // 自定义排序规则
+                                    (type1, type2) -> {
+                                        if ("机构".equals(type1) && "个人".equals(type2)) {
+                                            // -1:type1在先， type2在后
+                                            return -1;
+                                        } else if ("个人".equals(type1) && "机构".equals(type2)) {
+                                            return 1;
+                                        } else {
+                                            return 0;
+                                        }
+                                    }))
+            .collect(Collectors.toList());
+
+    System.out.println("排序后结果~~~\n" + JSON.toJSONString(sorted, true));
+}
+```
