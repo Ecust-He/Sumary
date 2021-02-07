@@ -1215,3 +1215,430 @@ public void sortTrade() {
     System.out.println("排序后结果~~~\n" + JSON.toJSONString(sorted, true));
 }
 ```
+
+## 资源关闭
+
+### 1、资源关闭优化前与优化后代码量对比
+
+```java
+/**
+ * 资源关闭优化前与优化后代码量对比
+ */
+public class ResourceCloseVs {
+
+    @Test
+    public void newFileHandle(String url,
+                              FileConsumer fileConsumer) {
+        try (
+                // 声明、创建文件的读取流
+                FileInputStream fileInputStream =
+                        new FileInputStream(url);
+
+                InputStreamReader inputStreamReader =
+                        new InputStreamReader(fileInputStream);
+
+                BufferedReader bufferedReader =
+                        new BufferedReader(inputStreamReader);
+        ) {
+
+            // 定义行变量和内容sb
+            String line;
+            StringBuilder stringBuilder = new StringBuilder();
+
+            // 循环读取文件内容
+            while ((line = bufferedReader.readLine()) != null) {
+                stringBuilder.append(line + "\n");
+            }
+
+            // 调用函数式接口方法，将文件内容传递给lambda表达式，实现业务逻辑
+            fileConsumer.fileHandler(stringBuilder.toString());
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Test
+    public void oldFileHandle(String url,
+                              FileConsumer fileConsumer) {
+        // 声明
+        FileInputStream fileInputStream = null;
+        InputStreamReader inputStreamReader = null;
+        BufferedReader bufferedReader = null;
+
+        // 创建文件读取流
+        try {
+            fileInputStream = new FileInputStream(url);
+
+            inputStreamReader =
+                    new InputStreamReader(fileInputStream);
+
+            bufferedReader =
+                    new BufferedReader(inputStreamReader);
+
+            // 定义行变量和内容sb
+            String line;
+            StringBuilder stringBuilder = new StringBuilder();
+
+            // 循环读取文件内容
+            while ((line = bufferedReader.readLine()) != null) {
+                stringBuilder.append(line + "\n");
+            }
+
+            // 调用函数式接口方法，将文件内容传递给lambda表达式，实现业务逻辑
+            fileConsumer.fileHandler(stringBuilder.toString());
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+
+            // 关闭流资源
+            if (bufferedReader != null) {
+                try {
+                    bufferedReader.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (inputStreamReader != null) {
+                try {
+                    inputStreamReader.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (fileInputStream != null) {
+                try {
+                    fileInputStream.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+}
+```
+
+## Guava工具
+
+### 1、Optional用法
+
+```java
+/**
+ * 学习Java8中的Optional使用方法
+ */
+public class OptionalTest {
+
+    @Test
+    public void test() throws Throwable {
+        /**
+         * 三种创建Optional对象方式
+         */
+
+        // 创建空的Optional对象
+        Optional.empty();
+
+        // 使用非null值创建Optional对象
+        Optional.of("zhangxiaoxi");
+
+        // 使用任意值创建Optional对象
+        Optional optional = Optional.ofNullable("zhangxiaoxi");
+
+        /**
+         * 判断是否引用缺失的方法(建议不直接使用)
+         */
+        optional.isPresent();
+
+        /**
+         * 当optional引用存在时执行
+         * 类似的方法：map filter flatMap
+         */
+        optional.ifPresent(System.out::println);
+
+
+        /**
+         * 当optional引用缺失时执行
+         */
+        optional.orElse("引用缺失");
+        optional.orElseGet(() -> {
+            // 自定义引用缺失时的返回值
+            return "自定义引用缺失";
+        });
+        optional.orElseThrow(() -> {
+            throw new RuntimeException("引用缺失异常");
+        });
+    }
+
+    public static void stream(List<String> list) {
+//        list.stream().forEach(System.out::println);
+
+
+        Optional.ofNullable(list)
+                .map(List::stream)
+                .orElseGet(Stream::empty)
+                .forEach(System.out::println);
+
+    }
+
+    public static void main(String[] args) {
+        stream(Arrays.asList("1","2"));
+    }
+}
+```
+
+### 2、不可变集合用法
+
+```java
+/**
+ * 不可变集合用法
+ */
+public class ImmutableTest {
+
+    public static void test(List<Integer> list) {
+        list.remove(0);
+    }
+
+    public static void main(String[] args) {
+        List<Integer> list = new ArrayList<Integer>();
+
+        list.add(1);
+        list.add(2);
+        list.add(3);
+
+        List<Integer> newList =
+                Collections.unmodifiableList(list);
+
+        test(newList);
+
+        System.out.println(newList);
+    }
+
+    public void immutable() {
+        List<Integer> list = new ArrayList<Integer>();
+
+        list.add(1);
+        list.add(2);
+        list.add(3);
+
+        /**
+         * 构造不可变集合对象三种方式
+         */
+        // 通过已经存在的集合创建
+        ImmutableSet.copyOf(list);
+
+        // 通过初始值，直接创建不可变集合
+        ImmutableSet immutableSet =
+                ImmutableSet.of(1, 2, 3);
+
+        // 以builder方式创建
+        ImmutableSet.builder()
+                .add(1)
+                .addAll(Sets.newHashSet(2, 3))
+                .add(4)
+                .build();
+    }
+}
+```
+
+### 3、新型集合Multiset用法
+
+```java
+/**
+ * 实现：使用Multiset统计一首古诗的文字出现频率
+ */
+public class MultisetTest {
+
+    private static final String text =
+            "《南陵别儿童入京》" +
+            "白酒新熟山中归，黄鸡啄黍秋正肥。" +
+            "呼童烹鸡酌白酒，儿女嬉笑牵人衣。" +
+            "高歌取醉欲自慰，起舞落日争光辉。" +
+            "游说万乘苦不早，著鞭跨马涉远道。" +
+            "会稽愚妇轻买臣，余亦辞家西入秦。" +
+            "仰天大笑出门去，我辈岂是蓬蒿人。";
+
+    @Test
+    public void handle() {
+        // multiset创建
+        Multiset<Character> multiset =
+                HashMultiset.create();
+
+        // string 转换成 char 数组
+        char[] chars = text.toCharArray();
+
+        // 遍历数组，添加到multiset中
+        Chars.asList(chars)
+                .stream()
+                .forEach(charItem -> {
+                    multiset.add(charItem);
+                });
+
+        System.out.println
+                ("size : " + multiset.size());
+
+        System.out.println
+                ("count : " + multiset.count('人'));
+    }
+}
+```
+
+### 4、Lists / Sets 使用
+
+```java
+/**
+ * Lists / Sets 使用
+ */
+public class SetsTest {
+
+    /**
+     * Sets工具类的常用方法
+     * 并集 / 交集 / 差集 / 分解集合中的所有子集 / 求两个集合的笛卡尔积
+     *
+     * Lists工具类的常用方式
+     * 反转 / 拆分
+     */
+
+    private static final Set set1 =
+            Sets.newHashSet(1, 2);
+
+    private static final Set set2 =
+            Sets.newHashSet(4);
+
+    // 并集
+    @Test
+    public void union() {
+        Set<Integer> set = Sets.union(set1, set2);
+
+        System.out.println(set);
+    }
+
+    // 交集
+    @Test
+    public void intersection() {
+        Set<Integer> set = Sets.intersection(set1, set2);
+
+        System.out.println(set);
+    }
+
+    // 差集：如果元素属于A而且不属于B
+    @Test
+    public void difference() {
+        Set<Integer> set = Sets.difference(set1, set2);
+
+        System.out.println(set);
+
+        // 相对差集：属于A而且不属于B 或者 属于B而且不属于A
+        set = Sets.symmetricDifference(set1, set2);
+
+        System.out.println(set);
+    }
+
+    // 拆分所有子集合
+    @Test
+    public void powerSet() {
+        Set<Set<Integer>> powerSet = Sets.powerSet(set1);
+
+        System.out.println(JSON.toJSONString(powerSet));
+    }
+
+    // 计算两个集合笛卡尔积
+    @Test
+    public void cartesianProduct() {
+        Set<List<Integer>> product =
+                Sets.cartesianProduct(set1, set2);
+
+        System.out.println(JSON.toJSONString(product));
+    }
+
+    /**
+     * 拆分
+     */
+    @Test
+    public void partition() {
+        List<Integer> list =
+                Lists.newArrayList(1, 2, 3, 4, 5, 6, 7);
+
+        List<List<Integer>> partition =
+                Lists.partition(list, 3);
+
+        System.out.println(JSON.toJSONString(partition));
+    }
+
+    // 反转
+    @Test
+    public void reverse() {
+        List<Integer> list = Lists.newLinkedList();
+        list.add(1);
+        list.add(2);
+        list.add(3);
+
+        List<Integer> newList = Lists.reverse(list);
+
+        System.out.println(newList);
+    }
+
+}
+```
+
+### 5、演示如何使用流(Source)与汇(Sink)来对文件进行常用操作
+
+```java
+/**
+ * 演示如何使用流(Source)与汇(Sink)来对文件进行常用操作
+ */
+public class IOTest {
+    @Test
+    public void copyFile() throws IOException {
+        /**
+         * 创建对应的Source和Sink
+         */
+        CharSource charSource = Files.asCharSource(
+                new File("SourceText.txt"),
+                Charsets.UTF_8);
+        CharSink charSink = Files.asCharSink(
+                new File("TargetText.txt"),
+                Charsets.UTF_8);
+        /**
+         * 拷贝
+         */
+        charSource.copyTo(charSink);
+    }
+
+}
+```
+
+### 6、演示布隆过滤器使用
+
+```java
+public class BloomFilterTest {
+
+
+    @Test
+    public void bloomFilter() {
+
+        // 创建布隆过滤器
+        BloomFilter<Integer> bloomFilter = BloomFilter.create(
+
+                // 将任意类型数据转换为Java基础类型，默认转换为byte数组
+                (Integer from, PrimitiveSink primitiveSink)
+                        -> primitiveSink.putInt(from),
+
+                // 预计插入的元素总数
+                10000L,
+
+                // 期望误判率(0.0 ~ 1.0)
+                0.9
+                );
+
+        // 向布隆过滤器中添加元素
+        for (int i = 0; i < 10000; i++) {
+            bloomFilter.put(i);
+        }
+
+        // 检测给定元素是否 可能 存在在布隆过滤器中
+        boolean might = bloomFilter.mightContain(6666);
+        System.out.println("是否存在？" + might);
+    }
+
+}
+```
