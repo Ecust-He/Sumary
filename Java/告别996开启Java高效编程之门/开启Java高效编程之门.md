@@ -1642,3 +1642,350 @@ public class BloomFilterTest {
 
 }
 ```
+
+## 线程池
+
+### 1、线程池的简单使用
+
+```java
+    /**
+     * 新的处理方式
+     */
+    @Test
+    public void newHandle() throws InterruptedException {
+        /**
+         * 开启了一个线程池：线程个数是10个
+         */
+        ExecutorService threadPool =
+                Executors.newFixedThreadPool(10);
+        /**
+         * 使用循环来模拟许多用户请求的场景
+         */
+        for (int request = 1; request <= 100; request++) {
+            threadPool.execute(() -> {
+                System.out.println("文档处理开始！");
+
+                try {
+                    // 将Word转换为PDF格式：处理时长很长的耗时过程
+                    Thread.sleep(1000L * 30);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                System.out.println("文档处理结束！");
+            });
+        }
+        Thread.sleep(1000L * 1000);
+    }
+
+    /**
+     * 老的处理方式
+     */
+    @Test
+    public void oldHandle() throws InterruptedException {
+        /**
+         * 使用循环来模拟许多用户请求的场景
+         */
+        for (int request = 1; request <= 100; request++) {
+            new Thread(() -> {
+                System.out.println("文档处理开始！");
+
+                try {
+                    // 将Word转换为PDF格式：处理时长很长的耗时过程
+                    Thread.sleep(1000L * 30);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
+                System.out.println("文档处理结束！");
+            }).start();
+        }
+        Thread.sleep(1000L * 1000);
+    }
+}
+```
+
+### 2、阻塞队列的选择
+
+```java
+public class QueueTest {
+
+    @Test
+    public void arrayBlockingQueue() throws InterruptedException {
+        /**
+         * 基于数组的有界阻塞队列，队列容量为10
+         */
+        ArrayBlockingQueue queue =
+                new ArrayBlockingQueue<Integer>(10);
+
+        // 循环向队列添加元素
+        for (int i = 0; i < 20; i++) {
+            queue.put(i);
+            System.out.println("向队列中添加值：" + i);
+        }
+    }
+
+    @Test
+    public void linkedBlockingQueue() throws InterruptedException {
+        /**
+         * 基于链表的有界/无界阻塞队列，队列容量为10
+         */
+        LinkedBlockingQueue queue =
+                new LinkedBlockingQueue<Integer>();
+
+        // 循环向队列添加元素
+        for (int i = 0; i < 20; i++) {
+            queue.put(i);
+            System.out.println("向队列中添加值：" + i);
+        }
+    }
+
+    @Test
+    public void test() throws InterruptedException {
+        /**
+         * 同步移交阻塞队列
+         */
+        SynchronousQueue queue = new SynchronousQueue<Integer>();
+
+        // 插入值
+        new Thread(() -> {
+            try {
+                queue.put(1);
+                System.out.println("插入成功");
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }).start();
+
+        // 删除值
+        /*
+        new Thread(() -> {
+            try {
+                queue.take();
+                System.out.println("删除成功");
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }).start();
+        */
+        Thread.sleep(1000L * 60);
+    }
+}
+```
+
+### 3、饱和策略的选择
+
+```java
+public class PolicyTest {
+
+    /**
+     * 线程池
+     */
+    private static ThreadPoolExecutor executor =
+            new ThreadPoolExecutor(
+                    // 核心线程数和最大线程数
+                    2, 3,
+
+                    // 线程空闲后的存活时间
+                    60L, TimeUnit.SECONDS,
+
+                    // 有界阻塞队列
+                    new LinkedBlockingQueue<Runnable>(5));
+
+    /**
+     * 任务
+     */
+    class Task implements Runnable {
+        /**
+         * 任务名称
+         */
+        private String taskName;
+
+        public Task(String taskName) {
+            this.taskName = taskName;
+        }
+
+        @Override
+        public void run() {
+            System.out.println("线程[ " + Thread.currentThread().getName()
+                    + " ]正在执行[ " + this.taskName + " ]任务...");
+
+            try {
+                Thread.sleep(1000L * 5);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            System.out.println("线程[ " + Thread.currentThread().getName()
+                    + " ]已执行完[ " + this.taskName + " ]任务！！！");
+        }
+    }
+
+    /**
+     * 线程池的执行过程
+     *
+     * 2个核心线程
+     * 5个任务的队列
+     * 3个最大线程：1个线程可用
+     *
+     * 前2个任务，会占用2个核心线程
+     * 第3个到第7个任务，会暂存到任务队列中
+     * 第8个任务，会启动最大线程，去执行
+     * 第9个任务，没有线程可以去执行~~~
+     */
+
+    /**
+     * 终止策略
+     * TODO 抛出异常，拒绝任务提交
+     */
+    @Test
+    public void abortPolicyTest() {
+        // 设置饱和策略为 终止策略
+        executor.setRejectedExecutionHandler(
+                new ThreadPoolExecutor.AbortPolicy());
+
+        for (int i = 1; i <= 10; i++) {
+            try {
+                // 提交10个线程任务
+                executor.execute(new Task("线程任务" + i));
+            } catch (Exception e) {
+                System.err.println(e);
+            }
+        }
+
+        // 关闭线程池
+        executor.shutdown();
+    }
+
+    /**
+     * 抛弃策略
+     * TODO 直接丢弃掉新提交的任务
+     */
+    @Test
+    public void discardPolicyTest() {
+        // 设置饱和策略为 抛弃策略
+        executor.setRejectedExecutionHandler(
+                new ThreadPoolExecutor.DiscardPolicy());
+
+        for (int i = 1; i <= 10; i++) {
+            try {
+                // 提交10个线程任务
+                executor.execute(new Task("线程任务" + i));
+            } catch (Exception e) {
+                System.err.println(e);
+            }
+        }
+
+        // 关闭线程池
+        executor.shutdown();
+    }
+
+    /**
+     * 抛弃旧任务策略
+     * TODO 丢弃掉任务队列中的旧任务，暂存新提交的任务
+     */
+    @Test
+    public void discardOldestPolicyTest() {
+        // 设置饱和策略为 抛弃旧任务策略
+        executor.setRejectedExecutionHandler(
+                new ThreadPoolExecutor.DiscardOldestPolicy());
+
+        for (int i = 1; i <= 10; i++) {
+            try {
+                // 提交10个线程任务
+                executor.execute(new Task("线程任务" + i));
+            } catch (Exception e) {
+                System.err.println(e);
+            }
+        }
+
+        // 关闭线程池
+        executor.shutdown();
+    }
+
+    /**
+     * 调用者运行策略
+     * TODO 借用主线程来执行多余任务
+     */
+    @Test
+    public void callerRunsPolicyTest() {
+        // 设置饱和策略为 调用者运行策略
+        executor.setRejectedExecutionHandler(
+                new ThreadPoolExecutor.CallerRunsPolicy());
+
+        for (int i = 1; i <= 10; i++) {
+            try {
+                // 提交10个线程任务
+                executor.execute(new Task("线程任务" + i));
+            } catch (Exception e) {
+                System.err.println(e);
+            }
+        }
+
+        // 关闭线程池
+        executor.shutdown();
+    }
+
+    /**
+     * 单元测试执行完，主线程等待100秒。防止主线程退出，看不到线程的执行结果
+     * @throws InterruptedException
+     */
+    @After
+    public void after() throws InterruptedException {
+        Thread.sleep(1000L * 100);
+    }
+}
+```
+
+### 4、向线程池中提交任务
+
+```java
+public class RunTest {
+
+    @Test
+    public void submitTest()
+            throws ExecutionException, InterruptedException {
+
+        // 创建线程池
+        ExecutorService threadPool =
+                Executors.newCachedThreadPool();
+
+        /**
+         * 利用submit方法提交任务，接收任务的返回结果
+         */
+        Future<Integer> future = threadPool.submit(() -> {
+            Thread.sleep(1000L * 10);
+
+            return 2 * 5;
+        });
+
+        /**
+         * 阻塞方法，直到任务有返回值后，才向下执行
+         */
+        Integer num = future.get();
+
+        System.out.println("执行结果：" + num);
+    }
+
+    @Test
+    public void executeTest() throws InterruptedException {
+        // 创建线程池
+        ExecutorService threadPool =
+                Executors.newCachedThreadPool();
+
+        /**
+         * 利用execute方法提交任务，没有返回结果
+         */
+        threadPool.execute(() -> {
+            try {
+                Thread.sleep(1000L * 10);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            Integer num = 2 * 5;
+            System.out.println("执行结果：" + num);
+        });
+        Thread.sleep(1000L * 1000);
+    }
+}
+```
