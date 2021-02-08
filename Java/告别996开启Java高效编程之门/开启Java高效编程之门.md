@@ -1989,3 +1989,310 @@ public class RunTest {
     }
 }
 ```
+
+## lombok工具
+
+### 1、实现原理
+
+#### 1、注解的两种解析方式
+
+运行时解析
+
+编译时解析
+
+#### 2、lombok注解的解析时机
+
+编译时解析
+
+### 2、@Getter注解
+
+```java
+/**
+ * @Getter注解
+ * 为属性生成get方法
+ */
+public class GetterTest {
+
+    @Getter(
+            lazy = true
+    )
+    private final String field1 = "zhangxiaoxi";
+
+    @Getter(
+            value = AccessLevel.PRIVATE,
+            onMethod_={@NotNull}
+    )
+    private String field2;
+
+}
+```
+
+### 3、@Setter注解
+
+```java
+/**
+ * @Setter注解
+ * 为属性生成set方法
+ */
+public class SetterTest {
+
+    @Setter
+    private String field1;
+
+    @Setter(
+            value = AccessLevel.PRIVATE,
+            onParam_={@NotNull}
+    )
+    private String field2;
+}
+```
+
+### 4、@ToString注解
+
+```java
+/**
+ * @ToString注解
+ * 生成toString方法
+ */
+@ToString(
+        includeFieldNames = false,
+//        exclude = {"field1"},
+//        of = {"field1"},
+        doNotUseGetters = false
+)
+public class ToStringTest {
+
+    @Setter
+    private String field1;
+
+    @Setter
+    private String field2;
+
+    public String getField2() {
+        System.out.println("调用get方法！");
+        return this.field2;
+    }
+
+    @Test
+    public void test() {
+        ToStringTest toStringTest = new ToStringTest();
+        toStringTest.setField1("zhang");
+        toStringTest.setField2("xiaoxi");
+        System.out.println(toStringTest.toString());
+    }
+}
+```
+
+### 5、@EqualsAndHashCode注解
+
+```java
+/**
+ * @EqualsAndHashCode注解
+ * 生成Equals方法和HashCode方法
+ */
+@EqualsAndHashCode(
+        exclude = {"field1"}
+)
+public class EqualsAndHashCodeTest {
+
+    private String field1;
+
+    private String field2;
+
+}
+```
+
+### 6、@Data注解
+
+```java
+/**
+ * @Data注解
+ * 大而全的注解：包含@Getter，@Setter，@ToString，@EqualsAndHashCode
+ */
+@Data
+public class DataTest {
+
+    private String field1;
+
+    private String field2;
+
+}
+```
+
+### 7、@val注解
+
+```java
+/**
+ * @val注解
+ * 弱语言变量
+ */
+public class ValTest {
+
+    public ValTest() {
+        val field = "zhangxiaoxi";
+
+        val list = new ArrayList<String>();
+        list.add("zhangxiaoxi");
+    }
+
+}
+```
+
+### 8、@NonNull注解
+
+```java
+/**
+ * @NonNull注解
+ * 生成非空检查
+ */
+public class NonNullTest {
+
+    public NonNullTest(@NonNull String field) {
+        System.out.println(field);
+    }
+}
+```
+
+### 9、@RequiredArgsConstructor注解
+
+```java
+/**
+ * @AllArgsConstructor
+ * @NoArgsConstructor
+ * @RequiredArgsConstructor
+ */
+@RequiredArgsConstructor
+public class ConstructorTest {
+
+    private final String field1;
+
+    @NonNull
+    private String field2;
+
+    private String field3;
+}
+```
+
+### 10、@Cleanup注解
+
+```java
+/**
+ * @Cleanup注解
+ * 资源关闭
+ */
+public class CleanupTest {
+
+    public void copyFile(String in, String out)
+            throws Exception {
+
+        @Cleanup FileInputStream fileInputStream =
+                new FileInputStream(in);
+        @Cleanup FileOutputStream fileOutputStream =
+                new FileOutputStream(out);
+
+        int r;
+
+        while ((r = fileInputStream.read()) != -1) {
+            fileOutputStream.write(r);
+        }
+    }
+}
+```
+
+### 11、@Slf4j日志注解
+
+```java
+@Slf4j
+public class LogTest {
+
+    @Test
+    public void func() {
+        log.error("日志！！！");
+    }
+}
+```
+
+### 12、@Builder注解
+
+```java
+/**
+ * 类名称：BuilderTest
+ * ********************************
+ * <p>
+ * 类描述：@Builder和@Singular注解
+ *
+ * TODO 总结一下
+ * @Builder注解帮助我们完成的工作：
+ * 1. 一个名为XxxBuilder的内部静态类，成为构建器
+ * 2. 构建器中，对于目标类的所有属性和未初始化的final字段，都会在构建器中创建对应的属性
+ * 3. 构建器中，对每个属性都会创建一个同名的方法，用于为此属性赋值。并且支持链式调用
+ * 4. 构建器中，build方法会根据设置的属性值来创建实体对象
+ * 5. 实体类中，生成所有属性和未初始化的final字段的构造方法
+ * 6. 实体类中，会创建builder方法，用来生成构建器
+ *
+ * @Singular注解帮助我们完成的工作：
+ * 1. 构建器中，生成一个向集合添加单个元素的方法
+ * 2. 构建器中，生成一个向集合添加另一个集合的方法
+ * 3. 构建器中，生成一个清除集合元素的方法
+ * 4. build方法创建集合时，将根据集合元素多少创建不同的集合，并且创建的集合都是不可变的
+ *
+ * @author zhangxiaoxi
+ * @date 下午6:13
+ */
+@Builder
+@Data
+public class BuilderTest {
+
+    /**
+     * 静态属性：不能赋值的
+     */
+    private static String staticField;
+
+    /**
+     * final属性
+     */
+    private final String finalField;
+
+    /**
+     * 已初始化的Final字段：不能赋值的
+     */
+    private final String initFinalField = "已初始化的Final字段！";
+
+    /**
+     * 普通属性
+     */
+    private String field = "普通属性Field!";
+
+    /**
+     * 集合类属性
+     */
+    @Singular
+    private List<String> listFields;
+
+    /**
+     * main
+     * @param args
+     */
+    public static void main(String[] args) {
+        BuilderTest builderTest = BuilderTest
+
+                // builder创建一个可以链式赋值的对象
+                .builder()
+
+                // 为这个对象的"每个"字段赋值
+                .finalField("手动赋值FinalField字段")
+//                .field("手动赋值Field字段")
+//                .listFields(new ArrayList<>())
+                .listField("zhangxiaoxi")
+                .listField("lisi")
+
+                // build方法来创建对象。
+                // TODO 完成了对象的创建。此时创建出来的对象，是不可变的！！！
+                .build();
+
+        System.out.println(
+                JSON.toJSONString(builderTest, true));
+    }
+
+}
+```
