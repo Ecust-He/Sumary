@@ -244,3 +244,225 @@ public class CourseImpl implements ICourseManager,ICourseContent {
     }
 }
 ```
+
+### 接口隔离原则
+
+#### 编码演示
+
+```java
+public interface IEatAnimalAction {
+    void eat();
+}
+```
+
+```java
+public interface ISwimAnimalAction {
+    void swim();
+}
+```
+
+```java
+public class Dog implements ISwimAnimalAction,IEatAnimalAction {
+
+    @Override
+    public void eat() {
+
+    }
+
+    @Override
+    public void swim() {
+
+    }
+}
+```
+
+### 迪米特法则
+
+#### 编码演示
+
+##### 课程类
+
+```java
+public class Course {
+}
+```
+
+##### 领导类
+
+```java
+public class TeamLeader {
+    public void checkNumberOfCourses(){
+        List<Course> courseList = new ArrayList<Course>();
+        for(int i = 0 ;i < 20;i++){
+            courseList.add(new Course());
+        }
+        System.out.println("在线课程的数量是："+courseList.size());
+    }
+}
+```
+
+##### 老板类
+
+```java
+public class Boss {
+
+    public void commandCheckNumber(TeamLeader teamLeader){
+        teamLeader.checkNumberOfCourses();
+    }
+}
+```
+
+##### 测试类
+
+```java
+public class Test {
+    public static void main(String[] args) {
+        Boss boss = new Boss();
+        TeamLeader teamLeader = new TeamLeader();
+        boss.commandCheckNumber(teamLeader);
+    }
+}
+```
+
+### 里式替换原则
+
+#### 编码演示1
+
+##### 父类
+
+```java
+public class Base {
+    public void method(HashMap map){
+        System.out.println("父类被执行");
+    }
+}
+```
+
+##### 子类
+
+```java
+public class Child extends Base {
+//    @Override
+//    public void method(HashMap map) {
+//        System.out.println("子类HashMap入参方法被执行");
+//    }
+
+    public void method(Map map) {
+        System.out.println("子类HashMap入参方法被执行");
+    }
+}
+```
+
+##### 测试类
+
+```java
+public class Test {
+    public static void main(String[] args) {
+        Base child = new Child();
+        HashMap hashMap = new HashMap();
+        child.method(hashMap);
+    }
+}
+```
+
+#### 编码演示2
+
+##### 父类
+
+```java
+public abstract class Base {
+    public abstract Map method();
+
+}
+```
+
+##### 子类
+
+```java
+public class Child extends Base {
+    @Override
+    public HashMap method() {
+        HashMap hashMap = new HashMap();
+        System.out.println("子类method被执行");
+        hashMap.put("message","子类method被执行");
+        return hashMap;
+    }
+}
+```
+
+##### 测试类
+
+```java
+public class Test {
+    public static void main(String[] args) {
+        Child child = new Child();
+        System.out.println(child.method());
+    }
+}
+```
+
+### 组合聚合原则
+
+#### 编码演示
+
+##### 数据库连接接口
+
+```java
+public abstract class DBConnection {
+//    public String getConnection(){
+//        return "MySQL数据库连接";
+//    }
+    public abstract String getConnection();
+}
+```
+
+##### mysql数据库连接
+
+```java
+public class MySQLConnection extends DBConnection {
+    @Override
+    public String getConnection() {
+        return "MySQL数据库连接";
+    }
+}
+```
+
+##### postgresql数据库连接
+
+```java
+public class PostgreSQLConnection extends DBConnection {
+    @Override
+    public String getConnection() {
+        return "PostgreSQL数据库连接";
+    }
+}
+```
+
+##### 商品数据库操作
+
+```java
+public class ProductDao{
+    private DBConnection dbConnection;
+
+    public void setDbConnection(DBConnection dbConnection) {
+        this.dbConnection = dbConnection;
+    }
+
+    public void addProduct(){
+        String conn = dbConnection.getConnection();
+        System.out.println("使用"+conn+"增加产品");
+    }
+}
+```
+
+##### 测试类
+
+```java
+public class Test {
+    public static void main(String[] args) {
+        ProductDao productDao = new ProductDao();
+        productDao.setDbConnection(new PostgreSQLConnection());
+        productDao.addProduct();
+    }
+}
+```
