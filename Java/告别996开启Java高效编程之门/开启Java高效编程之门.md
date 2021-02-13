@@ -2296,3 +2296,292 @@ public class BuilderTest {
 
 }
 ```
+
+## 验证框架
+
+### 1、案例演示
+
+#### 1、用户信息类
+
+```java
+/**
+ * 待验证对象实体类
+ * 用户信息类
+ */
+public class UserInfo {
+
+    // 登录场景
+    public interface LoginGroup {}
+
+    // 注册场景
+    public interface RegisterGroup {}
+
+    // 组排序场景
+    @GroupSequence({
+            LoginGroup.class,
+            RegisterGroup.class,
+            Default.class
+    })
+    public interface Group {}
+
+    /**
+     * 用户ID
+     */
+    @NotNull(message = "用户ID不能为空",
+            groups = LoginGroup.class)
+    private String userId;
+
+    /**
+     * 用户名
+     * NotEmpty 不会自动去掉前后空格
+     */
+    @NotEmpty(message = "用户名称不能为空")
+    private String userName;
+
+    /**
+     * 用户密码
+     * NotBlank 自动去掉字符串前后空格后验证是否为空
+     */
+    @NotBlank(message = "用户密码不能为空")
+    @Length(min = 6, max = 20,
+            message = "密码长度不能少于6位，多于20位")
+    private String passWord;
+
+    /**
+     * 邮箱
+     */
+    @NotNull(message = "邮箱不能为空",
+            groups = RegisterGroup.class)
+    @Email(message = "邮箱必须为有效邮箱")
+    private String email;
+
+    /**
+     * 手机号
+     */
+    @Phone(message = "手机号不是158后头随便")
+    private String phone;
+
+    /**
+     * 年龄
+     */
+    @Min(value = 18, message = "年龄不能小于18岁")
+    @Max(value = 60, message = "年龄不能大于60岁")
+    private Integer age;
+
+    /**
+     * 生日
+     */
+    @Past(message = "生日不能为未来或当前时间点")
+    private Date birthday;
+
+    /**
+     * 好友列表
+     */
+    @Size(min = 1, message = "不能少于1个好友")
+    private List<@Valid UserInfo> friends;
+}
+```
+
+#### 2、用户信息服务类
+
+```java
+/**
+ * 用户信息服务类
+ */
+public class UserInfoService {
+
+    /**
+     * UserInfo 作为输入参数
+     * @param userInfo
+     */
+    public void setUserInfo(@Valid UserInfo userInfo) {}
+
+    /**
+     * UserInfo 作为输出参数
+     * @return
+     */
+    public @Valid UserInfo getUserInfo() {
+        return new UserInfo();
+    }
+
+    /**
+     * 默认构造函数
+     */
+    public UserInfoService() {}
+
+    /**
+     * 接收UserInfo作为参数的构造函数
+     * @param userInfo
+     */
+    public UserInfoService(@Valid UserInfo userInfo) {}
+
+}
+```
+
+#### 3、验证测试类
+
+```java
+public class ValidationTest {
+
+    // 验证器对象
+    private Validator validator;
+    // 待验证对象
+    private UserInfo userInfo;
+    // 验证结果集合
+    private Set<ConstraintViolation<UserInfo>> set;
+    // 验证结果集合
+    private Set<ConstraintViolation<UserInfoService>> otherSet;
+
+    /**
+     * 初始化操作
+     */
+    @Before
+    public void init() {
+        // 初始化验证器
+        validator = Validation.buildDefaultValidatorFactory()
+                .getValidator();
+
+        // 初始化待验证对象 - 用户信息
+        userInfo = new UserInfo();
+//        userInfo.setUserId("zhangxiaoxi");
+        userInfo.setUserName("张小喜");
+        userInfo.setPassWord("zhangxiaoxi");
+//        userInfo.setEmail("zhangxiaoxi@sina.cn");
+        userInfo.setAge(30);
+        Calendar calendar = Calendar.getInstance();
+        calendar.set(2012, 1, 1);
+        userInfo.setBirthday(calendar.getTime());
+
+        userInfo.setPhone("15800000000");
+
+        UserInfo friend = new UserInfo();
+//        friend.setUserId("wangxiaoxi");
+        friend.setUserName("王小喜");
+        friend.setPassWord("wangxiaoxi");
+//        friend.setEmail("wangxiaoxi@sina.cn");
+        friend.setPhone("15811111111");
+
+        userInfo.setFriends(new ArrayList(){{add(friend);}});
+    }
+
+    /**
+     * 结果打印
+     */
+    @After
+    public void print() {
+        set.forEach(item -> {
+            // 输出验证错误信息
+            System.out.println(item.getMessage());
+        });
+
+    }
+
+    @Test
+    public void nullValidation() {
+        // 使用验证器对对象进行验证
+        set = validator.validate(userInfo);
+    }
+
+    /**
+     * 级联验证测试方法
+     */
+    @Test
+    public void graphValidation() {
+        set = validator.validate(userInfo);
+    }
+
+    /**
+     * 分组验证测试方法
+     */
+    @Test
+    public void groupValidation() {
+        set = validator.validate(userInfo,
+                UserInfo.RegisterGroup.class,
+                UserInfo.LoginGroup.class);
+    }
+
+    /**
+     * 组序列
+     */
+    @Test
+    public void groupSequenceValidation() {
+        set = validator.validate(userInfo,
+                UserInfo.Group.class);
+    }
+
+    /**
+     * 对方法输入参数进行约束注解校验
+     */
+    @Test
+    public void paramValidation() throws NoSuchMethodException {
+        // 获取校验执行器
+        ExecutableValidator executableValidator =
+                validator.forExecutables();
+
+        // 待验证对象
+        UserInfoService service = new UserInfoService();
+        // 待验证方法
+        Method method = service.getClass()
+                .getMethod("setUserInfo", UserInfo.class);
+        // 方法输入参数
+        Object[] paramObjects = new Object[]{new UserInfo()};
+
+        // 对方法的输入参数进行校验
+        otherSet = executableValidator.validateParameters(
+                service,
+                method,
+                paramObjects);
+    }
+
+
+    /**
+     * 对方法返回值进行约束校验
+     */
+    @Test
+    public void returnValueValidation()
+            throws NoSuchMethodException,
+            InvocationTargetException, IllegalAccessException {
+
+        // 获取校验执行器
+        ExecutableValidator executableValidator =
+                validator.forExecutables();
+
+        // 构造要验证的方法对象
+        UserInfoService service = new UserInfoService();
+        Method method = service.getClass()
+                .getMethod("getUserInfo");
+
+        // 调用方法得到返回值
+        Object returnValue = method.invoke(service);
+
+        // 校验方法返回值是否符合约束
+        otherSet = executableValidator.validateReturnValue(
+                service,
+                method,
+                returnValue);
+    }
+
+    /**
+     * 对构造函数输入参数进行校验
+     */
+    @Test
+    public void constructorValidation()
+            throws NoSuchMethodException {
+
+        // 获取验证执行器
+        ExecutableValidator executableValidator =
+                validator.forExecutables();
+
+        // 获取构造函数
+        Constructor constructor =
+                UserInfoService.class
+                        .getConstructor(UserInfo.class);
+        Object[] paramObjects = new Object[]{new UserInfo()};
+
+        // 校验构造函数
+        otherSet = executableValidator
+                .validateConstructorParameters(
+                constructor, paramObjects);
+    }
+}
+```
