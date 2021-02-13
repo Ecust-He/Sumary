@@ -466,3 +466,245 @@ public class Test {
     }
 }
 ```
+
+## 设计模式
+
+### 创建型
+
+#### 简单工厂
+
+##### 编码演示
+
+###### 视频抽象类
+
+```java
+public abstract class Video {
+    public abstract void produce();
+}
+```
+
+###### Java视频类
+
+```java
+public class JavaVideo extends Video {
+    @Override
+    public void produce() {
+        System.out.println("录制Java课程视频");
+    }
+}
+```
+
+###### 视频工厂类
+
+```java
+public class VideoFactory {
+    public Video getVideo(Class c){
+        Video video = null;
+        try {
+            video = (Video) Class.forName(c.getName()).newInstance();
+        } catch (InstantiationException e) {
+            e.printStackTrace();
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        return video;
+    }
+
+    public Video getVideo(String type){
+        if("java".equalsIgnoreCase(type)){
+            return new JavaVideo();
+        }else if("python".equalsIgnoreCase(type)){
+            return new PythonVideo();
+        }
+        return null;
+    }
+}
+```
+
+###### 测试类
+
+```java
+public class Test {
+    public static void main(String[] args) {
+//        VideoFactory videoFactory = new VideoFactory();
+//        Video video = videoFactory.getVideo("java");
+//        if(video == null){
+//            return;
+//        }
+//        video.produce();
+
+        VideoFactory videoFactory = new VideoFactory();
+        Video video = videoFactory.getVideo(JavaVideo.class);
+        if(video == null){
+            return;
+        }
+        video.produce();
+	}
+}
+```
+
+#### 简单工厂
+
+##### 编码演示
+
+###### 视频抽象类
+
+```java
+public abstract class Video {
+    public abstract void produce();
+}
+```
+
+###### Java视频类
+
+```java
+public class JavaVideo extends Video {
+    @Override
+    public void produce() {
+        System.out.println("录制Java课程视频");
+    }
+}
+```
+
+###### 视频工厂
+
+```java
+public abstract class VideoFactory {
+
+    public abstract Video getVideo();
+
+//    public Video getVideo(Class c){
+//        Video video = null;
+//        try {
+//            video = (Video) Class.forName(c.getName()).newInstance();
+//        } catch (InstantiationException e) {
+//            e.printStackTrace();
+//        } catch (IllegalAccessException e) {
+//            e.printStackTrace();
+//        } catch (ClassNotFoundException e) {
+//            e.printStackTrace();
+//        }
+//        return video;
+//    }
+//
+//
+//    public Video getVideo(String type){
+//        if("java".equalsIgnoreCase(type)){
+//            return new JavaVideo();
+//        }else if("python".equalsIgnoreCase(type)){
+//            return new PythonVideo();
+//        }
+//        return null;
+//    }
+
+}
+```
+
+###### Java视频工厂
+
+```java
+public class JavaVideoFactory extends VideoFactory {
+    @Override
+    public Video getVideo() {
+        return new JavaVideo();
+    }
+}
+```
+
+###### 测试类
+
+```java
+public class Test {
+    public static void main(String[] args) {
+        VideoFactory videoFactory = new PythonVideoFactory();
+        VideoFactory videoFactory2 = new JavaVideoFactory();
+        VideoFactory videoFactory3 = new FEVideoFactory();
+        Video video = videoFactory.getVideo();
+        video.produce();
+    }
+}
+```
+
+#### 抽象工厂
+
+##### 编码演示
+
+###### 文章抽象类
+
+```java
+public abstract class Article {
+    public abstract void produce();
+}
+```
+
+###### Java文章类
+
+```java
+public class JavaArticle extends Article {
+    @Override
+    public void produce() {
+        System.out.println("编写Java课程手记");
+    }
+}
+```
+
+###### 视频抽象类
+
+```java
+public abstract class Video {
+    public abstract void produce();
+}
+```
+
+###### Java视频类
+
+```java
+public class JavaVideo extends Video {
+    @Override
+    public void produce() {
+        System.out.println("录制Java课程视频");
+    }
+}
+```
+
+###### 课程工厂抽象类
+
+```java
+public interface CourseFactory {
+    Video getVideo();
+    Article getArticle();
+
+}
+```
+
+###### Java课程工厂
+
+```java
+public class JavaCourseFactory implements CourseFactory {
+    @Override
+    public Video getVideo() {
+        return new JavaVideo();
+    }
+
+    @Override
+    public Article getArticle() {
+        return new JavaArticle();
+    }
+}
+```
+
+###### 测试类
+
+```java
+public class Test {
+    public static void main(String[] args) {
+        CourseFactory courseFactory = new JavaCourseFactory();
+        Video video = courseFactory.getVideo();
+        Article article = courseFactory.getArticle();
+        video.produce();
+        article.produce();
+    }
+}
+```
