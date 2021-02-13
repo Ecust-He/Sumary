@@ -545,7 +545,7 @@ public class Test {
 }
 ```
 
-#### 简单工厂
+#### 工厂方法
 
 ##### 编码演示
 
@@ -705,6 +705,98 @@ public class Test {
         Article article = courseFactory.getArticle();
         video.produce();
         article.produce();
+    }
+}
+```
+
+#### 建造者模式
+
+##### 编码演示
+
+```java
+public class Course {
+
+    private String courseName;
+    private String coursePPT;
+    private String courseVideo;
+    private String courseArticle;
+
+    //question & answer
+    private String courseQA;
+
+    public Course(CourseBuilder courseBuilder) {
+        this.courseName = courseBuilder.courseName;
+        this.coursePPT = courseBuilder.coursePPT;
+        this.courseVideo = courseBuilder.courseVideo;
+        this.courseArticle = courseBuilder.courseArticle;
+        this.courseQA = courseBuilder.courseQA;
+    }
+
+
+    @Override
+    public String toString() {
+        return "Course{" +
+                "courseName='" + courseName + '\'' +
+                ", coursePPT='" + coursePPT + '\'' +
+                ", courseVideo='" + courseVideo + '\'' +
+                ", courseArticle='" + courseArticle + '\'' +
+                ", courseQA='" + courseQA + '\'' +
+                '}';
+    }
+
+    public static class CourseBuilder{
+        private String courseName;
+        private String coursePPT;
+        private String courseVideo;
+        private String courseArticle;
+
+        //question & answer
+        private String courseQA;
+
+        public CourseBuilder buildCourseName(String courseName){
+            this.courseName = courseName;
+            return this;
+        }
+
+
+        public CourseBuilder buildCoursePPT(String coursePPT) {
+            this.coursePPT = coursePPT;
+            return this;
+        }
+
+        public CourseBuilder buildCourseVideo(String courseVideo) {
+            this.courseVideo = courseVideo;
+            return this;
+        }
+
+        public CourseBuilder buildCourseArticle(String courseArticle) {
+            this.courseArticle = courseArticle;
+            return this;
+        }
+
+        public CourseBuilder buildCourseQA(String courseQA) {
+            this.courseQA = courseQA;
+            return this;
+        }
+
+        public Course build(){
+            return new Course(this);
+        }
+    }
+}
+```
+
+###### 测试类
+
+```java
+public class Test {
+    public static void main(String[] args) {
+        Course course = new Course.CourseBuilder().buildCourseName("Java设计模式精讲").buildCoursePPT("Java设计模式精讲PPT").buildCourseVideo("Java设计模式精讲视频").build();
+        System.out.println(course);
+
+        Set<String> set = ImmutableSet.<String>builder().add("a").add("b").build();
+
+        System.out.println(set);
     }
 }
 ```
