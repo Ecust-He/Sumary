@@ -800,3 +800,217 @@ public class Test {
     }
 }
 ```
+
+#### 单例模式
+
+##### 编码演示
+
+###### 1、懒汉模式
+
+```java
+public class LazySingleton {
+    private static LazySingleton lazySingleton = null;
+    private LazySingleton(){
+        if(lazySingleton != null){
+            throw new RuntimeException("单例构造器禁止反射调用");
+        }
+    }
+    public synchronized static LazySingleton getInstance(){
+        if(lazySingleton == null){
+            lazySingleton = new LazySingleton();
+        }
+        return lazySingleton;
+    }
+}
+```
+
+###### 2、DoubleCheck双重检查
+
+```java
+public class LazyDoubleCheckSingleton {
+    private volatile static LazyDoubleCheckSingleton lazyDoubleCheckSingleton = null;
+    private LazyDoubleCheckSingleton(){
+
+    }
+    public static LazyDoubleCheckSingleton getInstance(){
+        if(lazyDoubleCheckSingleton == null){
+            synchronized (LazyDoubleCheckSingleton.class){
+                if(lazyDoubleCheckSingleton == null){
+                    lazyDoubleCheckSingleton = new LazyDoubleCheckSingleton();
+                    //1.分配内存给这个对象
+//                  //3.设置lazyDoubleCheckSingleton 指向刚分配的内存地址
+                    //2.初始化对象
+//                    intra-thread semantics
+//                    ---------------//3.设置lazyDoubleCheckSingleton 指向刚分配的内存地址
+                }
+            }
+        }
+        return lazyDoubleCheckSingleton;
+    }
+}
+```
+
+###### 3、静态内部类
+
+```java
+public class StaticInnerClassSingleton {
+    private static class InnerClass{
+        private static StaticInnerClassSingleton staticInnerClassSingleton = new StaticInnerClassSingleton();
+    }
+    public static StaticInnerClassSingleton getInstance(){
+        return InnerClass.staticInnerClassSingleton;
+    }
+    private StaticInnerClassSingleton(){
+        if(InnerClass.staticInnerClassSingleton != null){
+            throw new RuntimeException("单例构造器禁止反射调用");
+        }
+    }
+}
+```
+
+###### 4、饿汉模式
+
+```java
+public class HungrySingleton implements Serializable,Cloneable{
+
+    private final static HungrySingleton hungrySingleton;
+
+    static{
+        hungrySingleton = new HungrySingleton();
+    }
+    private HungrySingleton(){
+        if(hungrySingleton != null){
+            throw new RuntimeException("单例构造器禁止反射调用");
+        }
+    }
+    public static HungrySingleton getInstance(){
+        return hungrySingleton;
+    }
+
+    private Object readResolve(){
+        return hungrySingleton;
+    }
+
+    @Override
+    protected Object clone() throws CloneNotSupportedException {
+        return getInstance();
+    }
+}
+```
+
+###### 5、枚举单例
+
+```java
+public enum EnumInstance {
+    INSTANCE{
+        protected  void printTest(){
+            System.out.println("Geely Print Test");
+        }
+    };
+    protected abstract void printTest();
+    private Object data;
+
+    public Object getData() {
+        return data;
+    }
+
+    public void setData(Object data) {
+        this.data = data;
+    }
+    public static EnumInstance getInstance(){
+        return INSTANCE;
+    }
+
+}
+```
+
+#### 原型模式
+
+##### 编码演示
+
+###### 1、邮件类
+
+```java
+public class Mail implements Cloneable{
+    private String name;
+    private String emailAddress;
+    private String content;
+    public Mail(){
+        System.out.println("Mail Class Constructor");
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getEmailAddress() {
+        return emailAddress;
+    }
+
+    public void setEmailAddress(String emailAddress) {
+        this.emailAddress = emailAddress;
+    }
+
+    public String getContent() {
+        return content;
+    }
+
+    public void setContent(String content) {
+        this.content = content;
+    }
+
+    @Override
+    public String toString() {
+        return "Mail{" +
+                "name='" + name + '\'' +
+                ", emailAddress='" + emailAddress + '\'' +
+                ", content='" + content + '\'' +
+                '}'+super.toString();
+    }
+
+    @Override
+    protected Object clone() throws CloneNotSupportedException {
+        System.out.println("clone mail object");
+        return super.clone();
+    }
+}
+```
+
+###### 2、邮件工具类
+
+```java
+public class MailUtil {
+    public static void sendMail(Mail mail){
+        String outputContent = "向{0}同学,邮件地址:{1},邮件内容:{2}发送邮件成功";
+        System.out.println(MessageFormat.format(outputContent,mail.getName(),mail.getEmailAddress(),mail.getContent()));
+    }
+    public static void saveOriginMailRecord(Mail mail){
+        System.out.println("存储originMail记录,originMail:"+mail.getContent());
+    }
+}
+```
+
+###### 3、测试类
+
+```java
+public class Test {
+    public static void main(String[] args) throws CloneNotSupportedException {
+        Mail mail = new Mail();
+        mail.setContent("初始化模板");
+        System.out.println("初始化mail:"+mail);
+        for(int i = 0;i < 10;i++){
+            Mail mailTemp = (Mail) mail.clone();
+            mailTemp.setName("姓名"+i);
+            mailTemp.setEmailAddress("姓名"+i+"@imooc.com");
+            mailTemp.setContent("恭喜您，此次慕课网活动中奖了");
+            MailUtil.sendMail(mailTemp);
+            System.out.println("克隆的mailTemp:"+mailTemp);
+        }
+        MailUtil.saveOriginMailRecord(mail);
+    }
+}
+```
