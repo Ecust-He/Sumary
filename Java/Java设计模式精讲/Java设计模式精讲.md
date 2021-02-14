@@ -1014,3 +1014,214 @@ public class Test {
     }
 }
 ```
+
+### 结构型
+
+#### 外观模式
+
+##### 编码演示
+
+###### 积分礼物类
+
+```java
+public class PointsGift {
+    private String name;
+
+    public PointsGift(String name) {
+        this.name = name;
+    }
+
+    public String getName() {
+        return name;
+    }
+}
+```
+
+###### 资格校验服务类
+
+```java
+public class QualifyService {
+    public boolean isAvailable(PointsGift pointsGift){
+        System.out.println("校验"+pointsGift.getName()+" 积分资格通过,库存通过");
+        return true;
+    }
+}
+```
+
+###### 积分支付服务类
+
+```java
+public class PointsPaymentService {
+    public boolean pay(PointsGift pointsGift){
+        //扣减积分
+        System.out.println("支付"+pointsGift.getName()+" 积分成功");
+        return true;
+    }
+
+}
+```
+
+###### 物流系统服务类
+
+```java
+public class ShippingService {
+    public String shipGift(PointsGift pointsGift){
+        //物流系统的对接逻辑
+        System.out.println(pointsGift.getName()+"进入物流系统");
+        String shippingOrderNo = "666";
+        return shippingOrderNo;
+    }
+}
+```
+
+###### 积分兑换服务类
+
+```java
+public class GiftExchangeService {
+    private QualifyService qualifyService = new QualifyService();
+    private PointsPaymentService pointsPaymentService = new PointsPaymentService();
+    private ShippingService shippingService = new ShippingService();
+
+    public void giftExchange(PointsGift pointsGift){
+        if(qualifyService.isAvailable(pointsGift)){
+            //资格校验通过
+            if(pointsPaymentService.pay(pointsGift)){
+                //如果支付积分成功
+                String shippingOrderNo = shippingService.shipGift(pointsGift);
+                System.out.println("物流系统下单成功,订单号是:"+shippingOrderNo);
+            }
+        }
+    }
+
+}
+```
+
+###### 测试类
+
+```java
+public class Test {
+    public static void main(String[] args) {
+        PointsGift pointsGift = new PointsGift("T恤");
+        GiftExchangeService giftExchangeService = new GiftExchangeService();
+        giftExchangeService.giftExchange(pointsGift);
+    }
+}
+```
+
+#### 装饰器模式
+
+##### 编码演示
+
+###### 煎饼抽象类
+
+```java
+public abstract class ABattercake {
+    protected abstract String getDesc();
+    protected abstract int cost();
+}
+```
+
+###### 抽象装饰器类
+
+```java
+public abstract class AbstractDecorator extends ABattercake {
+    private ABattercake aBattercake;
+
+    public AbstractDecorator(ABattercake aBattercake) {
+        this.aBattercake = aBattercake;
+    }
+
+    protected abstract void doSomething();
+
+    @Override
+    protected String getDesc() {
+        return this.aBattercake.getDesc();
+    }
+
+    @Override
+    protected int cost() {
+        return this.aBattercake.cost();
+    }
+}
+```
+
+###### 煎饼类
+
+```java
+public class Battercake extends ABattercake {
+    @Override
+    protected String getDesc() {
+        return "煎饼";
+    }
+
+    @Override
+    protected int cost() {
+        return 8;
+    }
+}
+```
+
+###### 鸡蛋装饰器类
+
+```java
+public class EggDecorator extends AbstractDecorator {
+    public EggDecorator(ABattercake aBattercake) {
+        super(aBattercake);
+    }
+
+    @Override
+    protected void doSomething() {
+
+    }
+
+    @Override
+    protected String getDesc() {
+        return super.getDesc()+" 加一个鸡蛋";
+    }
+
+    @Override
+    protected int cost() {
+        return super.cost()+1;
+    }
+}
+```
+
+###### 香肠装饰器类
+
+```java
+public class SausageDecorator extends AbstractDecorator{
+    public SausageDecorator(ABattercake aBattercake) {
+        super(aBattercake);
+    }
+
+    @Override
+    protected void doSomething() {
+
+    }
+
+    @Override
+    protected String getDesc() {
+        return super.getDesc()+" 加一根香肠";
+    }
+
+    @Override
+    protected int cost() {
+        return super.cost()+2;
+    }
+}
+```
+
+###### 测试类
+
+```java
+public class Test {
+    public static void main(String[] args) {
+        ABattercake aBattercake;
+        aBattercake = new Battercake();
+        aBattercake = new EggDecorator(aBattercake);
+        aBattercake = new EggDecorator(aBattercake);
+        aBattercake = new SausageDecorator(aBattercake);
+        System.out.println(aBattercake.getDesc()+" 销售价格:"+aBattercake.cost());
+    }
+}
+```
