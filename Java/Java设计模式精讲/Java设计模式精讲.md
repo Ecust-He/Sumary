@@ -1225,3 +1225,147 @@ public class Test {
     }
 }
 ```
+
+#### 适配器模式
+
+##### 编码演示1
+
+###### 交流220V电源类
+
+```java
+public class AC220 {
+    public int outputAC220V(){
+        int output = 220;
+        System.out.println("输出交流电"+output+"V");
+        return output;
+    }
+}
+```
+
+###### 直流5V电源类
+
+```java
+public interface DC5 {
+    int outputDC5V();
+}
+```
+
+###### 电源适配器
+
+```java
+public class PowerAdapter implements DC5{
+    private AC220 ac220 = new AC220();
+
+    @Override
+    public int outputDC5V() {
+        int adapterInput = ac220.outputAC220V();
+        //变压器...
+        int adapterOutput = adapterInput/44;
+
+        System.out.println("使用PowerAdapter输入AC:"+adapterInput+"V"+"输出DC:"+adapterOutput+"V");
+        return adapterOutput;
+    }
+}
+```
+
+###### 测试类
+
+```java
+public class Test {
+    public static void main(String[] args) {
+        DC5 dc5 = new PowerAdapter();
+        dc5.outputDC5V();
+    }
+}
+```
+
+##### 编码演示2（对象适配器）
+
+###### 被适配者类
+
+```java
+public class Adaptee {
+    public void adapteeRequest(){
+        System.out.println("被适配者的方法");
+    }
+}
+```
+
+###### 目标类
+
+```java
+public interface Target {
+    void request();
+}
+```
+
+###### 适配器类
+
+```java
+public class Adapter implements Target{
+    private Adaptee adaptee = new Adaptee();
+
+    @Override
+    public void request() {
+        //...
+        adaptee.adapteeRequest();
+        //...
+    }
+}
+```
+
+###### 测试类
+
+```java
+public class Test {
+    public static void main(String[] args) {
+        Target adapterTarget = new Adapter();
+        adapterTarget.request();
+    }
+}
+```
+
+##### 编码演示3（类适配器）
+
+###### 被适配者类
+
+```java
+public class Adaptee {
+    public void adapteeRequest(){
+        System.out.println("被适配者的方法");
+    }
+
+}
+```
+
+###### 目标类
+
+```java
+public interface Target {
+    void request();
+}
+```
+
+###### 适配器类
+
+```java
+public class Adapter extends Adaptee implements Target{
+    @Override
+    public void request() {
+        //...
+        super.adapteeRequest();
+        //...
+    }
+}
+```
+
+###### 测试类
+
+```java
+public class Test {
+    public static void main(String[] args) {
+        Target adapterTarget = new Adapter();
+        adapterTarget.request();
+    }
+}
+```
