@@ -1369,3 +1369,288 @@ public class Test {
     }
 }
 ```
+
+#### 享元模式
+
+##### 编码演示
+
+###### 部门员工接口
+
+```java
+public interface Employee {
+    void report();
+}
+```
+
+###### 员工工厂类
+
+```java
+public class EmployeeFactory {
+    private static final Map<String,Employee> EMPLOYEE_MAP = new HashMap<String,Employee>();
+
+    public static Employee getManager(String department){
+        Manager manager = (Manager) EMPLOYEE_MAP.get(department);
+
+        if(manager == null){
+            manager = new Manager(department);
+            System.out.print("创建部门经理:"+department);
+            String reportContent = department+"部门汇报:此次报告的主要内容是......";
+            manager.setReportContent(reportContent);
+            System.out.println(" 创建报告:"+reportContent);
+            EMPLOYEE_MAP.put(department,manager);
+        }
+        return manager;
+    }
+}
+```
+
+###### 部门经理类
+
+```java
+public class Manager implements Employee {
+    @Override
+    public void report() {
+        System.out.println(reportContent);
+    }
+    private String title = "部门经理";
+    private String department;
+    private String reportContent;
+
+    public void setReportContent(String reportContent) {
+        this.reportContent = reportContent;
+    }
+
+    public Manager(String department) {
+        this.department = department;
+    }
+}
+```
+
+###### 测试类
+
+```java
+public class Test {
+    private static final String departments[] = {"RD","QA","PM","BD"};
+
+    public static void main(String[] args) {
+        for(int i=0; i<10; i++){
+            String department = departments[(int)(Math.random() * departments.length)];
+            Manager manager = (Manager) EmployeeFactory.getManager(department);
+            manager.report();
+
+        }
+    }
+}
+```
+
+#### 组合模式
+
+##### 编码演示
+
+###### 目录组件抽象类
+
+```java
+public abstract class CatalogComponent {
+    public void add(CatalogComponent catalogComponent){
+        throw new UnsupportedOperationException("不支持添加操作");
+    }
+    
+    public void remove(CatalogComponent catalogComponent){
+        throw new UnsupportedOperationException("不支持删除操作");
+    }
+
+    public String getName(CatalogComponent catalogComponent){
+        throw new UnsupportedOperationException("不支持获取名称操作");
+    }
+
+    public double getPrice(CatalogComponent catalogComponent){
+        throw new UnsupportedOperationException("不支持获取价格操作");
+    }
+
+    public void print(){
+        throw new UnsupportedOperationException("不支持打印操作");
+    }
+}
+```
+
+###### 课程类
+
+```java
+public class Course extends CatalogComponent {
+    private String name;
+    private double price;
+
+    public Course(String name, double price) {
+        this.name = name;
+        this.price = price;
+    }
+
+    @Override
+    public String getName(CatalogComponent catalogComponent) {
+        return this.name;
+    }
+
+    @Override
+    public double getPrice(CatalogComponent catalogComponent) {
+        return this.price;
+    }
+
+    @Override
+    public void print() {
+        System.out.println("Course Name:"+name+" Price:"+price);
+    }
+
+}
+```
+
+###### 课程目录类
+
+```java
+public class CourseCatalog extends CatalogComponent {
+    private List<CatalogComponent> items = new ArrayList<CatalogComponent>();
+    private String name;
+    private Integer level;
+
+
+    public CourseCatalog(String name,Integer level) {
+        this.name = name;
+        this.level = level;
+    }
+
+    @Override
+    public void add(CatalogComponent catalogComponent) {
+        items.add(catalogComponent);
+    }
+
+    @Override
+    public String getName(CatalogComponent catalogComponent) {
+        return this.name;
+    }
+
+    @Override
+    public void remove(CatalogComponent catalogComponent) {
+        items.remove(catalogComponent);
+    }
+
+    @Override
+    public void print() {
+        System.out.println(this.name);
+        for(CatalogComponent catalogComponent : items){
+            if(this.level != null){
+                for(int  i = 0; i < this.level; i++){
+                    System.out.print("  ");
+                }
+            }
+            catalogComponent.print();
+        }
+    }
+
+}
+```
+
+###### 测试类
+
+```java
+public class Test {
+    public static void main(String[] args) {
+        CatalogComponent linuxCourse = new Course("Linux课程",11);
+        CatalogComponent windowsCourse = new Course("Windows课程",11);
+
+        CatalogComponent javaCourseCatalog = new CourseCatalog("Java课程目录",2);
+
+        CatalogComponent mmallCourse1 = new Course("Java电商一期",55);
+        CatalogComponent mmallCourse2 = new Course("Java电商二期",66);
+        CatalogComponent designPattern = new Course("Java设计模式",77);
+
+        javaCourseCatalog.add(mmallCourse1);
+        javaCourseCatalog.add(mmallCourse2);
+        javaCourseCatalog.add(designPattern);
+
+        CatalogComponent imoocMainCourseCatalog = new CourseCatalog("慕课网课程主目录",1);
+        imoocMainCourseCatalog.add(linuxCourse);
+        imoocMainCourseCatalog.add(windowsCourse);
+        imoocMainCourseCatalog.add(javaCourseCatalog);
+        
+        imoocMainCourseCatalog.print();
+    }
+}
+```
+
+#### 桥接模式
+
+##### 编码演示
+
+###### 银行账户接口
+
+```java
+public interface Account {
+    Account openAccount();
+    void showAccountType();
+}
+```
+
+###### 银行抽象类
+
+```java
+public abstract class Bank {
+    protected Account account;
+    public Bank(Account account){
+        this.account = account;
+    }
+    abstract Account openAccount();
+}
+```
+
+###### 农业银行类
+
+```java
+public class ABCBank extends Bank {
+    public ABCBank(Account account) {
+        super(account);
+    }
+
+    @Override
+    Account openAccount() {
+        System.out.println("打开中国农业银行账号");
+        account.openAccount();
+        return account;
+    }
+}
+```
+
+###### 定期账户类
+
+```java
+public class DepositAccount implements Account {
+    @Override
+    public Account openAccount() {
+        System.out.println("打开定期账号");
+        return new DepositAccount();
+    }
+
+    @Override
+    public void showAccountType() {
+        System.out.println("这是一个定期账号");
+    }
+}
+```
+
+###### 测试类
+
+```java
+public class Test {
+    public static void main(String[] args) {
+        Bank icbcBank = new ICBCBank(new DepositAccount());
+        Account icbcAccount = icbcBank.openAccount();
+        icbcAccount.showAccountType();
+
+        Bank icbcBank2 = new ICBCBank(new SavingAccount());
+        Account icbcAccount2 = icbcBank2.openAccount();
+        icbcAccount2.showAccountType();
+
+        Bank abcBank = new ABCBank(new SavingAccount());
+        Account abcAccount = abcBank.openAccount();
+        abcAccount.showAccountType();
+    }
+}
+```
