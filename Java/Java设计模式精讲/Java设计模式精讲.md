@@ -1819,3 +1819,355 @@ public class Test {
     }
 }
 ```
+
+#### 迭代器模式
+
+##### 编码演示
+
+###### 课程迭代器接口
+
+```java
+public interface CourseIterator {
+    Course nextCourse();
+    boolean isLastCourse();
+}
+```
+
+###### 课程迭代器实现
+
+```java
+public class CourseIteratorImpl implements CourseIterator {
+
+    private List courseList;
+    private int position;
+    private Course course;
+    public CourseIteratorImpl(List courseList){
+        this.courseList=courseList;
+    }
+
+    @Override
+    public Course nextCourse() {
+        System.out.println("返回课程,位置是: "+position);
+        course=(Course)courseList.get(position);
+        position++;
+        return course;
+    }
+
+    @Override
+    public boolean isLastCourse(){
+        if(position< courseList.size()){
+            return false;
+        }
+        return true;
+    }
+}
+```
+
+###### 测试类
+
+```java
+public class Test {
+    public static void main(String[] args) {
+        Course course1 = new Course("Java电商一期");
+        Course course2 = new Course("Java电商二期");
+        Course course3 = new Course("Java设计模式精讲");
+        Course course4 = new Course("Python课程");
+        Course course5 = new Course("算法课程");
+        Course course6 = new Course("前端课程");
+
+        CourseAggregate courseAggregate = new CourseAggregateImpl();
+
+        courseAggregate.addCourse(course1);
+        courseAggregate.addCourse(course2);
+        courseAggregate.addCourse(course3);
+        courseAggregate.addCourse(course4);
+        courseAggregate.addCourse(course5);
+        courseAggregate.addCourse(course6);
+
+        System.out.println("-----课程列表-----");
+        printCourses(courseAggregate);
+
+        courseAggregate.removeCourse(course4);
+        courseAggregate.removeCourse(course5);
+
+        System.out.println("-----删除操作之后的课程列表-----");
+        printCourses(courseAggregate);
+    }
+
+    public static void printCourses(CourseAggregate courseAggregate){
+        CourseIterator courseIterator= courseAggregate.getCourseIterator();
+        while(!courseIterator.isLastCourse()){
+            Course course=courseIterator.nextCourse();
+            System.out.println(course.getName());
+        }
+    }
+}
+```
+
+#### 策略模式
+
+##### 编码演示
+
+###### 促销策略接口
+
+```java
+public interface PromotionStrategy {
+    void doPromotion();
+}
+```
+
+###### 促销活动类
+
+```java
+public class PromotionActivity {
+    private PromotionStrategy promotionStrategy;
+
+    public PromotionActivity(PromotionStrategy promotionStrategy) {
+        this.promotionStrategy = promotionStrategy;
+    }
+
+    public void executePromotionStrategy(){
+        promotionStrategy.doPromotion();
+    }
+}
+```
+
+###### 促销策略工厂
+
+```java
+public class PromotionStrategyFactory {
+    private static Map<String,PromotionStrategy> PROMOTION_STRATEGY_MAP = new HashMap<String, PromotionStrategy>();
+    static {
+        PROMOTION_STRATEGY_MAP.put(PromotionKey.LIJIAN,new LiJianPromotionStrategy());
+        PROMOTION_STRATEGY_MAP.put(PromotionKey.FANXIAN,new FanXianPromotionStrategy());
+        PROMOTION_STRATEGY_MAP.put(PromotionKey.MANJIAN,new ManJianPromotionStrategy());
+    }
+
+    private static final PromotionStrategy NON_PROMOTION = new EmptyPromotionStrategy();
+
+    private PromotionStrategyFactory(){
+
+    }
+
+    public static PromotionStrategy getPromotionStrategy(String promotionKey){
+        PromotionStrategy promotionStrategy = PROMOTION_STRATEGY_MAP.get(promotionKey);
+        return promotionStrategy == null ? NON_PROMOTION : promotionStrategy;
+    }
+
+    private interface PromotionKey{
+        String LIJIAN = "LIJIAN";
+        String FANXIAN = "FANXIAN";
+        String MANJIAN = "MANJIAN";
+    }
+}
+```
+
+###### 测试类
+
+```java
+public class Test {
+    public static void main(String[] args) {
+        PromotionActivity promotionActivity618 = new PromotionActivity(new LiJianPromotionStrategy());
+        PromotionActivity promotionActivity1111 = new PromotionActivity(new FanXianPromotionStrategy());
+
+        promotionActivity618.executePromotionStrategy();
+        promotionActivity1111.executePromotionStrategy();
+    }
+}
+```
+
+#### 解释器模式
+
+##### 编码演示
+
+###### 解释器接口
+
+```java
+public interface Interpreter {
+    int interpret();
+}
+```
+
+###### 数字解释器
+
+```java
+public class NumberInterpreter implements Interpreter {
+    private int number;
+    public NumberInterpreter(int number){
+        this.number=number;
+    }
+    public NumberInterpreter(String number){
+        this.number=Integer.parseInt(number);
+    }
+    @Override
+    public int interpret(){
+        return this.number;
+    }
+}
+```
+
+###### 加法解释器
+
+```java
+public class AddInterpreter implements Interpreter {
+    private Interpreter firstExpression,secondExpression;
+    public AddInterpreter(Interpreter firstExpression, Interpreter secondExpression){
+        this.firstExpression=firstExpression;
+        this.secondExpression=secondExpression;
+    }
+    @Override
+    public int interpret(){
+        return this.firstExpression.interpret()+this.secondExpression.interpret();
+    }
+}
+```
+
+###### 操作工具类
+
+```java
+public class OperatorUtil {
+    public static boolean isOperator(String symbol) {
+        return (symbol.equals("+") || symbol.equals("*"));
+    }
+
+    public static Interpreter getExpressionObject(Interpreter firstExpression, Interpreter secondExpression, String symbol) {
+        if (symbol.equals("+")) {
+            return new AddInterpreter(firstExpression, secondExpression);
+        } else if (symbol.equals("*")) {
+            return new MultiInterpreter(firstExpression, secondExpression);
+        }
+        return null;
+    }
+}
+```
+
+###### 表达式解释器
+
+```java
+public class GeelyExpressionParser {
+    private Stack<Interpreter> stack = new Stack<Interpreter>();
+
+    public int parse(String str) {
+        String[] strItemArray = str.split(" ");
+        for (String symbol : strItemArray) {
+            if (!OperatorUtil.isOperator(symbol)) {
+                Interpreter numberExpression = new NumberInterpreter(symbol);
+                stack.push(numberExpression);
+                System.out.println(String.format("入栈: %d", numberExpression.interpret()));
+            } else {
+                //是运算符号，可以计算
+                Interpreter firstExpression = stack.pop();
+                Interpreter secondExpression = stack.pop();
+                System.out.println(String.format("出栈: %d 和 %d",
+                        firstExpression.interpret(), secondExpression.interpret()));
+                Interpreter operator = OperatorUtil.getExpressionObject(firstExpression, secondExpression, symbol);
+                System.out.println(String.format("应用运算符: %s", operator));
+                int result = operator.interpret();
+                NumberInterpreter resultExpression = new NumberInterpreter(result);
+                stack.push(resultExpression);
+                System.out.println(String.format("阶段结果入栈: %d", resultExpression.interpret()));
+            }
+        }
+        int result = stack.pop().interpret();
+        return result;
+    }
+}
+```
+
+###### 测试类
+
+```java
+public class Test {
+    public static void main(String[] args) {
+        String geelyInputStr="6 100 11 + *";
+        GeelyExpressionParser expressionParser=new GeelyExpressionParser();
+        int result=expressionParser.parse(geelyInputStr);
+        System.out.println("解释器计算结果: "+result);
+    }
+}
+```
+
+#### 观察者模式
+
+##### 编码演示1
+
+###### 课程类（被观察对象）
+
+```java
+public class Course extends Observable{
+    private String courseName;
+
+    public Course(String courseName) {
+        this.courseName = courseName;
+    }
+
+    public String getCourseName() {
+        return courseName;
+    }
+
+    public void produceQuestion(Course course, Question question){
+        System.out.println(question.getUserName()+"在"+course.courseName+"提交了一个问题");
+        setChanged();
+        notifyObservers(question);
+    }
+}
+```
+
+###### 老师类（观察者）
+
+```java
+public class Teacher implements Observer{
+    private String teacherName;
+
+    public Teacher(String teacherName) {
+        this.teacherName = teacherName;
+    }
+    
+    @Override
+    public void update(Observable o, Object arg) {
+        Course course = (Course)o;
+        Question question = (Question)arg;
+        System.out.println(teacherName+"老师的"+course.getCourseName()+"课程接收到一个"+question.getUserName()+"提交的问答:"+question.getQuestionContent());
+    }
+}
+```
+
+###### 测试类
+
+```java
+public class Test {
+    public static void main(String[] args) {
+        Course course = new Course("Java设计模式精讲");
+        Teacher teacher = new Teacher("Alpha");
+        course.addObserver(teacher);
+        //业务逻辑代码
+        Question question = new Question();
+        question.setUserName("Geely");
+        question.setQuestionContent("Java的主函数如何编写");
+        course.produceQuestion(course,question);
+    }
+}
+```
+
+##### 编码演示2（Guava）
+
+```java
+public class GuavaEvent {
+    @Subscribe
+    public void subscribe(String str){
+        //业务逻辑
+        System.out.println("执行subscribe方法,传入的参数是:" + str);
+    }
+}
+```
+
+```java
+public class GuavaEventTest {
+    public static void main(String[] args) {
+        EventBus eventbus = new EventBus();
+        GuavaEvent guavaEvent = new GuavaEvent();
+        eventbus.register(guavaEvent);
+        eventbus.post("post的内容");
+    }
+}
+```
