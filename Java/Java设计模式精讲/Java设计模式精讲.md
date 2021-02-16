@@ -1748,3 +1748,74 @@ public class Test {
     }
 }
 ```
+
+### 行为型
+
+#### 模板方法模式
+
+##### 编码演示
+
+###### 课程模板抽象类
+
+```java
+public abstract class ACourse {
+
+    protected final void makeCourse(){
+        this.makePPT();
+        this.makeVideo();
+        if(needWriteArticle()){
+            this.writeArticle();
+        }
+        this.packageCourse();
+    }
+
+    final void makePPT(){
+        System.out.println("制作PPT");
+    }
+    final void makeVideo(){
+        System.out.println("制作视频");
+    }
+    final void writeArticle(){
+        System.out.println("编写手记");
+    }
+    //钩子方法
+    protected boolean needWriteArticle(){
+        return false;
+    }
+    abstract void packageCourse();
+}
+```
+
+###### 设计模式课程类
+
+```java
+public class DesignPatternCourse extends ACourse {
+    @Override
+    void packageCourse() {
+        System.out.println("提供课程Java源代码");
+    }
+
+    @Override
+    protected boolean needWriteArticle() {
+        return true;
+    }
+}
+```
+
+###### 测试类
+
+```java
+public class Test {
+    public static void main(String[] args) {
+//        System.out.println("后端设计模式课程start---");
+//        ACourse designPatternCourse = new DesignPatternCourse();
+//        designPatternCourse.makeCourse();
+//        System.out.println("后端设计模式课程end---");
+
+        System.out.println("前端课程start---");
+        ACourse feCourse = new FECourse(false);
+        feCourse.makeCourse();
+        System.out.println("前端课程end---");
+    }
+}
+```
