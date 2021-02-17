@@ -2409,3 +2409,389 @@ public class Test {
     }
 }
 ```
+
+#### 中介者模式
+
+##### 编码演示
+
+###### 学习群类（中介者）
+
+```java
+public class StudyGroup {
+
+    public static void showMessage(User user, String message){
+        System.out.println(new Date().toString() + " [" + user.getName() + "] : " + message);
+    }
+}
+```
+
+###### 用户类
+
+```java
+public class User {
+    private String name;
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public User(String name) {
+        this.name = name;
+    }
+
+    public void sendMessage(String message) {
+        StudyGroup.showMessage(this, message);
+    }
+}
+```
+
+###### 测试类
+
+```java
+public class Test {
+    public static void main(String[] args) {
+        User geely = new User("Geely");
+        User tom= new User("Tom");
+
+        geely.sendMessage(" Hey! Tom! Let's learn Design Pattern");
+        tom.sendMessage("OK! Geely");
+    }
+}
+```
+
+#### 责任链模式
+
+##### 编码演示
+
+###### 课程类
+
+```java
+public class Course {
+    private String name;
+    private String article;
+    private String video;
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getArticle() {
+        return article;
+    }
+
+    public void setArticle(String article) {
+        this.article = article;
+    }
+
+    public String getVideo() {
+        return video;
+    }
+
+    public void setVideo(String video) {
+        this.video = video;
+    }
+}
+```
+
+###### 批准者抽象类
+
+```java
+public abstract class Approver {
+    protected Approver approver;
+
+    public void setNextApprover(Approver approver){
+        this.approver = approver;
+    }
+    public abstract void deploy(Course course);
+}
+```
+
+###### 视频批准者类
+
+```java
+public class VideoApprover extends Approver{
+    @Override
+    public void deploy(Course course) {
+        if(StringUtils.isNotEmpty(course.getVideo())){
+            System.out.println(course.getName()+"含有视频,批准");
+            if(approver != null){
+                approver.deploy(course);
+            }
+        }else{
+            System.out.println(course.getName()+"不含有视频,不批准,流程结束");
+            return;
+        }
+    }
+}
+```
+
+###### 手记批准者类
+
+```java
+public class ArticleApprover extends Approver {
+    @Override
+    public void deploy(Course course) {
+        if(StringUtils.isNotEmpty(course.getArticle())){
+            System.out.println(course.getName()+"含有手记,批准");
+            if(approver != null){
+                approver.deploy(course);
+            }
+        }else{
+            System.out.println(course.getName()+"不含有手记,不批准,流程结束");
+            return;
+        }
+    }
+}
+```
+
+###### 测试类
+
+```java
+public class Test {
+    public static void main(String[] args) {
+        Approver articleApprover = new ArticleApprover();
+        Approver videoApprover = new VideoApprover();
+
+        Course course = new Course();
+        course.setName("Java设计模式精讲 -- By Geely");
+        course.setArticle("Java设计模式精讲的手记");
+        course.setVideo("Java设计模式精讲的视频");
+
+        articleApprover.setNextApprover(videoApprover);
+
+        articleApprover.deploy(course);
+    }
+}
+```
+
+#### 访问者模式
+
+##### 编码演示
+
+###### 课程抽象类
+
+```java
+public abstract class Course {
+    private String name;
+
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+    
+    public abstract void accept(IVisitor visitor);
+    
+}
+```
+
+###### 实战课程类
+
+```java
+public class CodingCourse extends Course {
+    private int price;
+
+    public int getPrice() {
+        return price;
+    }
+
+    public void setPrice(int price) {
+        this.price = price;
+    }
+
+    @Override
+    public void accept(IVisitor visitor) {
+        visitor.visit(this);
+    }
+}
+```
+
+###### 免费课程
+
+```java
+public class FreeCourse extends Course {
+
+    @Override
+    public void accept(IVisitor visitor) {
+        visitor.visit(this);
+    }
+}
+```
+
+###### 访问者接口
+
+```java
+public interface IVisitor {
+
+    void visit(FreeCourse freeCourse);
+
+    void visit(CodingCourse codingCourse);
+
+}
+```
+
+###### 访问者
+
+```java
+public class Visitor implements IVisitor {
+
+    //访问免费课程，打印所有免费课程名称
+    @Override
+    public void visit(FreeCourse freeCourse) {
+        System.out.println("免费课程:"+freeCourse.getName());
+    }
+
+    //访问实战课程，打印所有实战课程名称及价格
+    @Override
+    public void visit(CodingCourse codingCourse) {
+        System.out.println("实战课程:"+codingCourse.getName()+" 价格:"+codingCourse.getPrice()+"元");
+    }
+
+}
+```
+
+###### 测试类
+
+```java
+public class Test {
+    public static void main(String[] args) {
+        List<Course> courseList = new ArrayList<Course>();
+
+        FreeCourse freeCourse = new FreeCourse();
+        freeCourse.setName("SpringMVC数据绑定");
+
+        CodingCourse codingCourse = new CodingCourse();
+        codingCourse.setName("Java设计模式精讲 -- By Geely");
+        codingCourse.setPrice(299);
+
+        courseList.add(freeCourse);
+        courseList.add(codingCourse);
+
+        for(Course course : courseList){
+            course.accept(new Visitor());
+        }
+
+    }
+}
+```
+
+#### 状态模式
+
+##### 编码演示
+
+###### 课程视频状态抽象类
+
+```java
+public abstract class CourseVideoState {
+    protected CourseVideoContext courseVideoContext;
+
+    public void setCourseVideoContext(CourseVideoContext courseVideoContext) {
+        this.courseVideoContext = courseVideoContext;
+    }
+    
+    public abstract void play();
+    public abstract void speed();
+    public abstract void pause();
+    public abstract void stop();
+}
+```
+
+###### 课程视频上下文类
+
+```java
+public class CourseVideoContext {
+
+    private CourseVideoState courseVideoState;
+    public final static PlayState PLAY_STATE = new PlayState();
+    public final static StopState STOP_STATE = new StopState();
+    public final static PauseState PAUSE_STATE = new PauseState();
+    public final static SpeedState SPEED_STATE = new SpeedState();
+
+    public CourseVideoState getCourseVideoState() {
+        return courseVideoState;
+    }
+
+    public void setCourseVideoState(CourseVideoState courseVideoState) {
+        this.courseVideoState = courseVideoState;
+        this.courseVideoState.setCourseVideoContext(this);
+    }
+    public void play(){
+        this.courseVideoState.play();
+    }
+
+    public void speed(){
+        this.courseVideoState.speed();
+    }
+
+    public void stop(){
+        this.courseVideoState.stop();
+    }
+
+    public void pause(){
+        this.courseVideoState.pause();
+    }
+}
+```
+
+###### 播放视频状态类
+
+```java
+public class PlayState extends CourseVideoState {
+
+    @Override
+    public void play() {
+        System.out.println("正常播放课程视频状态");
+    }
+
+    @Override
+    public void speed() {
+        super.courseVideoContext.setCourseVideoState(CourseVideoContext.SPEED_STATE);
+    }
+
+    @Override
+    public void pause() {
+        super.courseVideoContext.setCourseVideoState(CourseVideoContext.PAUSE_STATE);
+    }
+
+    @Override
+    public void stop() {
+        super.courseVideoContext.setCourseVideoState(CourseVideoContext.STOP_STATE);
+    }
+}
+```
+
+###### 测试类
+
+```java
+public class Test {
+    public static void main(String[] args) {
+        CourseVideoContext courseVideoContext = new CourseVideoContext();
+        courseVideoContext.setCourseVideoState(new PlayState());
+
+        System.out.println("当前状态:"+courseVideoContext.getCourseVideoState().getClass().getSimpleName());
+        courseVideoContext.pause();
+
+        System.out.println("当前状态:"+courseVideoContext.getCourseVideoState().getClass().getSimpleName());
+
+        courseVideoContext.speed();
+
+        System.out.println("当前状态:"+courseVideoContext.getCourseVideoState().getClass().getSimpleName());
+
+        courseVideoContext.stop();
+
+        System.out.println("当前状态:"+courseVideoContext.getCourseVideoState().getClass().getSimpleName());
+        courseVideoContext.speed();
+    }
+}
+```
