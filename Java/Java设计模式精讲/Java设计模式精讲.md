@@ -2325,3 +2325,87 @@ public class Test {
     }
 }
 ```
+
+#### 命令模式
+
+##### 编码演示
+
+###### 命令接口
+
+```java
+public interface Command {
+    void execute();
+}
+```
+
+###### 课程视频类
+
+```java
+public class CourseVideo {
+    private String name;
+
+    public CourseVideo(String name) {
+        this.name = name;
+    }
+    public void open(){
+        System.out.println(this.name+"课程视频开放");
+    }
+    public void close(){
+        System.out.println(this.name+"课程视频关闭");
+    }
+}
+```
+
+###### 关闭课程视频类
+
+```java
+public class CloseCourseVideoCommand implements Command {
+    private CourseVideo courseVideo;
+
+    public CloseCourseVideoCommand(CourseVideo courseVideo) {
+        this.courseVideo = courseVideo;
+    }
+
+    @Override
+    public void execute() {
+        courseVideo.close();
+    }
+}
+```
+
+###### 员工类
+
+```java
+public class Staff {
+    private List<Command> commandList = new ArrayList<Command>();
+    public void addCommand(Command command){
+        commandList.add(command);
+    }
+
+    public void executeCommands(){
+        for(Command command : commandList){
+            command.execute();
+        }
+        commandList.clear();
+    }
+
+}
+```
+
+###### 测试类
+
+```java
+public class Test {
+    public static void main(String[] args) {
+        CourseVideo courseVideo = new CourseVideo("Java设计模式精讲 -- By Geely");
+        OpenCourseVideoCommand openCourseVideoCommand = new OpenCourseVideoCommand(courseVideo);
+        CloseCourseVideoCommand closeCourseVideoCommand = new CloseCourseVideoCommand(courseVideo);
+
+        Staff staff = new Staff();
+        staff.addCommand(openCourseVideoCommand);
+        staff.addCommand(closeCourseVideoCommand);
+
+        staff.executeCommands();
+    }
+}
+```
