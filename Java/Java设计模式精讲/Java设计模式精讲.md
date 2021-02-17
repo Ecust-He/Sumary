@@ -2171,3 +2171,157 @@ public class GuavaEventTest {
     }
 }
 ```
+
+#### 备忘录模式
+
+##### 编码演示
+
+###### 文章类
+
+```java
+public class Article {
+
+    private String title;
+    private String content;
+    private String imgs;
+
+    public Article(String title, String content, String imgs) {
+        this.title = title;
+        this.content = content;
+        this.imgs = imgs;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public String getContent() {
+        return content;
+    }
+
+    public void setContent(String content) {
+        this.content = content;
+    }
+
+    public String getImgs() {
+        return imgs;
+    }
+
+    public void setImgs(String imgs) {
+        this.imgs = imgs;
+    }
+
+    public ArticleMemento saveToMemento() {
+        ArticleMemento articleMemento = new ArticleMemento(this.title,this.content,this.imgs);
+        return articleMemento;
+    }
+
+    public void undoFromMemento(ArticleMemento articleMemento) {
+
+        this.title = articleMemento.getTitle();
+        this.content = articleMemento.getContent();
+        this.imgs = articleMemento.getImgs();
+    }
+}
+```
+
+###### 文章备忘录类
+
+```java
+public class ArticleMemento {
+    private String title;
+    private String content;
+    private String imgs;
+
+    public ArticleMemento(String title, String content, String imgs) {
+        this.title = title;
+        this.content = content;
+        this.imgs = imgs;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public String getContent() {
+        return content;
+    }
+
+    public String getImgs() {
+        return imgs;
+    }
+}
+```
+
+###### 文章备忘录管理类
+
+```java
+public class ArticleMementoManager {
+
+    private final Stack<ArticleMemento> ARTICLE_MEMENTO_STACK = new Stack<ArticleMemento>();
+
+    public ArticleMemento getMemento()
+    {
+        ArticleMemento articleMemento= ARTICLE_MEMENTO_STACK.pop();
+        return articleMemento;
+    }
+
+    public void addMemento(ArticleMemento articleMemento)
+    {
+        ARTICLE_MEMENTO_STACK.push(articleMemento);
+    }
+
+}
+```
+
+###### 测试类
+
+```java
+public class Test {
+
+    public static void main(String[] args) {
+        ArticleMementoManager articleMementoManager = new ArticleMementoManager();
+
+        Article article= new Article("如影随行的设计模式A","手记内容A","手记图片A");
+
+        ArticleMemento articleMemento = article.saveToMemento();
+
+        articleMementoManager.addMemento(articleMemento);
+        System.out.println("标题:"+article.getTitle()+" 内容:"+article.getContent()+" 图片:"+article.getImgs()+" 暂存成功");
+
+        System.out.println("手记完整信息:"+article);
+        System.out.println("修改手记start");
+
+        article.setTitle("如影随行的设计模式B");
+        article.setContent("手记内容B");
+        article.setImgs("手记图片B");
+
+        System.out.println("修改手记end");
+        System.out.println("手记完整信息:"+article);
+
+        articleMemento = article.saveToMemento();
+        articleMementoManager.addMemento(articleMemento);
+
+        article.setTitle("如影随行的设计模式C");
+        article.setContent("手记内容C");
+        article.setImgs("手记图片C");
+
+        System.out.println("暂存回退start");
+
+        System.out.println("回退出栈1次");
+        articleMemento = articleMementoManager.getMemento();
+        article.undoFromMemento(articleMemento);
+
+        System.out.println("回退出栈2次");
+        articleMemento = articleMementoManager.getMemento();
+        article.undoFromMemento(articleMemento);
+        
+        System.out.println("暂存回退end");
+        System.out.println("手记完整信息:"+article);
+    }
+}
+```
