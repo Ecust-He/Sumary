@@ -98,5 +98,3 @@ context.initializer.classes=com.mooc.sb2.initializer.ThirdInitializer
 ### 实战监听器设计模式
 
 ### SpringBoot监听器实现
-
-##### 
