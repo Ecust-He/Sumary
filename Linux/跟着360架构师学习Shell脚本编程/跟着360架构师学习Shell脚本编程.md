@@ -314,3 +314,126 @@ fi
 	((num++));
 	((num--))
 	$(($num1+$num2*2))
+
+### 有类型变量
+
+#### 声明变量为只读类型
+
+```bash
+declare -r
+```
+
+```bash
+declare -r var="hello"
+var="world"				
+#test.sh: line 5: var: readonly variable
+```
+
+#### 声明变量类型为整型
+
+```bash
+declare -i
+```
+
+```bash
+num1=2001
+num2=$num1+1
+echo $num2
+
+declare -i num2
+num2=$num1+1
+echo $num2
+```
+#### 显示定义的函数和内容
+
+```bash
+declare -f
+```
+
+#### 显示定义的函数
+
+```bash
+declare -F
+```
+
+#### 显示定义的数组
+
+```bash
+declare -a
+```
+
+```bash
+array=("jones" "mike" "kobe" "jordan")
+```
+
+##### 输出数组内容
+
+```bash
+echo ${array[@]}	
+# 输出全部内容
+echo ${array[1]}	
+# 输出下标索引为1的内容
+```
+
+##### 获取数组长度
+
+```bash
+echo ${#array}		
+# 数组内元素个数
+echo ${#array[2]}	
+# 数组内下标索引为2的元素长度						
+```
+
+##### 给数组某个下标赋值
+
+```bash
+array[0]="lily"				
+# 给数组下标索引为1的元素赋值为lily
+array[20]="hanmeimei"		
+# 在数组尾部添加一个新元素
+```
+
+##### 删除元素
+
+```bash
+unset array[2]		
+# 清除元素
+unset array			
+# 清空整个数组
+```
+##### 分片访问
+
+```bash
+${array[@]:1:4}		
+# 显示数组下标索引从1开始到3的3个元素，不显示索引为4的元素
+```
+
+##### 内容替换
+
+```bash
+${array[@]/an/AN}	
+# 将数组中所有元素内包含kobe的子串替换为mcgrady
+```
+
+##### 数组遍历
+
+```bash
+for v in ${array[@]}
+do
+	echo $v
+done
+```
+
+##### 声明为环境变量
+
+```bash
+declare -x
+```
+
+##### 取消已声明的变量
+
+```bash
+declare +r
+declare +i
+declare +a
+declar
