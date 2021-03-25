@@ -16,7 +16,7 @@
 
 ## 变量的高级用法
 
-### 变量替换和测试
+### 变量替换
 
 |            语法            |                     说明                     |
 | :------------------------: | :------------------------------------------: |
@@ -121,3 +121,196 @@ substr5=`expr substr "$var1" 5 10`
 # 注意：使用expr，索引计数是从1开始计算；使用${string:position}，索引计数是从0开始计数
 ```
 
+### 字符串处理练习
+
+#### 需求描述
+
+```tex
+	变量string="Bigdata process framework is Hadoop,Hadoop is an open source project"
+	执行脚本后，打印输出string字符串变量，并给出用户以下选项：
+
+	(1)、打印string长度
+	(2)、删除字符串中所有的Hadoop
+	(3)、替换第一个Hadoop为Mapreduce
+	(4)、替换全部Hadoop为Mapreduce
+	
+	用户输入数字1|2|3|4，可以执行对应项的功能；输入q|Q则退出交互模式
+```
+#### 思路分析
+
+##### 1、将不同的功能模块划分，并编写函数
+
+	function print_tips
+	function len_of_string
+	function del_hadoop
+	function rep_hadoop_mapreduce_first
+	function rep_hadoop_mapreduce_all
+##### 2、实现第一步所定义的功能函数
+
+	function print_tips
+	{
+	    echo "******************************"
+	    echo "(1) 打印string长度"
+	    echo "(2) 删除字符串中所有的Hadoop"
+	    echo "(3) 替换第一个Hadoop为Mapreduce"
+	    echo "(4) 替换全部Hadoop为Mapreduce"
+	    echo "******************************"
+	}
+	
+	function len_of_string
+	{	
+	    echo "${#string}"
+	}
+	
+	function del_hadoop
+	{
+	    echo "${string//Hadoop/}"
+	}
+	
+	function rep_hadoop_mapreduce_first
+	{
+	    echo "${string/Hadoop/Mapreduce}"
+	}
+	
+	function rep_hadoop_mapreduce_all
+	{
+	    echo "${string//Hadoop/Mapreduce}"
+	}
+##### 3、程序主流程的设计
+
+#### 代码实现
+
+```bash
+#!/bin/bash
+#
+
+string="Bigdata process framework is Hadoop,Hadoop is an open source project"
+
+function print_tips
+{
+	echo "******************************"
+	echo "(1) 打印string长度"
+	echo "(2) 删除字符串中所有的Hadoop"
+	echo "(3) 替换第一个Hadoop为Mapreduce"
+	echo "(4) 替换全部Hadoop为Mapreduce"
+	echo "******************************"
+}
+
+function len_of_string
+{	
+	echo "${#string}"
+}
+
+function del_hadoop
+{
+	echo "${string//Hadoop/}"
+}
+
+function rep_hadoop_mapreduce_first
+{
+	echo "${string/Hadoop/Mapreduce}"
+}
+
+function rep_hadoop_mapreduce_all
+{
+	echo "${string//Hadoop/Mapreduce}"
+}
+
+while true
+do
+	echo "【string=$string】"
+	echo
+	print_tips
+	read -p "Pls input your choice(1|2|3|4|q|Q): " choice
+	
+case $choice in
+	1)
+		len_of_string
+		;;
+	2)
+		del_hadoop
+		;;
+	3)
+		rep_hadoop_mapreduce_first
+		;;
+	4)
+		rep_hadoop_mapreduce_all
+		;;
+	q|Q)
+		exit
+		;;
+	*)
+		echo "Error,input only in {1|2|3|4|q|Q}"
+		;;
+esac
+done
+```
+
+### 命令替换
+
+#### 两种方法
+
+##### 方法一
+
+```bash
+`command`
+```
+##### 方法二
+
+```bash
+$(command)
+```
+
+#### 例子1：获取系统得所有用户并输出	
+
+```bash
+#!/bin/bash
+#
+index=1
+for user in `cat /etc/passwd | cut -d ":" -f 1`
+do
+    echo "This is $index user: $user"
+    index=$(($index + 1))
+done
+```
+#### 例子2：根据系统时间计算今年或明年
+
+```bash
+echo "This is $(date +%Y) year"
+echo "This is $(($(date +%Y) + 1)) year"
+# Bash中的(())用来支持算术表达式
+
+# C语言规则运算
+# $((exp))，exp为符合C语言规则的运算表达式
+```
+#### 例3：根据系统时间获取今年还剩下多少星期，已经过了多少星期
+
+```bash
+date +%j
+echo "This year have passed $(date +%j) days"
+echo "This year have passed $(($(date +%j)/7)) weeks"
+
+echo "There is $((365 - $(date +%j))) days before new year"
+echo "There is $(((365 - $(date +%j))/7)) days before new year"
+```
+#### 例4：判定nginx进程是否存在，若不存在则自动拉起该进程
+
+```bash
+#!/bin/bash
+#
+nginx_process_num=$(ps -ef | grep nginx | grep -v grep | wc -l)
+if [ $nginx_process_num -eq 0 ];then
+	systemctl start nginx
+fi
+```
+#### 总结
+
+	``和$()两者是等价的，但推荐初学者使用$()，易于掌握；缺点是极少数UNIX可能不支持，但``都是支持的
+	$(())主要用来进行整数运算，包括加减乘除,引用变量前面可以加$，也可以不加$
+	
+	$(( (100 + 30) / 13 ))
+	
+	num1=20;num2=30
+	((num++));
+	((num--))
+	$(($num1+$num2*2))
