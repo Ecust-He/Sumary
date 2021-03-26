@@ -437,3 +437,265 @@ declare +r
 declare +i
 declare +a
 declar
+
+## 函数的高级用法
+
+### 函数定义和使用
+
+#### 函数定义两种语法
+
+```bash
+name()
+{
+    command1
+    command2
+    .....
+    commandn
+}
+```
+```bash
+function name
+{
+    command1
+    command2
+    .....
+    commandn
+}
+```
+#### 函数使用
+
+调用函数直接使用函数名即可，相当于一条命令
+
+##### 示例1
+
+```bash
+function hello
+{
+	echo "Hello,Zhangsan"
+}
+
+hello
+```
+##### 示例2
+
+```bash
+function print_num
+{
+	for((i=0;i<=10;i++))
+	do
+		echo -n "$i "
+	done
+}
+```
+##### 示例3
+
+需求描述：写一个监控nginx的脚本；如果Nginx服务宕掉，则该脚本可以检测到并将进程启动；如果正常运行，则不做任何处理
+
+```bash
+#!/bin/bash
+#
+
+this_pid=$$
+
+function nginx_daemon
+{
+	status=$(ps -ef | grep -v $this_pid | grep nginx | grep -v grep &> /dev/null)
+	if [ $? -eq 1 ];then
+		systemctl start nginx && echo "Start Nginx Successful" || echo "Failed To Start Nginx"
+	else
+		echo "Nginx is RUNNING Well"
+		sleep 5
+	fi
+}
+
+while true
+do
+	nginx_daemon
+done
+
+```
+
+##### 示例4
+
+###### 终端命令行定义函数
+
+在脚本中定义好disk_usage函数，然后直接使用. test.sh，再使用declare -F查看，是否可以列出disk_usage函数
+
+```bash
+function disk_usage
+{
+	if [ $# -eq 0 ];then
+		df
+	else
+		case $1 in
+			-h)
+				df -h
+				;;
+			-i)
+				df -i
+				;;
+			-ih|-hi)
+				df -ih
+				;;
+			-T)
+				df -T
+				;;
+			*)
+				echo "Usage: $0 { -h|-i|-ih|-T }"
+				;;
+		esac
+	fi
+}	
+```
+
+### 向函数传递参数
+
+函数传参和给脚本传参类似，都是使用$1 $2 $3 $4 $5 $6 $7这种方式
+
+#### 示例1
+
+需求描述：写一个脚本，该脚本可以实现计算器的功能，可以进行+-*/四种计算。
+
+```bash
+#!/bin/bash
+#
+
+function calculate
+{
+	case "$2" in
+		+)
+			echo "$1 + $3 = $(expr $1 + $3)"
+			;;
+		-)
+			echo "$1 + $3 = $(expr $1 - $3)"
+			;;
+		\*)			
+			echo "$1 * $3 = $(expr $1 \* $3)"
+			;;
+		/)
+			echo "$1 / $3 = $(expr $1 / $3)"
+			;;
+	esac
+}
+
+calculate $1 $2 $3
+```
+
+### 函数返回值
+
+```
+return 返回的是函数退出状态码，函数结束return不返回函数返回值，可以在前面使用echo返回函数返回值
+echo  返回的是函数返回值，函数退出状态码是函数最后一条命令的退出状态码 
+```
+
+#### 使用return返回退出状态码
+
+##### 测试nginx是否在运行
+
+```bash
+#!/bin/bash
+#
+
+this_pid=$$
+
+function is_nginx_running
+{
+
+	ps -ef | grep nginx | grep -v $this_pid | grep -v grep > /dev/null 2>&1
+	if [ $? -eq 0 ];then
+		return 0
+	else
+		return 1
+	fi
+}
+
+is_nginx_running && echo "Nginx is running" || echo "Nginx is stopped"
+```
+
+#### 使用echo返回值
+
+##### 两数字相加
+
+```bash
+#!/bin/bash
+#
+
+function add
+{
+	echo "`expr $1 \+ $2`"
+	# echo `expr $1 \+ $2`
+	# echo $(($1 + $2))
+}
+
+sum=`add $1 $2`
+
+echo "$1 + $2 = $sum"
+```
+
+##### 返回Linux上所有的不可登陆用户
+
+```bash
+#!/bin/bash
+#
+
+function get_users
+{
+	echo `cat /etc/passwd | awk -F: '/\/sbin\/nologin/{print $1}'`
+}
+
+index=1
+for user in `get_users`;do
+	echo "The $index user is $user"
+	index=$(expr $index + 1)
+done	
+
+echo
+echo "System have $index users(do not login)"
+```
+
+### 局部变量和全局变量
+
+		要点1：Shell脚本中，默认所有变量都是全局变量；即使函数内部定义的变量，一旦函数调用后，改变了就将一直存在，直到脚本执行完毕
+		要点2：定义局部变量，使用local关键字；
+		要点3：函数内部，变量会自动覆盖外部变量
+#### 示例1
+
+```bash
+#!/bin/bash
+#
+
+variable_1="Global Variable"
+
+function local_func
+{
+	variable_2="Local Variable"
+}
+
+echo "variable_1=$variable_1"
+# variable_1=Global Variable
+echo "variable_2=$variable_2"
+# variable_2=
+
+local_func
+
+echo "variable_1=$variable_1"
+# variable_1=Global Variable
+echo "variable_2=$variable_2"
+# variable_2=Local Variable
+
+function test_local
+{
+	echo "variable_2=$variable_2"
+	# variable_2=Local Variable
+}
+
+test_local
+
+```
+
+#### 编程习惯原则
+
+```
+1、尽量在函数内部使用local关键字，将变量的作用于限制在函数内部
+2、命名变量名时尽可能遵循实义性的，尽量做到见名知意
+```
