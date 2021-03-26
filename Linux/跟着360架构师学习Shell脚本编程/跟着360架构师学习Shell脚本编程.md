@@ -27,8 +27,6 @@
 | ${变量/旧字符串/新字符串}  | 替换变量内的旧字符串为新字符串，只替换第一个 |
 | ${变量//旧字符串/新字符串} |   替换变量内的旧字符串为新字符串，全部替换   |
 
-#### 例子
-
 ```bash
 variable_1="I love you,Do you love me"
 
@@ -50,19 +48,10 @@ var6=${PATH//bin/BIN}
 ### 字符串处理
 
 #### 计算字符串长度
-
-##### 方法一
-```bash
-${#string}
-```
-
-##### 方法二
-```bash
-expr length $string
-```
-
-##### 例子
-
+|        |        语法         |
+| ------ | :-----------------: |
+| 方法一 |     ${#string}      |
+| 方法二 | expr length $string |
 ```bash
 var1="Hello World"
 len=${#var1}
@@ -74,7 +63,6 @@ len=`expr length "$var1"`
 ```bash
 expr index "$string" substr
 ```
-##### 例子
 ```bash
 var1="quickstart is a app"
 ind=`expr index "$var1" start`
@@ -86,7 +74,6 @@ ind=`expr index "$var1" start`
 ```bash
 expr match "$string" substr
 ```
-##### 例子
 ```bash
 var1="quickstart is a app"
 sub_len=`expr match "$var1" app`
@@ -102,8 +89,6 @@ sub_len=`expr match "$var1" app`
 |         ${string: -position}          |         从右边开始匹配          |
 |         ${string:(position)}          |         从左边开始匹配          |
 | expr substr $string $position $length | 从postion开始，匹配长度为length |
-
-##### 例子
 
 ```bash
 var1="kafka hadoop yarn mapreduce"
@@ -247,21 +232,12 @@ done
 ```
 
 ### 命令替换
+|      | 语法 |
+| ---- | :-------: |
+| 方法一 | &#96;command` |
+| 方法二 | $(command) |
 
-#### 两种方法
-
-##### 方法一
-
-```bash
-`command`
-```
-##### 方法二
-
-```bash
-$(command)
-```
-
-#### 例子1：获取系统得所有用户并输出	
+#### 示例1：获取系统得所有用户并输出	
 
 ```bash
 #!/bin/bash
@@ -273,7 +249,7 @@ do
     index=$(($index + 1))
 done
 ```
-#### 例子2：根据系统时间计算今年或明年
+#### 示例2：根据系统时间计算今年或明年
 
 ```bash
 echo "This is $(date +%Y) year"
@@ -283,7 +259,7 @@ echo "This is $(($(date +%Y) + 1)) year"
 # C语言规则运算
 # $((exp))，exp为符合C语言规则的运算表达式
 ```
-#### 例3：根据系统时间获取今年还剩下多少星期，已经过了多少星期
+#### 示例3：根据系统时间获取今年还剩下多少星期，已经过了多少星期
 
 ```bash
 date +%j
@@ -293,7 +269,7 @@ echo "This year have passed $(($(date +%j)/7)) weeks"
 echo "There is $((365 - $(date +%j))) days before new year"
 echo "There is $(((365 - $(date +%j))/7)) days before new year"
 ```
-#### 例4：判定nginx进程是否存在，若不存在则自动拉起该进程
+#### 示例4：判定nginx进程是否存在，若不存在则自动拉起该进程
 
 ```bash
 #!/bin/bash
@@ -438,6 +414,68 @@ declare +i
 declare +a
 declar
 
+### 
+
+bash数学运算之expr
+
+​```bash
+num1=20
+num2=100
+
+expr $num1 \| $num2
+expr $num1 \& $num2
+expr $num1 \< $num2
+expr $num1 \< $num2
+expr $num1 \<= $num2
+expr $num1 \> $num2
+expr $num1 \>= $num2
+expr $num1 = $num2
+expr $num1 != $num2
+expr $num1 + $num2
+expr $num1 - $num2
+expr $num1 \* $num2
+expr $num1 / $num2
+expr $num1 % $num2
+```
+
+#### 示例1：提示用户输入一个正整数num，然后计算1+2+3+...+sum的值；必须对num是否为正整数做判断，不符合应当允许再此输入
+
+```bash
+#!/bin/bash
+#
+while true
+do
+	read -p "Pls enter a positive integer(num>0): " num
+
+	expr $num + 1 &> /dev/null
+	if [ $? -ne 0 ];then
+		echo "Error,You must input a interger"
+		continue
+	else
+		if [ `expr $num \> 0` -ne 1 ];then
+			echo "Error,You must input a postive interger"
+			continue
+		else
+			sum=0
+			for((i=0;i<=$num;i++))
+			do
+				sum=`expr $sum + $i`
+			done
+			echo "1+2+3+4+5+...+$num=$sum"
+		fi
+	fi
+done
+```
+### bash数学运算之bc
+
+```bash
+echo "options;expression" | bc
+
+num1=23.5
+num2=50
+
+var1=`echo "scale=2;$num1 * $num2" | bc`
+```
 ## 函数的高级用法
 
 ### 函数定义和使用
@@ -590,7 +628,7 @@ echo  返回的是函数返回值，函数退出状态码是函数最后一条�
 
 #### 使用return返回退出状态码
 
-##### 测试nginx是否在运行
+##### 示例1：测试nginx是否在运行
 
 ```bash
 #!/bin/bash
@@ -614,7 +652,7 @@ is_nginx_running && echo "Nginx is running" || echo "Nginx is stopped"
 
 #### 使用echo返回值
 
-##### 两数字相加
+##### 示例1：两数字相加
 
 ```bash
 #!/bin/bash
@@ -632,7 +670,7 @@ sum=`add $1 $2`
 echo "$1 + $2 = $sum"
 ```
 
-##### 返回Linux上所有的不可登陆用户
+##### 示例2：返回Linux上所有的不可登陆用户
 
 ```bash
 #!/bin/bash
