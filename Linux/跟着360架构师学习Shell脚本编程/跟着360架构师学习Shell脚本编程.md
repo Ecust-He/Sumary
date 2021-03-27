@@ -738,6 +738,7 @@ test_local
 2、命名变量名时尽可能遵循实义性的，尽量做到见名知意
 ```
 
+
 ## Shell编程中的常用工具
 
 ### 文件查找之find命令
@@ -778,9 +779,9 @@ find [路径] [选项] [操作]
 | 操作   | 说明                                                         | 使用示例                                                     |
 | ------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
 | -print | 打印输出                                                     |                                                              |
-| -exec  | 对搜索到的文件执行特定的操作，<br>格式为-exec 'command' {} \; | 搜索/etc下的文件(非目录)，文件名以conf结尾，<br/>且大于10k，然后将其删除<br/>find ./etc/ -type f -name '*.conf'<br/> -size +10k -exec rm -f {} \; |
-|        |                                                              | 将/var/log/目录下以log结尾的文件，<br/>且更改时间在7天以上的删除<br/>find /var/log/ -name '*.log' -mtime +7 -exec rm -rf {} \; |
-|        |                                                              | 搜索条件和例子1一样，只是不删除，<br/>而是将其复制到/root/conf目录下<br/>find ./etc/ -size +10k -type f -name '*.conf' <br/>-exec cp {} /root/conf/ \; |
+| -exec  | 对搜索到的文件执行特定的操作，<br>格式为-exec 'command' {}\\; | 搜索/etc下的文件(非目录)，文件名以conf结尾，<br/>且大于10k，然后将其删除<br/>find ./etc/ -type f -name '*.conf'<br/> -size +10k -exec rm -f {} \\; |
+|        |                                                              | 将/var/log/目录下以log结尾的文件，<br/>且更改时间在7天以上的删除<br/>find /var/log/ -name '*.log' -mtime +7 -exec rm -rf {} \\; |
+|        |                                                              | 搜索条件和例子1一样，只是不删除，<br/>而是将其复制到/root/conf目录下<br/>find ./etc/ -size +10k -type f -name '*.conf' <br/>-exec cp {} /root/conf/ \\; |
 | -ok    |                                                              | 和exec功能一样，只是每次操作都会给用户提示                   |
 
 #### 逻辑运算符
@@ -790,5 +791,23 @@ find [路径] [选项] [操作]
 | -a         | 与   |
 | -o         | 或   |
 | -not \| ！ | 非   |
+
+##### 示例1：查找当前目录下，属主不是hdfs的所有文件
+
+```bash
+find . -not -user hdfs 	|	find . ! -user hdfs
+```
+
+##### 示例2：查找当前目录下，属主属于hdfs，且大小大于300字节的文件
+
+```bash
+find . -type f -a -user hdfs -a -size +300c
+```
+
+##### 示例3：查找当前目录下的属主为hdfs或者以conf结尾的普通文件
+
+```bash
+find . -type f -a -user hdfs -o -name '*.conf'
+```
 
 
