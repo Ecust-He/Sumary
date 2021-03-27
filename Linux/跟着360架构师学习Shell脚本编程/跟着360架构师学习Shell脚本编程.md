@@ -737,3 +737,58 @@ test_local
 1、尽量在函数内部使用local关键字，将变量的作用于限制在函数内部
 2、命名变量名时尽可能遵循实义性的，尽量做到见名知意
 ```
+
+## Shell编程中的常用工具
+
+### 文件查找之find命令
+
+#### 语法格式
+
+```bash
+find [路径] [选项] [操作]
+```
+
+#### 常用选项
+
+| 选项      | 参数 | 描述                           | 使用示例                                                     |
+| --------- | ---- | ------------------------------ | ------------------------------------------------------------ |
+| -name     |      | 文件名称                       | 查找/etc目录下以conf结尾的文件<br/>find /etc -name '*conf'   |
+| -iname    |      |                                | 查找当前目录下文件名为aa的文件，不区分大小写<br/>find . -iname aa |
+| -user     |      |                                | 查找文件属主为hdfs的所有文件<br/>find . -user hdfs           |
+| -group    |      |                                | 查找文件属组为yarn的所有文件<br/>find . -group yarn          |
+| -type     | f    | 文件                           | find . -type f                                               |
+|           | d    | 目录                           | find . -type d                                               |
+|           | c    | 字符设备文件                   | find . -type c                                               |
+|           | b    | 块设备文件                     | find . -type b                                               |
+|           | l    | 链接文件                       | find . -type l                                               |
+|           | p    | 管道文件                       | find . -type p                                               |
+| -size     | -n   | 小于n的文件                    | 查找/etc目录下小于10000字节的文件<br/>find /etc -size -10000c |
+|           | +n   | 大于n的文件                    | 查找/etc目录下大于1M的文件<br/>find /etc -size +1M           |
+|           | n    | 等于n的文件                    |                                                              |
+| -mtime    | -n   | n天以内修改的文件              | 查找/etc目录下5天之内修改且以conf结尾的文件<br/>find /etc -mtime -5 -name '*.conf' |
+|           | +n   | n天以外修改的文件              | 查找/etc目录下10天之前修改且属主为root的文件<br/>find /etc -mtime +10 -user root |
+|           | n    | 正好n天修改的文件              |                                                              |
+| -mmin     | -n   | n分钟以内修改的文件            | 查找/etc目录下30分钟之前修改的文件<br/>find /etc -mmin +30   |
+|           | +n   | n分钟以外修改的文件            | 查找/etc目录下30分钟之内修改的目录<br/>find /etc -mmin -30 -type d |
+| -mindepth | n    | 表示从n级子目录<br/>开始搜索   | 在/etc下的3级子目录开始搜索<br/>find /etc -mindepth 3        |
+| -maxdepth | n    | 表示最多搜索到<br/>n-1级子目录 | 在/etc下搜索符合条件的文件,<br>但最多搜索到2级子目录<br/>find /etc -maxdepth 3 -name '*.conf' |
+
+#### 操作
+
+| 操作   | 说明                                                         | 使用示例                                                     |
+| ------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| -print | 打印输出                                                     |                                                              |
+| -exec  | 对搜索到的文件执行特定的操作，<br>格式为-exec 'command' {} \; | 搜索/etc下的文件(非目录)，文件名以conf结尾，<br/>且大于10k，然后将其删除<br/>find ./etc/ -type f -name '*.conf'<br/> -size +10k -exec rm -f {} \; |
+|        |                                                              | 将/var/log/目录下以log结尾的文件，<br/>且更改时间在7天以上的删除<br/>find /var/log/ -name '*.log' -mtime +7 -exec rm -rf {} \; |
+|        |                                                              | 搜索条件和例子1一样，只是不删除，<br/>而是将其复制到/root/conf目录下<br/>find ./etc/ -size +10k -type f -name '*.conf' <br/>-exec cp {} /root/conf/ \; |
+| -ok    |                                                              | 和exec功能一样，只是每次操作都会给用户提示                   |
+
+#### 逻辑运算符
+
+| 运算符     | 描述 |
+| ---------- | ---- |
+| -a         | 与   |
+| -o         | 或   |
+| -not \| ！ | 非   |
+
+
