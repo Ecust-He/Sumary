@@ -991,3 +991,745 @@ enforce_gtid_consistency=1
 key_buffer_size=32M
 read_buffer_size=8M
 ```
+
+### 利用sed删除文件内容
+
+#### 用法总结
+
+```tex
+1、1d
+2、5,10d
+3、10,+10d
+4、/pattern1/d
+5、/pattern1/,/pattern2/d
+6、/pattern1/,20d
+7、15,/pattern1/d
+```
+#### 示例1
+
+```bash
+# 1、删除/etc/passwd中的第15行	
+	sed -i '15d' /etc/passwd
+# 2、删除/etc/passwd中的第8行到第14行的所有内容	
+	sed -i '8,14d' passwd
+# 3、删除/etc/passwd中的不能登录的用户(筛选条件：/sbin/nologin)	
+	sed -i '/\/sbin\/nologin/d' passwd
+# 4、删除/etc/passwd中以mail开头的行，到以yarn开头的行的所有内容		
+	sed -i '/^mail/,/^yarn/d' passwd
+# 5、删除/etc/passwd中第一个不能登录的用户，到第13行的所有内容
+	sed -i '/\/sbin\/nologin/,13d' passwd
+# 6、删除/etc/passwd中第5行到以ftp开头的所有行的内容
+	sed -i '5,/^ftp/d' passwd
+# 7、删除/etc/passwd中以yarn开头的行到最后行的所有内容	
+	sed -i '/^yarn/,$d' passwd
+```
+##### paasword
+
+```
+root:x:0:0:root:/root:/bin/bash
+bin:x:1:1:bin:/bin:/sbin/nologin
+daemon:x:2:2:daemon:/sbin:/sbin/nologin
+adm:x:3:4:adm:/var/adm:/sbin/nologin
+lp:x:4:7:lp:/var/spool/lpd:/sbin/nologin
+```
+
+#### 示例2：典型需求
+
+```bash
+# 1、删除配置文件中的所有注释行和空行
+	sed -i '/[:blank:]*#/d;/^$/d' nginx.conf
+# 2、在配置文件中所有不以#开头的行前面添加*符号，注意：以#开头的行不添加
+	sed -i 's/^[^#]/\*&/g' nginx.conf
+	# 备注：使用&反向引用匹配到行的内容
+```
+##### nginx.conf
+
+```nginx
+# For more information on configuration, see:
+#   * Official English Documentation: http://nginx.org/en/docs/
+#   * Official Russian Documentation: http://nginx.org/ru/docs/
+
+user nginx;
+worker_processes auto;
+error_log /var/log/nginx/error.log;
+pid /run/nginx.pid;
+
+# Load dynamic modules. See /usr/share/nginx/README.dynamic.
+include /usr/share/nginx/modules/*.conf;
+
+events {
+    worker_connections 1024;
+}
+
+http {
+    log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                      '$status $body_bytes_sent "$http_referer" '
+                      '"$http_user_agent" "$http_x_forwarded_for"';
+
+    access_log  /var/log/nginx/access.log  main;
+
+    sendfile            on;
+    tcp_nopush          on;
+    tcp_nodelay         on;
+    keepalive_timeout   65;
+    types_hash_max_size 2048;
+
+    include             /etc/nginx/mime.types;
+    default_type        application/octet-stream;
+
+    upstream www_servers {
+	server 192.168.1.70:80 weight=1;
+	server 192.168.1.80:80 weight=1;
+    }
+
+    # Load modular configuration files from the /etc/nginx/conf.d directory.
+    # See http://nginx.org/en/docs/ngx_core_module.html#include
+    # for more information.
+    include /etc/nginx/conf.d/*.conf;
+
+    server {
+        listen       192.168.1.129:80 default_server;
+        server_name  _;
+        root         /usr/share/nginx/html;
+
+        # Load configuration files for the default server block.
+        include /etc/nginx/default.d/*.conf;
+
+        location / {
+	    proxy_pass http://www_servers;
+	    proxy_set_header Host $host;
+	    proxy_set_header X-Forwarded-For $remote_addr;
+        }
+
+        error_page 404 /404.html;
+            location = /40x.html {
+        }
+
+        error_page 500 502 503 504 /50x.html;
+            location = /50x.html {
+        }
+    }
+
+# Settings for a TLS enabled server.
+#
+#    server {
+#        listen       443 ssl http2 default_server;
+#        listen       [::]:443 ssl http2 default_server;
+#        server_name  _;
+#        root         /usr/share/nginx/html;
+#
+#        ssl_certificate "/etc/pki/nginx/server.crt";
+#        ssl_certificate_key "/etc/pki/nginx/private/server.key";
+#        ssl_session_cache shared:SSL:1m;
+#        ssl_session_timeout  10m;
+#        ssl_ciphers HIGH:!aNULL:!MD5;
+#        ssl_prefer_server_ciphers on;
+#
+#        # Load configuration files for the default server block.
+#        include /etc/nginx/default.d/*.conf;
+#
+#        location / {
+#        }
+#
+#        error_page 404 /404.html;
+#            location = /40x.html {
+#        }
+#
+#        error_page 500 502 503 504 /50x.html;
+#            location = /50x.html {
+#        }
+#    }
+
+}
+```
+
+#### sed中引入变量时注意事项
+
+```tex
+1、匹配模式中存在变量，则建议使用双引号
+2、匹配模式中存在变量，如果外面使用单引号，则自定义变量也必须使用单引号
+3、反向引用匹配到的内容使用&或\1
+```
+
+### 利用sed修改文件内容
+
+#### 用法总结
+
+```tex
+1、1s/old/new/
+2、5,10s/old/new/
+3、10,+10s/old/new/
+4、/pattern1/s/old/new/
+5、/pattern1/,/pattern2/s/old/new/
+6、/pattern1/,20s/old/new/
+7、15,/pattern1/s/old/new/
+```
+
+#### 示例1
+
+```bash
+# 1、修改/etc/passwd中第1行中第1个root为ROOT	
+	sed -i '1s/root/ROOT/' passwd
+# 2、修改/etc/passwd中第5行到第10行中所有的/sbin/nologin为/bin/bash
+	sed -i '5,10s/\/sbin\/nologin/\/bin\/bash/g' passwd
+# 3、修改/etc/passwd中匹配到/sbin/nologin的行，将匹配到行中的login改为大写的LOGIN
+	sed -i '/\/sbin\/nologin/s/login/LOGIN/g' passwd
+# 4、修改/etc/passwd中从匹配到以root开头的行，到匹配到行中包含mail的所有行。修改内为将这些所有匹配到的行中的bin改为HADOOP
+	sed -i '/^root/,/mail/s/bin/HADOOP/g' passwd
+# 5、修改/etc/passwd中从匹配到以root开头的行，到第15行中的所有行，修改内容为将这些行中的nologin修改为SPARK
+	sed -i '/^root/,15s/nologin/SPARK/g' passwd
+# 6、修改/etc/passwd中从第15行开始，到匹配到以yarn开头的所有航，修改内容为将这些行中的bin换位BIN
+	sed -i '15,/^yarn/s/bin/BIN/g' passwd
+```
+### 利用sed追加文件内容
+
+#### 用法总结
+
+```tex
+1、a					在匹配行后面追加		
+2、i					在匹配行前面追加
+3、r					将文件内容追加到匹配行后面
+4、w					将匹配行写入指定文件
+```
+
+#### 示例详解
+
+##### 在匹配行后面追加
+
+```bash
+# (1)、passwd文件第10行后面追加"Add Line Behind"		
+	sed -i '10a Add Line Begind' passwd
+# (2)、passwd文件第10行到第20行，每一行后面都追加"Test Line Behind"
+	sed -i '10,20a Test Line Behind' passwd
+# (3)、passwd文件匹配到/bin/bash的行后面追加"Insert Line For /bin/bash Behind"
+	sed -i '/\/bin\/bash/a Insert Line For /bin/bash Behind' passwd
+```
+##### 在匹配行前面追加
+
+```bash
+# (1)、passwd文件匹配到以yarn开头的行，在匹配航前面追加"Add Line Before"
+	sed -i '/^yarn/i Add Line Before' passwd
+# (2)、passwd文件每一行前面都追加"Insert Line Before Every Line"
+	sed -i 'i Insert Line Before Every Line' passwd
+```
+##### 将文件内容追加到匹配行后面
+
+```bash
+# (1)、将/etc/fstab文件的内容追加到passwd文件的第20行后面
+	sed -i '20r /etc/fstab' passwd
+# (2)、将/etc/inittab文件内容追加到passwd文件匹配/bin/bash行的后面
+	sed -i '/\/bin\/bash/r /etc/inittab' passwd
+# (3)、将/etc/vconsole.conf文件内容追加到passwd文件中特定行后面，匹配以ftp开头的行，到第18行的所有行
+	sed -i '//,18r /etc/vconsole.conf' passwd
+```
+##### 将匹配行写入指定文件
+
+```bash
+# (1)、将passwd文件匹配到/bin/bash的行追加到/tmp/sed.txt文件中
+	sed -i '/\/bin\/bash/w /tmp/sed.txt' passwd
+# (2)、将passwd文件从第10行开始，到匹配到hdfs开头的所有行内容追加到/tmp/sed-1.txt
+	sed -i '10,/^hdfs/w /tmp/sed-1.txt' passwd
+```
+##  文本处理三剑客之awk
+
+### awk的工作模式
+
+#### awk是一个文本处理工具，通常用于处理数据并生成结果报告
+
+#### 语法格式
+
+##### 形式一
+
+```bash
+awk 'BEGIN{} pattern {commands} END{}' file_name
+```
+
+##### 形式二
+
+```bash
+stout | awk 'BEGIN{} pattern {commands} END{}'
+```
+
+### awk的内置变量
+
+| 内置变量 | 全称                   | 含义                                      |
+| -------- | ---------------------- | ----------------------------------------- |
+| $0       |                        | 打印行所有信息                            |
+| $1~$n    |                        | 打印行的第1到n个字段的信息                |
+| NF       | Number Field           | 处理行的字段个数                          |
+| NR       | Number Row             | 处理行的行号                              |
+| FNR      | File Number Row        | 多文件处理时，每个文件单独记录行号        |
+| FS       | Field Separator        | 字段分割符，不指定时默认以空格或tab键分割 |
+| RS       | Row Separator          | 行分隔符，不指定时以回车分割\n            |
+| OFS      | Output Filed Separator | 输出字段分隔符                            |
+| ORS      | Output Row Separator   | 输出行分隔符                              |
+| FILENAME |                        | 处理文件的文件名                          |
+| ARGC     |                        | 命令行参数个数                            |
+| ARGV     |                        | 命令行参数数组                            |
+
+### awk格式输出之printf
+
+#### 用法总结
+
+##### 格式符
+
+| 格式符 | 含义                     |
+| ------ | ------------------------ |
+| %s     | 打印字符串               |
+| %d     | 打印10进制数             |
+| %f     | 打印浮点数               |
+| %x     | 打印16进制数             |
+| %o     | 打印8进制数              |
+| %e     | 打印数字的科学计数法格式 |
+| %c     | 打印单个字符的ASCII码    |
+
+
+##### 修饰符
+
+| 修饰符 | 含义                                     |
+| ------ | ---------------------------------------- |
+| -      | 左对齐                                   |
+| +      | 右对齐                                   |
+| #      | 显示8进制在前面加0，显示16进制在前面加0x |
+
+##### 示例1
+
+```bash
+# 1、以字符串格式打印/etc/passwd中的第7个字段，以":"作为分隔符
+	awk 'BEGIN{FS=":"} {printf "%s",$7}' /etc/passwd
+	
+# 2、以10进制格式打印/etc/passwd中的第3个字段，以":"作为分隔符
+	awk 'BEGIN{FS=":"} {printf "%d\n",$3}' /etc/passwd
+
+# 3、以浮点数格式打印/etc/passwd中的第3个字段，以":"作为分隔符
+	awk 'BEGIN{FS=":"} {printf "%0.3f\n",$3}' /etc/passwd
+
+# 4、以16进制数格式打印/etc/passwd中的第3个字段，以":"作为分隔符
+	awk 'BEGIN{FS=":"} {printf "%#x\n",$3}' /etc/passwd
+
+# 5、以8进制数格式打印/etc/passwd中的第3个字段，以":"作为分隔符
+	awk 'BEGIN{FS=":"} {printf "%#o\n",$3}' /etc/passwd
+
+# 6、以科学计数法格式打印/etc/passwd中的第3个字段，以":"作为分隔符
+	awk 'BEGIN{FS=":"} {printf "%e\n",$3}' /etc/passwd
+```
+
+### awk模式匹配两种用法
+
+#### 方法一：RegExp
+
+```bash
+# 匹配/etc/passwd文件行中含有root字符串的所有行
+	awk 'BEGIN{FS=":"}/root/{print $0}' /etc/passwd
+
+# 匹配/etc/passwd文件行中以yarn开头的所有行
+	awk 'BEGIN{FS=":"}/^yarn/{print $0}' /etc/passwd
+```
+
+#### 方法二：运算符匹配
+
+##### 关系运算符匹配
+
+| 运算符 | 含义             |
+| ------ | ---------------- |
+| <      | 小于             |
+| >      | 大于             |
+| <=     | 小于等于         |
+| >=     | 大于等于         |
+| ==     | 等于             |
+| !=     | 不等于           |
+| ~      | 匹配正则表达式   |
+| ！~    | 不匹配正则表达式 |
+
+```bash
+# (1)、以:为分隔符，匹配/etc/passwd文件中第3个字段小于50的所有行信息
+	awk 'BEGIN{FS=":"}$3<50{print $0}' /etc/passwd
+	
+# (2)、以:为分隔符，匹配/etc/passwd文件中第3个字段大于50的所有行信息
+	awk 'BEGIN{FS=":"}$3>50{print $0}' /etc/passwd
+	
+# (3)、以:为分隔符，匹配/etc/passwd文件中第7个字段为/bin/bash的所有行信息
+	awk 'BEGIN{FS=":"}$7=="/bin/bash"{print $0}' /etc/passwd
+
+# (4)、以:为分隔符，匹配/etc/passwd文件中第7个字段不为/bin/bash的所有行信息
+	awk 'BEGIN{FS=":"}$7!="/bin/bash"{print $0}' /etc/passwd
+
+# (5)、以：为分隔符，匹配/etc/passwd中第3个字段包含3个以上数字的所有行信息
+	awk 'BEGIN{FS=":"}$3~/[0-9]{3,}/{print $0}' /etc/passwd
+```
+
+##### 布尔运算符匹配
+
+| 运算符 | 含义 |
+| ------ | ---- |
+| \|\|   | 或   |
+| &&     | 与   |
+| ！     | 非   |
+
+```bash
+# (1)、以:为分隔符，匹配/etc/passwd文件中包含hdfs或yarn的所有行信息
+	awk 'BEGIN{FS=":"}$1=="hdfs" || $1=="yarn" {print $0}' /etc/passwd
+
+# (2)、以:为分隔符，匹配/etc/passwd文件中第3个字段小于50并且第4个字段大于50的所有行信息
+	awk 'BEGIN{FS=":"}$3<50 && $4>50 {print $0}' /etc/passwd
+```
+
+### awk中表达式的用法
+
+#### 用法总结
+
+| 算数运算符 | 含义                      |
+| ---------- | ------------------------- |
+| +          | 加                        |
+| -          | 减                        |
+| *          | 乘                        |
+| /          | 除                        |
+| %          | 取模                      |
+| ^或**      | 乘方                      |
+| ++x        | 在返回x变量之前，x变量加1 |
+| x++        | 在返回x变量之后，x变量加1 |
+| --x        | 在返回x变量之前，x变量减1 |
+| x--        | 在返回x变量之后，x变量减1 |
+
+##### 示例1
+
+使用awk计算/etc/services中的空白行数量
+
+```bash
+awk '/^$/{sum++}END{print sum}' /etc/services
+```
+##### 示例2
+
+计算学生课程分数平均值，学生课程文件内容如下：
+```tex
+Allen	80	90	96	98
+Mike	93	98	92	91
+Zhang	78	76	87	92
+Jerry	86	89	68	92
+Han		85	95	75	90
+Li		78	88	98	100
+```
+```bash
+awk 'BEGIN{printf "%-8s%-8s%-8s%-8s%-8s%s\n","Name","Yuwen","Math","English","Pysical","Average"}{total=$2+$3+$4+$5;AVG=total/4;printf "%-8s%-8d%-8d%-8d%-8d%0.2f\n",$1,$2,3,$4,$5,AVG}' student.txt
+
+# 思路：在BEGIN中先打印title，在command中计算并打印每一列
+```
+
+### awk中条件及循环语句
+
+#### 条件语句
+
+```bash
+if(条件表达式1)
+	动作
+else if(条件表达式2)
+	动作
+else
+	动作
+```
+
+##### 示例1
+
+以:为分隔符，只打印/etc/passwd中第3个字段的数值在50-100范围内的行信息
+
+```bash
+BEGIN{
+	FS=":"
+}
+
+{
+	if($3<50)
+	{
+		printf "%-20s%-25s%-5d\n","UID<50",$1,$3
+	}
+	else if($3>50 && $3<100)
+	{
+		printf "%-20s%-25s%-5d\n","50<UID<100",$1,$3
+	}
+	else
+	{
+		printf "%-20s%-25s%-5d\n","UID>100",$1,$3
+	}
+}
+```
+
+#### 循环条件语句
+
+##### for循环语句
+
+```bash
+for(初始化计数器;计数器测试;计数器变更)
+	动作
+```
+
+##### while循环语句
+
+```bash
+while(条件表达式)
+	动作
+```
+
+##### do...while语句
+
+```bash
+do
+	动作
+while(条件表达式)
+```
+
+###### 示例1
+
+计算下列每个同学的平均分数，并且只打印平均分数大于90的同学姓名和分数信息
+
+```tex
+Name	Chinese		English		Math		Physical	Average
+Allen	80			90			96			98
+Mike	93			98			92			91
+Zhang	78			76			87			92
+Jerry	86			89			68			92
+Han		85			95			75			90
+Li		78			88			98			100	
+```
+
+```bash
+BEGIN{
+	printf "%-10s%-10s%-10s%-10s%-10s%-10s\n","Name","Chinese","English","Math","Physical","Average"
+}
+
+{
+	total=$2+$3+$4+$5
+	avg=total/4
+	if(avg>90)
+	{
+		printf "%-10s%-10d%-10d%-10d%-10d%-0.2f\n",$1,$2,$3,$4,$5,avg
+		score_chinese+=$2
+        	score_english+=$3
+        	score_math+=$4
+        	score_physical+=$5
+	}
+}
+
+END{
+	printf "%-10s%-10d%-10d%-10d%-10d\n","",score_chinese,score_english,score_math,score_physical
+}
+```
+
+###### 示例2
+
+计算1+2+3+4+...+100的和，请使用while、do while、for三种循环方式实现
+
+```bash
+BEGIN{
+	while(i<=100)
+	{
+		sum+=i
+		i++
+	}
+	print sum
+}
+```
+
+```bash
+BEGIN{
+	do
+	{
+		sum+=i
+		i++
+	}while(i<=100)
+
+	print sum
+}
+```
+
+```bash
+BEGIN{
+	for(i=0;i<=100;i++)
+	{
+		sum+=i
+	}
+	print sum
+}
+```
+
+### awk中的常用选项
+
+| 选项 | 含义            |
+| ---- | --------------- |
+| -v   | 定义或引用变量  |
+| -f   | 指定awk命令文件 |
+| -F   | 指定分隔符      |
+| -V   | 查看awk的版本号 |
+
+### awk中数组的用法
+
+#### Shell中数组的用法
+
+```bash
+array=("Allen" "Mike" "Messi" "Jerry" "Hanmeimei" "Wang")
+打印元素：			echo ${array[2]}
+打印元素个数:		   echo ${#array[@]}
+打印元素长度：		  echo ${#array[3]}
+给元素赋值：		   array[3]="Li"
+删除元素：		    unset array[2];unset array
+分片访问：			echo ${array[@]:1:3}
+元素内容替换：		  ${array[@]/e/E}	只替换第一个e;${array[@]//e/E}	替换所有的e
+数组的遍历：
+                    for a in ${array[@]}
+                    do
+                        echo $a
+                    done
+```
+
+#### awk中数组的用法
+
+在awk中，使用数组时，不仅可以使用1.2..n作为数组下标，也可以使用字符串作为数组下标
+
+##### 形式一
+
+当使用1.2.3..n时，直接使用array[2]访问元素;需要遍历数组时，使用以下形式
+
+```bash
+str="Allen Jerry Mike Tracy Jordan Kobe Garnet"
+split(str,array)
+for(i=1;i<=length(array);i++)
+	print array[i]
+```
+
+##### 形式二
+
+当使用字符串作为数组下标时，需要使用array[str]形式访问元素;遍历数组时，使用以下形式
+
+```bash
+array["var1"]="Jin"
+array["var2"]="Hao"
+array["var3"]="Fang"
+
+for(a in array)
+	print array[a]
+```
+##### 典型应用
+
+###### 示例1
+
+统计主机上所有的TCP连接状态数，按照每个TCP状态分类
+
+```bash
+netstat -an | grep tcp | awk '{array[$6]++}END{for(a in array) print a,array[a]}'
+```
+
+###### 示例2（字典）
+
+计算横向数据总和，计算纵向数据总和
+
+```tex
+allen	80	90	87	91	348
+mike	78	86	93	96	256
+Kobe	66	92	82	78	232
+Jerry	98	74	66	54  356
+Wang	87	21	100	43  322
+		234 342 451 456 342
+```
+```bash
+BEGIN {
+	printf "%-10s%-10s%-10s%-10s%-10s%-10s\n","Name","Yuwen","Math","English","Physical","Total"
+}
+
+{
+	total=$2+$3+$4+$5
+	yuwen_sum+=$2
+	math_sum+=$3
+	eng_sum+=$4
+	phy_sum+=$5
+	printf "%-10s%-10d%-10d%-10d%-10d%-10d\n",$1,$2,$3,$4,$5,total
+}
+END {
+	printf "%-10s%-10d%-10d%-10d%-10d\n","",yuwen_sum,math_sum,eng_sum,phy_sum
+}
+
+```
+
+### 复杂的awk处理生产数据的示例
+
+#### 需求描述
+
+利用awk处理日志，并生成结果报告
+
+#### 生成数据脚本
+
+```bash
+#!/bin/bash
+#
+
+function create_random()
+{
+	min=$1
+	max=$(($2-$min+1))
+	num=$(date +%s%N)
+	echo $(($num%$max+$min))
+}
+
+INDEX=1
+
+while true
+do
+	for user in Allen Mike Jerry Tracy Hanmeimei Lilei
+	do
+		COUNT=$RANDOM
+		NUM1=`create_random 1 $COUNT`
+		NUM2=`expr $COUNT - $NUM1`		
+		echo "`date '+%Y-%m-%d %H:%M:%S'` $INDEX Batches:$user INSERT $COUNT DATA INTO database.table 'test',Insert $NUM1 Records Successfully,Failed Insert $NUM2 Records" >> /root/db.log.`date +%Y%m%d`
+		INDEX=`expr $INDEX + 1`
+	done
+done
+```
+
+#### 数据格式如下
+
+```tex
+2019-01-29 00:58:30 1 Batches: user allen insert 22498 records into database:product table:detail, insert 20771 records successfully,failed 1727 records
+2019-01-29 00:58:30 2 Batches: user mike insert 29378 records into database:product table:detail, insert 21426 records successfully,failed 7952 records
+2019-01-29 00:58:30 3 Batches: user jerry insert 22779 records into database:product table:detail, insert 9397 records successfully,failed 13382 records
+2019-01-29 00:58:30 4 Batches: user tracy insert 25232 records into database:product table:detail, insert 21255 records successfully,failed 3977 records
+```
+#### 统计每个人分别插入多少数据，多少成功，多少失败，并且要格式化输出，加上标题
+
+##### 输出结果
+
+```tex
+User      Total               Sucess              Failed              
+tracy     7472277             3945659             3526618             
+allen     7390330             3597157             3793173             
+mike      7226579             3679395             3547184
+		  21384945
+```
+```bash
+BEGIN {
+	printf "%-10s%-20s%-20s%-20s\n","User","Total","Sucess","Failed"
+}
+
+{
+	TOTAL[$6]+=$8
+	SUCCESS[$6]+=$14
+	FAIL[$6]+=$17
+}
+
+END {
+	for(u in SUCCESS)
+	{
+		total+=TOTAL[u]
+		success+=SUCCESS[u]
+		fail+=FAIL[u]
+		printf "%-10s%-20d%-20d%-20d\n",u,TOTAL[u],SUCCESS[u],FAIL[u]
+	}
+
+	printf "%-10s%-20d%-20d%-20d\n","",total,success,fail
+}
+```
+
+#### 查找丢失数据的现象，也就是成功+失败的记录数，不等于一共插入的记录数。找出这些数据并显示行号和对应行的日志信息
+
+##### 输出结果
+
+```bash
+awk '{if($8!=$14+$17) print NR,$0}' db.log.201901
+```
