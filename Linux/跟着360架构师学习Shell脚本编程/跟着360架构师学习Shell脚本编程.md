@@ -413,12 +413,11 @@ declare +r
 declare +i
 declare +a
 declar
+```
 
-### 
+### bash数学运算之expr
 
-bash数学运算之expr
-
-​```bash
+```bash
 num1=20
 num2=100
 
