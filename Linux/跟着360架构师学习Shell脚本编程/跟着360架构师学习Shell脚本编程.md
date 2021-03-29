@@ -919,3 +919,75 @@ set [option] "pattern command" file
 |      | s/old/new/2g | 将行内前2个old替换为new             |
 |      | s/old/new/ig | 将行内全部的old替换为new,忽略大小写 |
 
+
+### 利用sed查找文件内容
+
+#### 示例
+
+```bash
+#!/bin/bash
+#
+
+FILE_NAME=my.cnf
+
+function get_all_segments
+{
+	echo "`sed -n '/\[.*\]/p' $FILE_NAME  | sed -e 's/\[//g' -e 's/\]//g'`"
+	# 思路：先匹配[.*]行，然后删除[]
+}
+
+function count_items_in_segment
+{
+	items=`sed -n '/\['$1'\]/,/\[.*\]/p' $FILE_NAME | grep -v "^#" | grep -v "^$" | grep -v "\[.*\]"`
+	# 思路：先匹配当前行到[.*]，然后去掉注释^#,去掉空格^$，去掉最后一行[.*]
+	
+	index=0
+	for item in $items
+	do
+		index=`expr $index + 1`
+	done
+
+	echo $index
+}
+
+number=0
+
+for segment in `get_all_segments`
+do
+	number=`expr $number + 1`
+	items_count=`count_items_in_segment $segment`
+	echo "$number: $segment  $items_count"
+done
+```
+
+```properties
+# this is read by the standalone daemon and embedded servers
+[client]
+port=3306
+socket=/tmp/mysql.socket
+
+#ThisSegmentForserver
+[server]
+innodb_buffer_pool_size=91750M
+innodb_buffer_pool_instances=8
+
+#thisisonlyforthemysqldstandalonedaemon
+[mysqld]
+port=3306
+socket=/tmp/mysql.sock
+
+#ThisSegmentFormysqld_safe
+[mysqld_safe]
+log-error=/var/log/mariadb/mariadb.log
+pid-file=/var/run/mariadb/mariadb.pid
+
+#thisisonlyforembeddedserver
+[embedded]
+gtid_mode=on
+enforce_gtid_consistency=1
+
+#usethisgroupforoptionsthatolderserversdon'tunderstand
+[mysqld-5.5]
+key_buffer_size=32M
+read_buffer_size=8M
+```
