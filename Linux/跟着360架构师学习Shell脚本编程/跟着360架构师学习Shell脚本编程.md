@@ -959,6 +959,7 @@ do
 done
 ```
 
+#### my.conf
 ```properties
 # this is read by the standalone daemon and embedded servers
 [client]
