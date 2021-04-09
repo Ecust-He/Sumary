@@ -508,6 +508,239 @@ func main() {
 
 #### LeetCode真题
 
-寻找最长不重复字符子串
+寻找最长含有不重复字符的子串
+
+```go
+func lengthOfNonRepeatingSubStr(s string) int {
+	lastOccurred := make(map[rune]int)
+	start := 0
+	maxLength := 0
+
+	for i, ch := range []rune(s) {
+		if lastI, ok := lastOccurred[ch]; ok && lastI >= start {
+			start = lastI + 1
+		}
+		if i-start+1 > maxLength {
+			maxLength = i - start + 1
+		}
+		lastOccurred[ch] = i
+	}
+
+	return maxLength
+}
+```
 
 #### 引用类型
+
+### 字符和字符串
+
+- 字符串转字符[]rune(s)
+- 字符串转字节[]byte(s)
+- 使用len(s)获取字节长度
+- 使用utf8.RuneCountInString(s)获取字符长度
+
+```go
+# 英文字符占1个字节，中文字符占3个字节
+func main() {
+	s := "Yes我爱慕课网!" // UTF-8
+	fmt.Println(s)
+
+    # 打印字符串中的每个字节
+	for _, b := range []byte(s) {
+		fmt.Printf("%X ", b)
+	}
+    # 59 65 73 E6 88 91 E7 88 B1 E6 85 95 E8 AF BE E7 BD 91 21 
+
+    # 打印字符串的每个字符的ASCII码
+	for i, ch := range s { // ch is a rune
+		fmt.Printf("(%d %X) ", i, ch)
+	}
+    #(0 59) (1 65) (2 73) (3 6211) (6 7231) (9 6155) (12 8BFE) (15 7F51) (18 21) 
+
+	fmt.Println("Rune count:",
+		utf8.RuneCountInString(s))
+    # Rune count: 9
+
+    # 打印字符串的每个字符
+	bytes := []byte(s)
+	for len(bytes) > 0 {
+		ch, size := utf8.DecodeRune(bytes)
+		bytes = bytes[size:]
+		fmt.Printf("%c ", ch)
+	}
+    # Y e s 我 爱 慕 课 网 ! 
+
+     # 打印字符串的每个字符
+	for i, ch := range []rune(s) {
+		fmt.Printf("(%d %c) ", i, ch)
+	}
+	# (0 Y) (1 e) (2 s) (3 我) (4 爱) (5 慕) (6 课) (7 网) (8 !) 
+}
+```
+
+#### 字符串操作
+
+## 3 面向对象
+
+### 结构体和方法
+
+- go语言仅支持封装，不支持继承和多态
+
+#### 结构体的定义
+
+##### Node结构体
+
+```go
+type Node struct {
+	Value       int
+	Left, Right *Node
+}
+
+# 值接收者
+func (node Node) Print() {
+	fmt.Print(node.Value, " ")
+}
+
+# 指针接收者
+func (node *Node) SetValue(value int) {
+	if node == nil {
+		fmt.Println("Setting Value to nil " +
+			"node. Ignored.")
+		return
+	}
+	node.Value = value
+}
+
+# 工厂函数
+func CreateNode(value int) *Node {
+	return &Node{Value: value}
+}
+```
+
+##### TreeNode结构体
+
+```go
+type myTreeNode struct {
+	node *tree.Node
+}
+
+# 后序遍历
+func (myNode *myTreeNode) postOrder() {
+	if myNode == nil || myNode.node == nil {
+		return
+	}
+
+	left := myTreeNode{myNode.node.Left}
+	right := myTreeNode{myNode.node.Right}
+
+	left.postOrder()
+	right.postOrder()
+	myNode.node.Print()
+}
+
+func main() {
+    # 声明tree结构体
+	var root tree.Node
+
+    # 声明并赋值
+	root = tree.Node{Value: 3}
+	root.Left = &tree.Node{}
+	root.Right = &tree.Node{5, nil, nil}
+    
+    # 声明并赋值
+	root.Right.Left = new(tree.Node)
+	root.Left.Right = tree.CreateNode(2)
+	root.Right.Left.SetValue(4)
+
+	# 中序遍历
+	root.Traverse()
+
+	# 后序遍历
+	myRoot := myTreeNode{&root}
+	myRoot.postOrder()
+
+    # 使用函数式编程遍历二叉树，并统计节点数量
+	nodeCount := 0
+	root.TraverseFunc(func(node *tree.Node) {
+		nodeCount++
+	})
+	fmt.Println("Node count:", nodeCount)
+
+    # 使用channel遍历二叉树，并计算出最大值
+	c := root.TraverseWithChannel()
+	maxNodeValue := 0
+	for node := range c {
+		if node.Value > maxNodeValue {
+			maxNodeValue = node.Value
+		}
+	}
+	fmt.Println("Max node value:", maxNodeValue)
+}
+```
+
+##### TreeNode遍历
+
+```go
+# 中序遍历
+func (node *Node) Traverse() {
+	node.TraverseFunc(func(n *Node) {
+		n.Print()
+	})
+	fmt.Println()
+}
+
+# 使用函数式编程实现中序遍历
+func (node *Node) TraverseFunc(f func(*Node)) {
+	if node == nil {
+		return
+	}
+
+	node.Left.TraverseFunc(f)
+	f(node)
+	node.Right.TraverseFunc(f)
+}
+
+# 使用channel实现中序遍历
+func (node *Node) TraverseWithChannel() chan *Node {
+	out := make(chan *Node)
+	go func() {
+		node.TraverseFunc(func(node *Node) {
+			out <- node
+		})
+		close(out)
+	}()
+	return out
+}
+```
+
+#### 结构体的方法
+
+- 语法灵活
+- 值接收者是Go语言特有
+
+##### 值接收者
+
+###### 适用场景
+
+- 不可变结构
+
+##### 指针接收者
+
+- nil指针也可以调用方法，但不可获取结构体内容
+
+###### 适用场景
+
+- 需要改变结构体的内容
+
+##### 值接收者和指针接收者的异同
+
+###### 相同点
+
+- 接收的对象既可以是值也可以是指针
+
+###### 不同点
+
+- 值接收者：接收对象如果是值，方法内则会拷贝一份对象；如果是指针，方法内则会拷贝一份指针所指向的内容。
+- 指针接收者：接收对象如果是值，方法内则拷贝一份对象的地址；如果是指针，方法内则拷贝指针本身。
+
+##### 结构体方法和普通方法的区别
