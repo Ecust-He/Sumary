@@ -407,6 +407,7 @@ func sliceOps() {
 	for i := 0; i < 100; i++ {
 		printSlice(s)
 		s = append(s, 2*i+1)
+        # 注意：append会返回一个新的slice
 	}
 	fmt.Println(s)
 	# cap *2自动扩容
@@ -620,6 +621,7 @@ func CreateNode(value int) *Node {
 ##### TreeNode结构体
 
 ```go
+# 组合方式，扩展已有类型
 type myTreeNode struct {
 	node *tree.Node
 }
@@ -744,3 +746,183 @@ func (node *Node) TraverseWithChannel() chan *Node {
 - 指针接收者：接收对象如果是值，方法内则拷贝一份对象的地址；如果是指针，方法内则拷贝指针本身。
 
 ##### 结构体方法和普通方法的区别
+
+### 包和封装
+
+#### 封装
+
+- 可见性：通过修改变量名、方法名的首字母大小
+
+#### 包
+
+- 同一个目录下可以有多个文件，但只能有一个包
+- 可执行程序入口在main包下,main包一般放在外层包下
+
+### 扩展已有类型
+
+- 扩展即新增功能
+
+#### 定义别名
+
+- 为已有类型定义别名，自定义新类型
+- 新类型可以复用已有类型的数据结构，也可以定义方法
+- 与定义struct相比，更轻量
+
+##### 适用场景
+
+- 不需要原有类型的方法，只需要原有类型的数据结构
+- 为新类型自定义方法
+
+##### FIFO队列
+
+使用[]int类型，扩展出自定义类型Queue
+
+```go
+package queue
+
+// A FIFO queue.
+type Queue []int
+
+// Pushes the element into the queue.
+// 		e.g. q.Push(123)
+func (q *Queue) Push(v int) {
+	*q = append(*q, v)
+}
+
+// Pops element from head.
+func (q *Queue) Pop() int {
+	head := (*q)[0]
+	*q = (*q)[1:]
+	return head
+}
+
+// Returns if the queue is empty or not.
+func (q *Queue) IsEmpty() bool {
+	return len(*q) == 0
+}
+```
+
+```go
+func main() {
+	q := queue.Queue{1}
+
+	q.Push(2)
+	q.Push(3)
+    fmt.Println([]int(q))
+    # 强制类型转换
+    
+	fmt.Println(q.Pop())
+	fmt.Println(q.Pop())
+	fmt.Println(q.IsEmpty())
+	fmt.Println(q.Pop())
+	fmt.Println(q.IsEmpty())
+}
+```
+
+#### 使用组合
+
+- 已有类型作为成员变量
+- 复用已有类型的数据结构及方法
+
+##### 后序遍历
+
+使用treeNode扩展出myTreeNode
+
+#### 使用内嵌
+
+- 写法比较特别
+- 思想上类似于继承
+
+##### 适用场景
+
+- 在原有数据类型已有功能上，拓展功能（新增方法）
+
+```go
+type myTreeNode struct {
+	*tree.Node // Embedding
+}
+
+func (myNode *myTreeNode) postOrder() {
+	if myNode == nil || myNode.Node == nil {
+		return
+	}
+
+	left := myTreeNode{myNode.Left}
+	right := myTreeNode{myNode.Right}
+
+	left.postOrder()
+	right.postOrder()
+	myNode.Print()
+}
+
+func main() {
+	root := myTreeNode{&tree.Node{Value: 3}}
+	root.Left = &tree.Node{}
+	root.Right = &tree.Node{5, nil, nil}
+	root.Right.Left = new(tree.Node)
+	root.Left.Right = tree.CreateNode(2)
+	root.Right.Left.SetValue(4)
+
+	fmt.Print("In-order traversal: ")
+	root.Traverse()
+
+	fmt.Print("My own post-order traversal: ")
+	root.postOrder()
+	fmt.Println()
+}
+```
+
+## 依赖管理
+
+依赖管理的三个阶段GOPATH、GOVENDOR、go mod
+
+- go语言都是源码依赖
+- go env查看go运行时环境变量
+- GO111MODULE =on使用go mod依赖管理
+- GOPROXY=https://goproxy.cn,direct 设置国内镜像代理
+
+### GOPATH和GOVENDOR
+
+#### GOPATH
+
+- 不做管理，所有依赖的go源码放在GOPATH/src目录下
+
+```bash
+# 结构化日志
+go get -u go.uber.org/zap
+
+# web server框架
+github.com/gin-gonic/gin
+```
+
+#### GOVENDOR
+
+- 项目下新建vendor目录存放第三方库
+- 查找依赖的第三方库优先级：vendor目录  >  GOROOT  >  GOPATH
+
+### go mod
+
+- 由go命令统一管理第三方库，用户不必关心目录结构
+- 下载的第三方包默认放在GOPATH/pkg/mod目录下
+- 在go.mod中使用replace来指向本地目录
+- import包时，报的命名规则为module/dictionary
+
+```bash
+# 不指定版本时，下载最新的第三方库
+go get -u go.uber.org/zap
+
+# 下载指定版本的第三方库
+go get -u go.uber.org/zap@v1.12.0
+
+# 清理不再依赖的第三方库
+go mod tidy
+```
+
+#### 项目迁移go mod
+
+```bash
+go mod init
+# 构建当前目录及子目录
+go bulid ./...
+```
+
