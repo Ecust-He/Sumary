@@ -189,6 +189,7 @@ func printFile(filename string) {
 	printFileContents(file)
 }
 
+# 只要实现Reader接口就可以打印
 func printFileContents(reader io.Reader) {
 	scanner := bufio.NewScanner(reader)
 
@@ -205,6 +206,23 @@ func forever() {
 	}
 }
 ```
+
+```go
+func main() {
+	fmt.Println("abc.txt contents:")
+	printFile("lang/basic/branch/abc.txt")
+
+	fmt.Println("printing a string:")
+	s := `abc"d"
+	kkkk
+	123
+
+	p`
+	printFileContents(strings.NewReader(s))
+}
+```
+
+
 
 ### 函数
 
@@ -692,6 +710,7 @@ func (node *Node) Traverse() {
 }
 
 # 使用函数式编程实现中序遍历
+# 只管如何遍历树中每个节点，具体对每个节点做什么由传入的函数决定
 func (node *Node) TraverseFunc(f func(*Node)) {
 	if node == nil {
 		return
@@ -717,7 +736,7 @@ func (node *Node) TraverseWithChannel() chan *Node {
 
 #### 结构体的方法
 
-- 语法灵活
+- 语法灵活，本质是Go的语法糖，是否可以简写取决于Go的编译器是否支持
 - 值接收者是Go语言特有
 
 ##### 值接收者
@@ -745,7 +764,13 @@ func (node *Node) TraverseWithChannel() chan *Node {
 - 值接收者：接收对象如果是值，方法内则会拷贝一份对象；如果是指针，方法内则会拷贝一份指针所指向的内容。
 - 指针接收者：接收对象如果是值，方法内则拷贝一份对象的地址；如果是指针，方法内则拷贝指针本身。
 
+##### 接收者的选择
+
+是否需要使用指针接收者，主要取决于实现方法时，方法调用时只要编译通过即可
+
 ##### 结构体方法和普通方法的区别
+
+结构体方法有一个参数叫做接收者，普通方法即函数。
 
 ### 包和封装
 
@@ -926,3 +951,591 @@ go mod init
 go bulid ./...
 ```
 
+## 4 面向接口
+
+### 接口的概念
+
+- 一组行为的抽象
+
+#### 好处
+
+- 接口可以实现模块间松耦合，松到什么程度？你只要给我个东西能调方法就可以，至于你你给的东西到底是什么，我并不关心
+
+### duck typing的概念
+
+大黄鸭是鸭子吗？从duck typing角度来看，大黄鸭是鸭子，因为它走路像鸭子，叫起来像鸭子，长得像鸭子
+
+- 只关心事物的外部行为而非内部结构
+
+#### Go语言中的duck typing
+
+- 有Python duck typing弱类型语言的灵活性
+- 有java中的强类型检查
+
+### 接口的定义和实现
+
+- 接口由使用者来定义
+- 实现者不需要显示实现接口，只需要实现接口里方法即可
+
+```go
+package real
+
+import (
+	"net/http"
+	"net/http/httputil"
+	"time"
+)
+
+type Retriever struct {
+	UserAgent string
+	TimeOut   time.Duration
+}
+
+func (r *Retriever) Get(url string) string {
+	resp, err := http.Get(url)
+	if err != nil {
+		panic(err)
+	}
+
+	result, err := httputil.DumpResponse(
+		resp, true)
+
+	resp.Body.Close()
+
+	if err != nil {
+		panic(err)
+	}
+
+	return string(result)
+}
+
+```
+
+```go
+package mock
+
+import "fmt"
+
+type Retriever struct {
+	Contents string
+}
+
+func (r *Retriever) String() string {
+	return fmt.Sprintf(
+		"Retriever: {Contents=%s}", r.Contents)
+}
+
+func (r *Retriever) Post(url string,
+	form map[string]string) string {
+	r.Contents = form["contents"]
+	return "ok"
+}
+
+func (r *Retriever) Get(url string) string {
+	return r.Contents
+}
+
+```
+
+```go
+package main
+
+import (
+	"fmt"
+
+	"time"
+
+	"imooc.com/ccmouse/learngo/lang/retriever/mock"
+	"imooc.com/ccmouse/learngo/lang/retriever/real"
+)
+
+# 定义接口
+type Retriever interface {
+	Get(url string) string
+}
+
+type Poster interface {
+	Post(url string,
+		form map[string]string) string
+}
+
+const url = "http://www.imooc.com"
+
+func download(r Retriever) string {
+	return r.Get(url)
+}
+
+func post(poster Poster) {
+	poster.Post(url,
+		map[string]string{
+			"name":   "ccmouse",
+			"course": "golang",
+		})
+}
+
+# 接口的组合
+type RetrieverPoster interface {
+	Retriever
+	Poster
+}
+
+func session(s RetrieverPoster) string {
+	s.Post(url, map[string]string{
+		"contents": "another faked imooc.com",
+	})
+	return s.Get(url)
+}
+
+func main() {
+	var r Retriever
+
+	mockRetriever := mock.Retriever{
+		Contents: "this is a fake imooc.com"}
+	r = &mockRetriever
+	inspect(r)
+
+	r = &real.Retriever{
+		UserAgent: "Mozilla/5.0",
+		TimeOut:   time.Minute,
+	}
+	inspect(r)
+
+	// Type assertion
+	if mockRetriever, ok := r.(*mock.Retriever); ok {
+		fmt.Println(mockRetriever.Contents)
+	} else {
+		fmt.Println("r is not a mock retriever")
+	}
+
+	fmt.Println(
+		"Try a session with mockRetriever")
+	fmt.Println(session(&mockRetriever))
+}
+
+func inspect(r Retriever) {
+	fmt.Println("Inspecting", r)
+	fmt.Printf(" > Type:%T Value:%v\n", r, r)
+	fmt.Print(" > Type switch: ")
+	switch v := r.(type) {
+	case *mock.Retriever:
+		fmt.Println("Contents:", v.Contents)
+	case *real.Retriever:
+		fmt.Println("UserAgent:", v.UserAgent)
+	}
+	fmt.Println()
+}
+```
+
+### 接口的值类型
+
+- 接口变量可以是实现者的类型，也可以是实现者的指针
+- 接口的实现如果是指针接收者，只能以指针方式使用；如果是值接收者，都可以（与struct的方法使用不太一样）
+
+#### type assertion
+
+#### type switch
+
+#### interface{}
+
+- 空接口：该接口没有定义任何方法
+- 任意类型：所有类型都实现这个接口
+- 通过interface{}实现泛型
+
+### 接口的组合
+
+### 常用的系统接口
+
+- Stringer
+- Reader
+- Writer
+
+### 多态的实现
+
+#### 面向接口编程
+
+- 一个接口对应多个实现，灵活的选择同一个接口的不同实现给主逻辑
+
+#### 面向对象编程
+
+- 方法的重载
+- 方法的重写
+
+## 5 函数式编程
+
+### 函数是一等公民
+
+- 函数可以作为变量
+- 函数可以作为另一个函数的参数，将处理逻辑参数化
+- 函数可以作为另一个函数的返回值
+
+### 正统的函数式编程
+
+- 不可变性：函数中不能有状态，只能有常量和函数
+- 函数只能有一个参数
+
+### 高阶函数
+
+### 闭包
+
+<img src="闭包.png" alt="image-20210411134231310" style="zoom: 50%;" />
+
+- 定义的函数可以理解为类，函数中定义的自由变量可以理解为成员变量，返回的函数可以理解为类中定义的方法
+
+#### 应用
+
+##### 累加器
+
+```go
+package main
+
+import "fmt"
+
+func adder() func(int) int {
+	sum := 0
+	return func(v int) int {
+		sum += v
+		return sum
+	}
+}
+
+type iAdder func(int) (int, iAdder)
+
+func adder2(base int) iAdder {
+	return func(v int) (int, iAdder) {
+		return base + v, adder2(base + v)
+	}
+}
+
+func main() {
+	// a := adder() is trivial and also works.
+	a := adder2(0)
+	for i := 0; i < 10; i++ {
+		var s int
+		s, a = a(i)
+		fmt.Printf("0 + 1 + ... + %d = %d\n",
+			i, s)
+	}
+}
+```
+
+##### 斐波那契数列
+
+```go
+package fib
+
+// 1, 1, 2, 3, 5, 8, 13, ...
+func Fibonacci() func() int {
+	a, b := 0, 1
+	return func() int {
+		a, b = b, a+b
+		return a
+	}
+}
+```
+
+```go
+package main
+
+import (
+	"bufio"
+	"fmt"
+	"io"
+	"strings"
+
+	"imooc.com/ccmouse/learngo/lang/functional/fib"
+)
+
+type intGen func() int
+
+// 比较难以理解
+func (g intGen) Read(p []byte) (n int, err error) {
+	next := g()
+	if next > 10000 {
+		return 0, io.EOF
+	}
+	s := fmt.Sprintf("%d\n", next)
+
+	// TODO: incorrect if p is too small!
+	return strings.NewReader(s).Read(p)
+}
+
+func printFileContents(reader io.Reader) {
+	scanner := bufio.NewScanner(reader)
+
+	for scanner.Scan() {
+		fmt.Println(scanner.Text())
+	}
+}
+
+func main() {
+	var f intGen = fib.Fibonacci()
+	printFileContents(f)
+}
+
+```
+
+##### 二叉树遍历
+
+## 6 错误处理和资源管理
+
+### defer调用
+
+- 确保在函数调用结束后发生
+- defer列表先进后出
+
+```go
+package main
+
+import (
+	"fmt"
+	"os"
+
+	"bufio"
+
+	"imooc.com/ccmouse/learngo/lang/functional/fib"
+)
+
+func tryDefer() {
+	for i := 0; i < 100; i++ {
+		defer fmt.Println(i)
+		if i == 30 {
+			// Uncomment panic to see
+			// how it works with defer
+			// panic("printed too many")
+		}
+	}
+}
+
+func writeFile(filename string) {
+	file, err := os.OpenFile(filename,
+		os.O_EXCL|os.O_CREATE|os.O_WRONLY, 0666)
+
+	if err != nil {
+		if pathError, ok := err.(*os.PathError); !ok {
+			panic(err)
+		} else {
+			fmt.Printf("%s, %s, %s\n",
+				pathError.Op,
+				pathError.Path,
+				pathError.Err)
+		}
+		return
+	}
+	defer file.Close()
+
+	writer := bufio.NewWriter(file)
+	defer writer.Flush()
+
+	f := fib.Fibonacci()
+	for i := 0; i < 20; i++ {
+		fmt.Fprintln(writer, f())
+	}
+}
+
+func main() {
+	tryDefer()
+    # 将斐波那契数列写入文件
+	writeFile("fib.txt")
+}
+```
+
+### 服务器统一错误处理
+
+- 思路：最底层往外抛出异常，在最外层对异常处理
+- 先通过类型断言判断是否是用户自定义异常，并返回自定义错误信息给前端；然后判断是否是系统异常，再将信息封装放回给前端
+
+#### 查看服务器上的文件
+
+```go
+package filelisting
+
+import (
+   "fmt"
+   "io/ioutil"
+   "net/http"
+   "os"
+   "strings"
+)
+
+const prefix = "/list/"
+
+// 自定义用户错误信息
+type userError string
+
+func (e userError) Error() string {
+   return e.Message()
+}
+
+func (e userError) Message() string {
+   return string(e)
+}
+
+func HandleFileList(writer http.ResponseWriter,
+   request *http.Request) error {
+   fmt.Println()
+   if strings.Index(
+      request.URL.Path, prefix) != 0 {
+       # 构造userError
+      return userError(
+         fmt.Sprintf("path %s must start "+
+            "with %s",
+            request.URL.Path, prefix))
+   }
+   path := request.URL.Path[len(prefix):]
+   file, err := os.Open(path)
+   if err != nil {
+      return err
+   }
+   defer file.Close()
+
+   all, err := ioutil.ReadAll(file)
+   if err != nil {
+      return err
+   }
+
+   writer.Write(all)
+   return nil
+}
+```
+
+```go
+package main
+
+import (
+	"log"
+	"net/http"
+	_ "net/http/pprof"
+	"os"
+
+	"imooc.com/ccmouse/learngo/lang/errhandling/filelistingserver/filelisting"
+)
+
+type appHandler func(writer http.ResponseWriter,
+	request *http.Request) error
+
+# 包装错误信息
+func errWrapper(handler appHandler) func(
+	http.ResponseWriter, *http.Request) {
+	return func(writer http.ResponseWriter,
+		request *http.Request) {
+		// panic
+		defer func() {
+			if r := recover(); r != nil {
+				log.Printf("Panic: %v", r)
+				http.Error(writer,
+					http.StatusText(http.StatusInternalServerError),
+					http.StatusInternalServerError)
+			}
+		}()
+
+		err := handler(writer, request)
+
+		if err != nil {
+			log.Printf("Error occurred "+
+				"handling request: %s",
+				err.Error())
+
+			// user error
+			if userErr, ok := err.(userError); ok {
+				http.Error(writer,
+					userErr.Message(),
+					http.StatusBadRequest)
+				return
+			}
+
+			// system error
+			code := http.StatusOK
+			switch {
+			case os.IsNotExist(err):
+				code = http.StatusNotFound
+			case os.IsPermission(err):
+				code = http.StatusForbidden
+			default:
+				code = http.StatusInternalServerError
+			}
+			http.Error(writer,
+				http.StatusText(code), code)
+		}
+	}
+}
+
+// 1、实现标准的error接口，可以做类型断言
+// 2、Message是给用户看的消息
+type userError interface {
+	error
+	Message() string
+}
+
+func main() {
+	http.HandleFunc("/",
+		errWrapper(filelisting.HandleFileList))
+
+	err := http.ListenAndServe(":8889", nil)
+	if err != nil {
+		panic(err)
+	}
+}
+
+
+```
+
+### panic和recover
+
+#### panic
+
+- 停止当前函数运行
+- 一直向上返回，执行每一层的defer
+- 如果没有遇见recover,程序退出
+
+#### recover
+
+- 仅在defer调用中使用，用来捕获panic
+
+```go
+package main
+
+import (
+	"fmt"
+)
+
+func tryRecover() {
+	defer func() {
+		r := recover()
+		if r == nil {
+			fmt.Println("Nothing to recover. " +
+				"Please try uncomment errors " +
+				"below.")
+			return
+		}
+		if err, ok := r.(error); ok {
+			fmt.Println("Error occurred:", err)
+		} else {
+			panic(fmt.Sprintf(
+				"I don't know what to do: %v", r))
+		}
+	}()
+
+	// Uncomment each block to see different panic
+	// scenarios.
+	// Normal error
+	//panic(errors.New("this is an error"))
+
+	// Division by zero
+	//b := 0
+	//a := 5 / b
+	//fmt.Println(a)
+
+	// Causes re-panic
+	panic(123)
+}
+
+func main() {
+	tryRecover()
+}
+
+```
+
+#### 使用场景
+
+- 意料之中：使用error。例如：文件打不开
+- 意料之外：使用panic。例如：数组越界
