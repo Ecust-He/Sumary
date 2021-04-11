@@ -1787,7 +1787,7 @@ func main() {
 
 ## 9 Channel
 
-- channel是一个双向通道，当我接收数据时，若没人发送，则会阻塞；反之，若没人接收，发送方也会阻塞。
+- channel读写时阻塞的，当我接收数据时，若没人发送，则会阻塞；反之，若没人接收，发送方也会阻塞。
 - 不要通过共享内存来通信，通过通信来共享内存。
 
 ### 基本用法
@@ -1873,3 +1873,65 @@ func main() {
 }
 ```
 
+### 使用channel等待任务结束
+
+```go
+package main
+
+import (
+	"fmt"
+	"sync"
+)
+
+func doWork(id int,
+	w worker) {
+	for n := range w.in {
+		fmt.Printf("Worker %d received %c\n",
+			id, n)
+		w.done()
+	}
+}
+
+type worker struct {
+	in   chan int
+	done func()
+}
+
+func createWorker(
+	id int, wg *sync.WaitGroup) worker {
+	w := worker{
+		in: make(chan int),
+		done: func() {
+			wg.Done()
+		},
+	}
+	go doWork(id, w)
+	return w
+}
+
+func chanDemo() {
+	var wg sync.WaitGroup
+
+	var workers [10]worker
+	for i := 0; i < 10; i++ {
+		workers[i] = createWorker(i, &wg)
+	}
+
+	wg.Add(20)
+	for i, worker := range workers {
+		worker.in <- 'a' + i
+	}
+	for i, worker := range workers {
+		worker.in <- 'A' + i
+	}
+
+	wg.Wait()
+}
+
+func main() {
+	chanDemo()
+}
+
+```
+
+### 使用channel进行二叉树的遍历
