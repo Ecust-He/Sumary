@@ -1539,3 +1539,337 @@ func main() {
 
 - 意料之中：使用error。例如：文件打不开
 - 意料之外：使用panic。例如：数组越界
+
+## 7 测试与性能调优
+
+### 测试
+
+#### 运行测试用例
+
+##### 命令行
+
+```bash
+go test .
+```
+
+#### 表格驱动测试
+
+##### 实例1
+
+```go
+package main
+
+import "testing"
+
+func TestTriangle(t *testing.T) {
+	tests := []struct{ a, b, c int }{
+		{3, 4, 5},
+		{5, 12, 13},
+		{8, 15, 17},
+		{12, 35, 37},
+		{30000, 40000, 50000},
+	}
+
+	for _, tt := range tests {
+		if actual := calcTriangle(tt.a, tt.b); actual != tt.c {
+			t.Errorf("calcTriangle(%d, %d); "+
+				"got %d; expected %d",
+				tt.a, tt.b, actual, tt.c)
+		}
+	}
+}
+```
+
+##### 示例2
+
+```go
+package main
+
+import "testing"
+
+func TestSubstr(t *testing.T) {
+   tests := []struct {
+      s   string
+      ans int
+   }{
+      // Normal cases
+      {"abcabcbb", 3},
+      {"pwwkew", 3},
+
+      // Edge cases
+      {"", 0},
+      {"b", 1},
+      {"bbbbbbbbb", 1},
+      {"abcabcabcd", 4},
+
+      // Chinese support
+      {"这里是慕课网", 6},
+      {"一二三二一", 3},
+      {"黑化肥挥发发灰会花飞灰化肥挥发发黑会飞花", 8},
+   }
+
+   for _, tt := range tests {
+      actual := lengthOfNonRepeatingSubStr(tt.s)
+      if actual != tt.ans {
+         t.Errorf("got %d for input %s; "+
+            "expected %d",
+            actual, tt.s, tt.ans)
+      }
+   }
+}
+
+# 性能测试
+func BenchmarkSubstr(b *testing.B) {
+   s := "黑化肥挥发发灰会花飞灰化肥挥发发黑会飞花"
+   for i := 0; i < 13; i++ {
+      s = s + s
+   }
+   b.Logf("len(s) = %d", len(s))
+   ans := 8
+    
+   # 从当前位置开始计时 
+   b.ResetTimer()
+
+   for i := 0; i < b.N; i++ {
+      actual := lengthOfNonRepeatingSubStr(s)
+      if actual != ans {
+         b.Errorf("got %d for input %s; "+
+            "expected %d",
+            actual, s, ans)
+      }
+   }
+}
+```
+
+### 代码覆盖率和性能测试
+
+### 性能调优
+
+### 测试http服务器
+
+```go
+package main
+
+import (
+	"errors"
+	"fmt"
+	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"strings"
+	"testing"
+)
+
+func errPanic(_ http.ResponseWriter,
+	_ *http.Request) error {
+	panic(123)
+}
+
+type testingUserError string
+
+func (e testingUserError) Error() string {
+	return e.Message()
+}
+
+func (e testingUserError) Message() string {
+	return string(e)
+}
+
+func errUserError(_ http.ResponseWriter,
+	_ *http.Request) error {
+	return testingUserError("user error")
+}
+
+func errNotFound(_ http.ResponseWriter,
+	_ *http.Request) error {
+	return os.ErrNotExist
+}
+
+func errNoPermission(_ http.ResponseWriter,
+	_ *http.Request) error {
+	return os.ErrPermission
+}
+
+func errUnknown(_ http.ResponseWriter,
+	_ *http.Request) error {
+	return errors.New("unknown error")
+}
+
+func noError(writer http.ResponseWriter,
+	_ *http.Request) error {
+	fmt.Fprintln(writer, "no error")
+	return nil
+}
+
+var tests = []struct {
+	h       appHandler
+	code    int
+	message string
+}{
+	{errPanic, 500, "Internal Server Error"},
+	{errUserError, 400, "user error"},
+	{errNotFound, 404, "Not Found"},
+	{errNoPermission, 403, "Forbidden"},
+	{errUnknown, 500, "Internal Server Error"},
+	{noError, 200, "no error"},
+}
+
+func TestErrWrapper(t *testing.T) {
+	for _, tt := range tests {
+		f := errWrapper(tt.h)
+		response := httptest.NewRecorder()
+		request := httptest.NewRequest(
+			http.MethodGet,
+			"http://www.imooc.com", nil)
+		f(response, request)
+
+		verifyResponse(response.Result(),
+			tt.code, tt.message, t)
+	}
+}
+
+func TestErrWrapperInServer(t *testing.T) {
+	for _, tt := range tests {
+		f := errWrapper(tt.h)
+		server := httptest.NewServer(
+			http.HandlerFunc(f))
+		resp, _ := http.Get(server.URL)
+
+		verifyResponse(
+			resp, tt.code, tt.message, t)
+	}
+}
+
+func verifyResponse(resp *http.Response,
+	expectedCode int, expectedMsg string,
+	t *testing.T) {
+	b, _ := ioutil.ReadAll(resp.Body)
+	body := strings.Trim(string(b), "\n")
+	if resp.StatusCode != expectedCode ||
+		body != expectedMsg {
+		t.Errorf("expect (%d, %s); "+
+			"got (%d, %s)",
+			expectedCode, expectedMsg,
+			resp.StatusCode, body)
+	}
+}
+
+```
+
+### 生成文档和示例代码
+
+## 8 Goroutine
+
+### Go语言的调度器
+
+```go
+package main
+
+import (
+	"fmt"
+	"time"
+)
+
+func main() {
+	for i := 0; i < 1000; i++ {
+		go func(i int) {
+			for {
+				fmt.Printf("Hello from "+
+					"goroutine %d\n", i)
+			}
+		}(i)
+	}
+	time.Sleep(time.Minute)
+}
+
+```
+
+## 9 Channel
+
+- channel是一个双向通道，当我接收数据时，若没人发送，则会阻塞；反之，若没人接收，发送方也会阻塞。
+- 不要通过共享内存来通信，通过通信来共享内存。
+
+### 基本用法
+
+#### 定义channel
+
+#### 从channel中接收数据
+
+- 死循环写法是为了是**一直等待**接收数据，因为循环里是阻塞的，所以并不是一直轮询
+- for  range遍历channel时，会从channel中不断接收数据，直到channel被close
+
+#### 关闭channel
+
+- 由发送发关闭
+
+```go
+package main
+
+import (
+	"fmt"
+	"time"
+)
+
+func worker(id int, c chan int) {
+	for n := range c {
+		fmt.Printf("Worker %d received %c\n",
+			id, n)
+	}
+}
+
+func createWorker(id int) chan<- int {
+	c := make(chan int)
+	go worker(id, c)
+	return c
+}
+
+func chanDemo() {
+	var channels [10]chan<- int
+	for i := 0; i < 10; i++ {
+		channels[i] = createWorker(i)
+	}
+
+	for i := 0; i < 10; i++ {
+		channels[i] <- 'a' + i
+	}
+
+	for i := 0; i < 10; i++ {
+		channels[i] <- 'A' + i
+	}
+
+	time.Sleep(time.Millisecond)
+}
+
+# 带buffered的channel
+func bufferedChannel() {
+	c := make(chan int, 3)
+	go worker(0, c)
+	c <- 'a'
+	c <- 'b'
+	c <- 'c'
+	c <- 'd'
+	time.Sleep(time.Millisecond)
+}
+
+func channelClose() {
+	c := make(chan int)
+	go worker(0, c)
+	c <- 'a'
+	c <- 'b'
+	c <- 'c'
+	c <- 'd'
+	close(c)
+	time.Sleep(time.Millisecond)
+}
+
+func main() {
+	fmt.Println("Channel as first-class citizen")
+	chanDemo()
+	fmt.Println("Buffered channel")
+	bufferedChannel()
+	fmt.Println("Channel close and range")
+	channelClose()
+}
+```
+
