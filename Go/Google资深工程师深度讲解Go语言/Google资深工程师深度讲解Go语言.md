@@ -1179,7 +1179,7 @@ func inspect(r Retriever) {
 
 <img src="闭包.png" alt="image-20210411134231310" style="zoom: 50%;" />
 
-- 定义的函数可以理解为类，函数中定义的自由变量可以理解为成员变量，返回的函数可以理解为类中定义的方法
+- 函数体内使用的变量+函数打包成一个函数（闭包）
 
 #### 应用
 
@@ -1802,6 +1802,7 @@ func main() {
 #### 关闭channel
 
 - 由发送发关闭
+- 不是所有的channel都需要关闭，只有当所有的数据发送完毕，才需要关闭channel
 
 ```go
 package main
@@ -1875,6 +1876,8 @@ func main() {
 
 ### 使用channel等待任务结束
 
+- WaitGroup是一种同步机制，它可以等待一批任务的结束
+
 ```go
 package main
 
@@ -1935,3 +1938,667 @@ func main() {
 ```
 
 ### 使用channel进行二叉树的遍历
+
+### 使用select进行调度
+
+- for + select  case接收和发送数据，接收数据速度和发送数据速度不一致时，使用队列保存数据
+- default套在for循环里的话，需要注意不要产生不阻塞占用cpu的情况
+- 尽量所有会阻塞的操作都放在case里
+- 分支被选择的条件：有人同时在收发，谁先有数据先调度谁
+- channel为nil时，分支无法被选中
+- for + default非阻塞实现
+
+```go
+package main
+
+import (
+	"fmt"
+	"math/rand"
+	"time"
+)
+
+# 模拟不定时的往channel中发送数据
+func generator() chan int {
+	out := make(chan int)
+	go func() {
+		i := 0
+		for {
+			time.Sleep(
+				time.Duration(rand.Intn(1500)) *
+					time.Millisecond)
+			out <- i
+			i++
+		}
+	}()
+	return out
+}
+
+# 创建channel用于接收数据，并在后台一直等待打印接收道德数据
+func worker(id int, c chan int) {
+	for n := range c {
+		time.Sleep(time.Second)
+		fmt.Printf("Worker %d received %d\n",
+			id, n)
+	}
+}
+
+func createWorker(id int) chan<- int {
+	c := make(chan int)
+	go worker(id, c)
+	return c
+}
+
+func main() {
+	var c1, c2 = generator(), generator()
+	var worker = createWorker(0)
+
+	var values []int
+    // 计时器
+	tm := time.After(10 * time.Second)
+    // 定时器
+	tick := time.Tick(time.Second)
+	for {
+		var activeWorker chan<- int
+		var activeValue int
+		if len(values) > 0 {
+			activeWorker = worker
+			activeValue = values[0]
+		}
+
+		select {
+		case n := <-c1:
+			values = append(values, n)
+		case n := <-c2:
+			values = append(values, n)
+		case activeWorker <- activeValue:
+			values = values[1:]
+
+		case <-time.After(800 * time.Millisecond):
+			fmt.Println("timeout")
+		case <-tick:
+			fmt.Println(
+				"queue len =", len(values))
+		case <-tm:
+			fmt.Println("bye")
+			return
+		}
+	}
+}
+```
+
+#### 应用场景
+
+- 定时器
+
+### 传统同步机制
+
+- WaitGroup     等待组
+- Mutex      互斥量
+- Cond     条件
+
+```go
+package main
+
+import (
+	"fmt"
+	"sync"
+	"time"
+)
+
+type atomicInt struct {
+	value int
+	lock  sync.Mutex
+}
+
+func (a *atomicInt) increment() {
+	fmt.Println("safe increment")
+	func() {
+		a.lock.Lock()
+		defer a.lock.Unlock()
+
+		a.value++
+	}()
+}
+
+func (a *atomicInt) get() int {
+	a.lock.Lock()
+	defer a.lock.Unlock()
+
+	return a.value
+}
+
+func main() {
+	var a atomicInt
+	a.increment()
+	go func() {
+		a.increment()
+	}()
+	time.Sleep(time.Millisecond)
+	fmt.Println(a.get())
+}
+```
+
+### 并发模式
+
+- 生成器
+- 服务/任务
+- 同时等待多个服务：两种方法（fanIn和select），注意goroutine循环变量的问题
+
+### 并发任务的控制
+
+- 非阻塞等待
+- 超时等待
+- 任务中断/退出
+- 优雅退出
+
+## 10 迷宫的广度有优先搜索
+
+```go
+package main
+
+import (
+	"fmt"
+	"os"
+)
+
+func readMaze(filename string) [][]int {
+	file, err := os.Open(filename)
+	if err != nil {
+		panic(err)
+	}
+
+	var row, col int
+	fmt.Fscanf(file, "%d %d", &row, &col)
+
+	maze := make([][]int, row)
+	for i := range maze {
+		maze[i] = make([]int, col)
+		for j := range maze[i] {
+			fmt.Fscanf(file, "%d", &maze[i][j])
+		}
+	}
+
+	return maze
+}
+
+type point struct {
+	i, j int
+}
+
+var dirs = [4]point{
+	{-1, 0}, {0, -1}, {1, 0}, {0, 1}}
+
+func (p point) add(r point) point {
+	return point{p.i + r.i, p.j + r.j}
+}
+
+func (p point) at(grid [][]int) (int, bool) {
+	if p.i < 0 || p.i >= len(grid) {
+		return 0, false
+	}
+
+	if p.j < 0 || p.j >= len(grid[p.i]) {
+		return 0, false
+	}
+
+	return grid[p.i][p.j], true
+}
+
+func walk(maze [][]int,
+	start, end point) [][]int {
+	steps := make([][]int, len(maze))
+	for i := range steps {
+		steps[i] = make([]int, len(maze[i]))
+	}
+
+	Q := []point{start}
+
+	for len(Q) > 0 {
+		cur := Q[0]
+		Q = Q[1:]
+
+		if cur == end {
+			break
+		}
+
+		for _, dir := range dirs {
+			next := cur.add(dir)
+
+			val, ok := next.at(maze)
+			if !ok || val == 1 {
+				continue
+			}
+
+			val, ok = next.at(steps)
+			if !ok || val != 0 {
+				continue
+			}
+
+			if next == start {
+				continue
+			}
+
+			curSteps, _ := cur.at(steps)
+			steps[next.i][next.j] =
+				curSteps + 1
+
+			Q = append(Q, next)
+		}
+	}
+
+	return steps
+}
+
+func main() {
+	maze := readMaze("lang/maze/maze.in")
+
+	steps := walk(maze, point{0, 0},
+		point{len(maze) - 1, len(maze[0]) - 1})
+
+	for _, row := range steps {
+		for _, val := range row {
+			fmt.Printf("%3d", val)
+		}
+		fmt.Println()
+	}
+
+	// TODO: construct path from steps
+}
+
+```
+
+## 11 http及其他标准库
+
+### http标准库
+
+- 使用http客户端发送请求
+- 使用http.Client控制请求头部等
+- 使用httputil简化工作
+
+### 其他标准库
+
+- bufio
+- log
+- encoding/json
+- regexp
+- time
+- strings/math/rand
+
+#### 如何查看go doc
+
+```bash
+godoc  -http :8888
+```
+
+#### JSON数据格式的处理
+
+JSON的数据格式
+
+结构体的tag
+
+JSON Marshal与UnMarshal
+
+#### 第三方API数据格式的解析
+
+#### gin框架介绍
+
+```go
+package main
+
+import (
+   "github.com/gin-gonic/gin"
+   "go.uber.org/zap"
+   "math/rand"
+   "time"
+)
+
+const keyRequestId = "requestId"
+
+func main() {
+   r := gin.Default()
+   logger, err := zap.NewProduction()
+   if err != nil {
+      panic(err)
+   }
+
+   r.Use(func(c *gin.Context) {
+      s := time.Now()
+
+      c.Next()
+
+      logger.Info("incoming request",
+         zap.String("path", c.Request.URL.Path),
+         zap.Int("status", c.Writer.Status()),
+         zap.Duration("elapsed", time.Now().Sub(s)))
+   }, func(c *gin.Context) {
+      c.Set(keyRequestId, rand.Int())
+
+      c.Next()
+   })
+
+   r.GET("/ping", func(c *gin.Context) {
+      h := gin.H{
+         "message":   "pong",
+      }
+      if rid, exists := c.Get(keyRequestId); exists {
+         h[keyRequestId] = rid
+      }
+      c.JSON(200, h)
+   })
+   r.GET("/hello", func(c *gin.Context) {
+      c.String(200, "hello")
+   })
+   r.Run()
+}
+```
+
+##### gin-gonic/gin
+
+##### middleware的使用
+
+##### context的使用
+
+## 12 实战项目
+
+### 爬虫项目分类
+
+#### 网络爬虫分类
+
+- 通用爬虫：如baidu、google
+- 聚焦爬虫：从互联网获取结构化数据
+
+#### go语言的爬虫库/框架
+
+- henrylee2cn/pholcus
+- gocrawl
+- colly
+- hu17889/go_spider
+
+### 爬虫的法律风险
+
+- robots协议
+- 技术上没有约束力
+
+### 新爬虫的选择
+
+### 总体算法
+
+## 13 单任务版爬虫
+
+### 获取初始页面
+
+### 正则表达式
+
+#### 获取城市名称和链接
+
+- 使用css选择器
+- 使用xpath
+- 使用正则表达式
+
+```go
+const text = `
+my email is ccmouse@gmail.com@abc.com
+email1 is abc@def.org
+email2 is    kkk@qq.com
+email3 is ddd@abc.com.cn
+`
+
+func main() {
+	re := regexp.MustCompile(
+		`([a-zA-Z0-9]+)@([a-zA-Z0-9]+)(\.[a-zA-Z0-9.]+)`)
+	match := re.FindAllStringSubmatch(text, -1)
+	for _, m := range match {
+		fmt.Println(m)
+	}
+}
+```
+
+### 提取城市和URL
+
+### Engine与Parser
+
+#### CityListParser
+
+```go
+const cityListRe = `<a href="(http://www.zhenai.com/zhenghun/[0-9a-z]+)"[^>]*>([^<]+)</a>`
+
+func ParseCityList(
+   contents []byte) engine.ParseResult {
+   re := regexp.MustCompile(cityListRe)
+   matches := re.FindAllSubmatch(contents, -1)
+
+   result := engine.ParseResult{}
+   limit := 10
+   for _, m := range matches {
+      result.Items = append(
+         result.Items, "City "+string(m[2]))
+      result.Requests = append(
+         result.Requests, engine.Request{
+            Url:        string(m[1]),
+            ParserFunc: ParseCity,
+         })
+      limit--
+      if limit == 0 {
+         break
+      }
+   }
+
+   return result
+}
+```
+
+#### CityListParser测试
+
+```go
+func TestParseCityList(t *testing.T) {
+   contents, err := ioutil.ReadFile(
+      "citylist_test_data.html")
+
+   if err != nil {
+      panic(err)
+   }
+
+   result := ParseCityList(contents)
+
+   const resultSize = 470
+   expectedUrls := []string{
+      "http://www.zhenai.com/zhenghun/aba",
+      "http://www.zhenai.com/zhenghun/akesu",
+      "http://www.zhenai.com/zhenghun/alashanmeng",
+   }
+   expectedCities := []string{
+      "City 阿坝", "City 阿克苏", "City 阿拉善盟",
+   }
+
+   if len(result.Requests) != resultSize {
+      t.Errorf("result should have %d "+
+         "requests; but had %d",
+         resultSize, len(result.Requests))
+   }
+   for i, url := range expectedUrls {
+      if result.Requests[i].Url != url {
+         t.Errorf("expected url #%d: %s; but "+
+            "was %s",
+            i, url, result.Requests[i].Url)
+      }
+   }
+
+   if len(result.Items) != resultSize {
+      t.Errorf("result should have %d "+
+         "requests; but had %d",
+         resultSize, len(result.Items))
+   }
+   for i, city := range expectedCities {
+      if result.Items[i].(string) != city {
+         t.Errorf("expected city #%d: %s; but "+
+            "was %s",
+            i, city, result.Items[i].(string))
+      }
+   }
+
+}
+```
+
+#### CityParser
+
+```go
+const cityRe = `<a href="(http://album.zhenai.com/u/[0-9]+)"[^>]*>([^<]+)</a>`
+
+func ParseCity(
+   contents []byte) engine.ParseResult {
+   re := regexp.MustCompile(cityRe)
+   matches := re.FindAllSubmatch(contents, -1)
+
+   result := engine.ParseResult{}
+   for _, m := range matches {
+      name := string(m[2])
+      result.Items = append(
+         result.Items, "User "+name)
+      result.Requests = append(
+         result.Requests, engine.Request{
+            Url: string(m[1]),
+            # 函数式编程，闭包的使用 
+            ParserFunc: func(
+               c []byte) engine.ParseResult {
+               return ParseProfile(
+                  c, name)
+            },
+         })
+   }
+
+   return result
+}
+```
+
+#### 用户信息解析器
+
+```go
+var ageRe = regexp.MustCompile(
+   `<td><span class="label">年龄：</span>(\d+)岁</td>`)
+var heightRe = regexp.MustCompile(
+   `<td><span class="label">身高：</span>(\d+)CM</td>`)
+var incomeRe = regexp.MustCompile(
+   `<td><span class="label">月收入：</span>([^<]+)</td>`)
+var weightRe = regexp.MustCompile(
+   `<td><span class="label">体重：</span><span field="">(\d+)KG</span></td>`)
+var genderRe = regexp.MustCompile(
+   `<td><span class="label">性别：</span><span field="">([^<]+)</span></td>`)
+var xinzuoRe = regexp.MustCompile(
+   `<td><span class="label">星座：</span><span field="">([^<]+)</span></td>`)
+var marriageRe = regexp.MustCompile(
+   `<td><span class="label">婚况：</span>([^<]+)</td>`)
+var educationRe = regexp.MustCompile(
+   `<td><span class="label">学历：</span>([^<]+)</td>`)
+var occupationRe = regexp.MustCompile(
+   `<td><span class="label">职业：</span><span field="">([^<]+)</span></td>`)
+var hokouRe = regexp.MustCompile(
+   `<td><span class="label">籍贯：</span>([^<]+)</td>`)
+var houseRe = regexp.MustCompile(
+   `<td><span class="label">住房条件：</span><span field="">([^<]+)</span></td>`)
+var carRe = regexp.MustCompile(
+   `<td><span class="label">是否购车：</span><span field="">([^<]+)</span></td>`)
+
+func ParseProfile(
+   contents []byte,
+   name string) engine.ParseResult {
+   profile := model.Profile{}
+   profile.Name = name
+
+   age, err := strconv.Atoi(
+      extractString(contents, ageRe))
+   if err == nil {
+      profile.Age = age
+   }
+
+   height, err := strconv.Atoi(
+      extractString(contents, heightRe))
+   if err == nil {
+      profile.Height = height
+   }
+
+   weight, err := strconv.Atoi(
+      extractString(contents, weightRe))
+   if err == nil {
+      profile.Weight = weight
+   }
+
+   profile.Income = extractString(
+      contents, incomeRe)
+   profile.Gender = extractString(
+      contents, genderRe)
+   profile.Car = extractString(
+      contents, carRe)
+   profile.Education = extractString(
+      contents, educationRe)
+   profile.Hokou = extractString(
+      contents, hokouRe)
+   profile.House = extractString(
+      contents, houseRe)
+   profile.Marriage = extractString(
+      contents, marriageRe)
+   profile.Occupation = extractString(
+      contents, occupationRe)
+   profile.Xinzuo = extractString(
+      contents, xinzuoRe)
+
+   result := engine.ParseResult{
+      Items: []interface{}{profile},
+   }
+
+   return result
+}
+
+func extractString(
+   contents []byte, re *regexp.Regexp) string {
+   match := re.FindSubmatch(contents)
+
+   if len(match) >= 2 {
+      return string(match[1])
+   } else {
+      return ""
+   }
+}
+```
+
+#### 用户信息解析器测试
+
+```go
+func TestParseProfile(t *testing.T) {
+   contents, err := ioutil.ReadFile(
+      "profile_test_data.html")
+
+   if err != nil {
+      panic(err)
+   }
+
+   result := ParseProfile(contents, "安静的雪")
+
+   if len(result.Items) != 1 {
+      t.Errorf("Items should contain 1 "+
+         "element; but was %v", result.Items)
+   }
+
+   profile := result.Items[0].(model.Profile)
+
+   expected := model.Profile{
+      Age:        34,
+      Height:     162,
+      Weight:     57,
+      Income:     "3001-5000元",
+      Gender:     "女",
+      Name:       "安静的雪",
+      Xinzuo:     "牡羊座",
+      Occupation: "人事/行政",
+      Marriage:   "离异",
+      House:      "已购房",
+      Hokou:      "山东菏泽",
+      Education:  "大学本科",
+      Car:        "未购车",
+   }
+
+   if profile != expected {
+      t.Errorf("expected %v; but was %v",
+         expected, profile)
+   }
+}
+```
