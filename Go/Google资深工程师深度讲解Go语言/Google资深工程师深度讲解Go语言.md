@@ -1180,6 +1180,7 @@ func inspect(r Retriever) {
 <img src="闭包.png" alt="image-20210411134231310" style="zoom: 50%;" />
 
 - 函数体内使用的变量+函数打包成一个函数（闭包）
+- 代码+引用的数据（闭包）
 
 #### 应用
 
@@ -1947,6 +1948,7 @@ func main() {
 - 分支被选择的条件：有人同时在收发，谁先有数据先调度谁
 - channel为nil时，分支无法被选中
 - for + default非阻塞实现
+- select的每个case里面都要快速执行，不能有阻塞
 
 ```go
 package main
@@ -2325,6 +2327,10 @@ func main() {
 
 ## 13 单任务版爬虫
 
+### 单任务版爬虫架构
+
+<img src="单任务版爬虫架构.png" style="zoom:67%;" />
+
 ### 获取初始页面
 
 ### 正则表达式
@@ -2602,3 +2608,156 @@ func TestParseProfile(t *testing.T) {
    }
 }
 ```
+
+## 14 并发版爬虫
+
+### 并发版爬虫架构
+
+<img src="并发版爬虫架构.png" style="zoom: 67%;" />
+
+- engine模块负责业务逻辑，它推动爬虫前进，把worker里的result拿出来进行处理，并由scheduler进行分发。
+- scheduler不懂业务逻辑，只会分发。SimpleScheduler、QueuedScheduler，都能和ConcurrentEngine协同工作。
+
+### 简单调度器
+
+- 所有的worker共用一个channel
+- 我们先要configure，告诉他我们用哪个channel来收任务，然后才能用submit对它发送任务
+
+```go
+func main() {
+   e := engine.ConcurrentEngine{
+      Scheduler:   &scheduler.SimpleScheduler{},
+      WorkerCount: 100,
+   }
+
+   e.Run(engine.Request{
+      Url:        "http://www.zhenai.com/zhenghun",
+      ParserFunc: parser.ParseCityList,
+   })
+}
+```
+
+```go
+type SimpleScheduler struct {
+   workerChan chan engine.Request
+}
+
+func (s *SimpleScheduler) ConfigureMasterWorkerChan(
+   c chan engine.Request) {
+   s.workerChan = c
+}
+
+func (s *SimpleScheduler) Submit(
+   r engine.Request) {
+   go func() { s.workerChan <- r }()
+}
+```
+
+```go
+type ConcurrentEngine struct {
+   Scheduler   Scheduler
+   WorkerCount int
+}
+
+type Scheduler interface {
+   Submit(Request)
+   ConfigureMasterWorkerChan(chan Request)
+}
+
+func (e *ConcurrentEngine) Run(seeds ...Request) {
+   in := make(chan Request)
+   out := make(chan ParseResult)
+   e.Scheduler.ConfigureMasterWorkerChan(in)
+
+   for i := 0; i < e.WorkerCount; i++ {
+      createWorker(in, out)
+   }
+
+   for _, r := range seeds {
+      e.Scheduler.Submit(r)
+   }
+
+   for {
+      result := <-out
+      for _, item := range result.Items {
+         log.Printf("Got item: %v", item)
+      }
+
+      for _, request := range result.Requests {
+         e.Scheduler.Submit(request)
+      }
+   }
+}
+
+func createWorker(
+   in chan Request, out chan ParseResult) {
+   go func() {
+      for {
+         request := <-in
+         result, err := worker(request)
+         if err != nil {
+            continue
+         }
+         out <- result
+      }
+   }()
+}
+```
+
+#### 死锁问题
+
+### 并发调度器
+
+<img src="并发分发Request.png" style="zoom: 67%;" />
+
+- 使用time.Tick限流
+
+### 队列实现调度器
+
+<img src="Request队列和Worker队列.png" style="zoom:67%;" />
+
+- 实现Request和Worker的解耦
+
+#### 优势
+
+- 实现2完全依赖于Go语言的能力，但是如果并发流量大或是出现峰值，总是有限度的，goroutine太多的话，吃内存。
+- 实现3goroutine可以控制在工作，队列排多长、内存开多大、触发排队等
+- 另外，实现3还可以有自己的调度算法。可以按照优先级来进行服务，或者有更符合自己系统的调度方案。
+
+## 15 数据存储和显示
+
+### ItemSaver的架构
+
+<img src="ItemSaver架构.png" style="zoom:67%;" />
+
+#### 如何存储Items
+
+为每个Item创建goroutine,提交给ItemSaver
+
+- ItemSaver的速度比Fetcher快
+
+### 标准模板库介绍
+
+## 16 分布式爬虫
+
+### 分布式系统
+
+- 多个节点
+- 消息传递
+- 完成特定需求
+
+#### 消息传递的方法
+
+- REST
+- RPC
+- 中间件
+
+### jsonrpc的使用
+
+### ItemSaver服务
+
+### 整合ItemSaver服务
+
+### 解析器的序列化
+
+### 实现爬虫服务
