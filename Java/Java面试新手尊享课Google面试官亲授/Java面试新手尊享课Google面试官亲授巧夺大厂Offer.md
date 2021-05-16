@@ -629,3 +629,283 @@ public void traverse(TreeNode root) {
 - 抽象类不可以多继承，接口可以多实现
 
 ### 实现Iterable接口
+
+#### 例题1：包装链表类
+
+```java
+public class LinkedList<T> implements Iterable<T> {
+
+  private Node<T> head;
+  private Node<T> tail;
+
+  public static <T> LinkedList<T> newEmptyList() {
+    return new LinkedList<T>();
+  }
+
+  private LinkedList() {
+    head = null;
+    tail = null;
+  }
+
+  public void add(T value) {
+    Node<T> node = new Node<>(value);
+    if (tail == null) {
+      head = node;
+    } else {
+      tail.setNext(node);
+    }
+    tail = node;
+  }
+
+  private class ListIterator implements Iterator<T> {
+    private Node<T> currentNode;
+
+    public ListIterator(Node<T> head) {
+      currentNode = head;
+    }
+
+    @Override
+    public boolean hasNext() {
+      return currentNode != null;
+    }
+
+    @Override
+    public T next() {
+      if (currentNode == null) {
+        throw new NoSuchElementException();
+      }
+      T value = currentNode.getValue();
+      currentNode = currentNode.getNext();
+      return value;
+    }
+  }
+
+  @Override
+  public Iterator<T> iterator() {
+    return new ListIterator(head);
+  }
+}
+```
+
+#### 例题2：包装树类，寻找中序遍历时的下一个节点
+
+### 继承
+
+- is-a关系
+- 子类增加或修改基类（增加成员变量或函数）
+
+### 封装
+
+### 不可变对象
+
+- 可以引用传递，可以缓存
+- 线程安全
+
+#### final关键字
+
+- 修饰类，类不可以被继承
+- 修饰方法，子类不可重写
+- 修饰变量，变量不可以指向其他对象
+
+### 泛型
+
+## 7 设计模式
+
+- 设计模式与语言无关
+- 变继承关系为组合关系
+
+### State模式
+
+### Decorator模式
+
+### 创建对象
+
+- 编译时必须决定创建哪个类的对象
+- 参数意义不明确
+
+## 8 高级知识点
+
+### 并行计算
+
+- 将数据拆分到每个节点上
+- 每个节点并行的计算出结果
+- 将结果汇总
+
+### 外部排序分析
+
+##### 归并：使用Iterable<T>接口
+
+- 可以不断获取下一个元素的能力
+- 元素存储/获取方式被抽象，与归并节点无关
+
+### 死锁分析
+
+#### 死锁防止
+
+- 破除互斥等待（一般无法破除）
+- 破除hold and wait（一次性获取所有的资源）
+- 破除循环等待（按顺序获取资源）
+- 破除无法剥夺的等待（加入超时）
+
+### 线程池
+
+### 服务器Socket编程
+
+```java
+public class SimpleServer {
+
+  public static void main(String[] args) throws IOException {
+    RequestHandler requestHandler = new RequestHandler();
+
+    try (ServerSocket serverSocket = new ServerSocket(6666)) {
+      System.out.println("Listening on "
+          + serverSocket.getLocalSocketAddress());
+
+      while (true) {
+        Socket clientSocket = serverSocket.accept();
+        System.out.println("Incoming connection from "
+            + clientSocket.getRemoteSocketAddress());
+        new ClientHandler(clientSocket, requestHandler).run();
+      }
+    }
+  }
+}
+```
+
+#### 线程池实现服务器
+
+```java
+public class ThreadPoolServer {
+  public static void main(String[] args) throws IOException {
+    ExecutorService executor =
+        Executors.newFixedThreadPool(3);
+    RequestHandler requestHandler = new RequestHandler();
+
+    try (ServerSocket serverSocket = new ServerSocket(7777)) {
+      System.out.println("Listening on "
+          + serverSocket.getLocalSocketAddress());
+
+      while (true) {
+        Socket clientSocket = serverSocket.accept();
+        System.out.println("Incoming connection from "
+            + clientSocket.getRemoteSocketAddress());
+        executor.submit(
+            new ClientHandler(clientSocket, requestHandler));
+      }
+    }
+  }
+}
+```
+
+#### NIO服务器
+
+```java
+public class NioServer {
+
+  public static void main(String[] args) throws IOException {
+    ServerSocketChannel serverChannel =
+        ServerSocketChannel.open();
+    serverChannel.configureBlocking(false);
+    serverChannel.bind(new InetSocketAddress(8888));
+    System.out.println("Listening on "
+        + serverChannel.getLocalAddress());
+
+    Selector selector = Selector.open();
+    serverChannel.register(selector, SelectionKey.OP_ACCEPT);
+
+    ByteBuffer buffer = ByteBuffer.allocate(1024);
+    RequestHandler requestHandler = new RequestHandler();
+    while (true) {
+      int selected = selector.select();
+      if (selected == 0) {
+        continue;
+      }
+
+      Set<SelectionKey> selectedKeys = selector.selectedKeys();
+      Iterator<SelectionKey> keyIter = selectedKeys.iterator();
+
+      while (keyIter.hasNext()) {
+        SelectionKey key = keyIter.next();
+
+        if (key.isAcceptable()) {
+          ServerSocketChannel channel =
+              (ServerSocketChannel) key.channel();
+          SocketChannel clientChannel = channel.accept();
+          System.out.println("Incoming connection from "
+              + clientChannel.getRemoteAddress());
+          clientChannel.configureBlocking(false);
+          clientChannel.register(
+              selector, SelectionKey.OP_READ);
+        }
+
+        if (key.isReadable()) {
+          SocketChannel channel =
+              (SocketChannel) key.channel();
+          channel.read(buffer);
+          String request = new String(buffer.array()).trim();
+          buffer.clear();
+          System.out.println(String.format(
+              "Request from %s: %s",
+              channel.getRemoteAddress(),
+              request));
+          String response = requestHandler.handle(request);
+          channel.write(ByteBuffer.wrap(response.getBytes()));
+        }
+
+        keyIter.remove();
+      }
+    }
+  }
+}
+```
+
+##### Select模型的缺点
+
+- 不直接适用于运算密集型
+- select系统调用需要轮询所有fd,而且至多只能有1024个
+- Java NIO会自动选择底层实现
+
+##### go语言实现异步服务器
+
+```go
+package main
+
+import (
+   "bufio"
+   "fmt"
+   "log"
+   "net"
+)
+
+func handleConn(conn net.Conn) {
+   defer conn.Close()
+
+   fmt.Println("Incoming connection from " + 
+      conn.RemoteAddr().String())
+
+   input := bufio.NewScanner(conn)
+
+   for input.Scan() {
+      fmt.Fprintln(conn, "Hello " + input.Text() + ".")
+   }
+}
+
+func main() {
+   listener, err := net.Listen("tcp", "localhost:9999")
+   if err != nil {
+      log.Fatal(err)
+   }
+   defer listener.Close()
+
+   for {
+      conn, err := listener.Accept()
+      if err != nil {
+         log.Print(err)
+         continue
+      }
+      go handleConn(conn)
+   }
+}
+```
+
+### 资源管理
