@@ -57,6 +57,8 @@ Now is better than never. Although never is often better than right now
 
 #### 字符串（str）
 
+- 不可变
+
 ##### 单引号
 
 - 单引号内可以使用双引号
@@ -118,4 +120,51 @@ r''
 'hello world'[0:2]
 ```
 
-###### 
+## 3 python中组的概念与定义
+
+### list列表
+
+#### 定义
+
+#### 操作
+
+- 数组索引
+- 切片截取
+- 数组合并（+）
+- 数组repeat（*）
+
+### tuple元组
+
+- 不可变类型
+- type((1))是int类型，type((1,))是tuple类型，type(())是tuple类型
+
+### 序列总结
+
+str、list、tuple
+
+- 数组索引
+- 切片操作
+- +、*操作
+- 成员运算符（in、not in）
+- 内置函数len、max、min等
+
+### set集合
+
+- 无序、不重复
+- 没有索引和切片操作
+
+#### 操作
+
+- len
+- 成员运算符(in、not in)
+- 差集（-）、并集（|）、交集（&）
+- 内置函数difference、intersection、union等
+
+### dict字典
+
+- key值必须是不可变类型
+- type({})是dict类型
+
+## 4 变量
+
+## 5 运算符
