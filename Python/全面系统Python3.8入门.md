@@ -189,9 +189,9 @@ str、list、tuple
 
 ### 算数运算符
 
-- +
-- -
-- *
+- \+
+- \-
+- \*
 - /
 - %
 - //（保留整数部分）
@@ -334,3 +334,120 @@ isinstance(a, (str,int))
 - ~（按位取反）
 - \>\>
 - <<
+
+## 6 表达式
+
+表达式(Expression)是运算符（Operator）和操作数（Operand）所构成的序列
+
+### 优先级
+
+## 7 流程控制
+
+### 条件控制语句
+
+```python
+if condition :
+	print True
+elif
+	print False
+```
+
+- elif的优点：替换switch分支
+
+#### 嵌套分支
+
+#### 代码块
+
+### 循环控制语句
+
+#### while循环
+
+##### 使用场景
+
+- 递归场景
+- while与else一起使用
+
+#### for循环
+
+##### 使用场景
+
+- 遍历序列（str、list、tuple）、set集合、dict字典
+- for与else一起使用
+- for与range一起使用
+
+```python
+nums = [1, 2, 3]
+for num in nums:
+    print(num, end=' | ')
+# 1 | 2 | 3 |     
+
+for num in range(0, 10, 2):
+    print(num)
+```
+
+## 8 工程组织结构
+
+### 包（package）
+
+- 文件夹名称
+- \__init__.py文件
+
+### 模块（module）
+
+.py文件名称
+
+#### import导入模块
+
+#### from import导入变量
+
+- \*是指所有
+- as 可以对变量起别名
+- **可以使用\__all__=[]指定需要导出的变量**
+
+```python
+from module1 import method1 
+# from module1 import method1 as m1
+# import * from module1
+```
+
+#### \__init__.py的用法
+
+- 其他模块导入该包或该包下的模块时首先被调用
+- 可以使用\__all__=[]指定需要导出的模块
+
+#### 常见错误
+
+- 避免循环导入
+
+#### 模块内置变量
+
+- dir函数返回模块内所有变量
+- \__name__：模块全限定名称
+- \__package__：包名称
+- \__doc__：模块的注释
+- \__file__：跟执行入口文件时的相对路径有关
+
+#### 入口文件
+
+- 你运行哪个文件哪个文件就是入口文件，其他的都是普通模块
+- \__name__：\__main__
+
+#### \__name__的经典应用
+
+make a script importable and excutable
+
+**入口文件会执行main方法**
+
+```python
+if __name__ == '__main__':
+	pass
+```
+
+##### 使用场景
+
+- 既可以作为普通的模块，又可以作为程序的入口
+
+#### 相对导入和绝对导入
+
+- 与入口文件的位置有关
+- 入口文件不允许使用相对导入
