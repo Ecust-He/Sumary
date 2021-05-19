@@ -800,3 +800,438 @@ final V putVal(int hash, K key, V value, boolean onlyIfAbsent,
 ```
 
 ##### 链表的新增
+
+###### 红黑树新增节点过程
+
+1. 首先判断新增的节点在红黑树上是不是已经存在，判断手段有如下两种：1）如果节点没有实现 Comparable 接口，使用 equals 进行判断；2） 如果节点自己实现了 Comparable 接口，使用 compareTo 进行判断。
+2. 新增的节点如果已经在红黑树上，直接返回；不在的话，判断新增节点是在当前节点的左边还是右边，左边值小，右边值大；
+3. 自旋递归 1 和 2 步，直到当前节点的左边或者右边的节点为空时，停止自旋，当前节点即为我们新增节点的父节点；
+4. 把新增节点放到当前节点的左边或右边为空的地方，并于当前节点建立父子节点关系；
+5. 进行着色和旋转，结束
+
+```java
+//入参 h：key 的hash值
+final TreeNode<K,V> putTreeVal(HashMap<K,V> map, Node<K,V>[] tab,
+                               int h, K k, V v) {
+    Class<?> kc = null;
+    boolean searched = false;
+    //找到根节点
+    TreeNode<K,V> root = (parent != null) ? root() : this;
+    //自旋
+    for (TreeNode<K,V> p = root;;) {
+        int dir, ph; K pk;
+        // p hash 值大于 h，说明 p 在 h 的右边
+        if ((ph = p.hash) > h)
+            dir = -1;
+        // p hash 值小于 h，说明 p 在 h 的左边
+        else if (ph < h)
+            dir = 1;
+        //要放进去key在当前树中已经存在了(equals来判断)
+        else if ((pk = p.key) == k || (k != null && k.equals(pk)))
+            return p;
+        //自己实现的Comparable的话，不能用hashcode比较了，需要用compareTo
+        else if ((kc == null &&
+                  //得到key的Class类型，如果key没有实现Comparable就是null
+                  (kc = comparableClassFor(k)) == null) ||
+                  //当前节点pk和入参k不等
+                 (dir = compareComparables(kc, k, pk)) == 0) {
+            if (!searched) {
+                TreeNode<K,V> q, ch;
+                searched = true;
+                if (((ch = p.left) != null &&
+                     (q = ch.find(h, k, kc)) != null) ||
+                    ((ch = p.right) != null &&
+                     (q = ch.find(h, k, kc)) != null))
+                    return q;
+            }
+            dir = tieBreakOrder(k, pk);
+        }
+
+        TreeNode<K,V> xp = p;
+        //找到和当前hashcode值相近的节点(当前节点的左右子节点其中一个为空即可)
+        if ((p = (dir <= 0) ? p.left : p.right) == null) {
+            Node<K,V> xpn = xp.next;
+            //生成新的节点
+            TreeNode<K,V> x = map.newTreeNode(h, k, v, xpn);
+            //把新节点放在当前子节点为空的位置上
+            if (dir <= 0)
+                xp.left = x;
+            else
+                xp.right = x;
+            //当前节点和新节点建立父子，前后关系
+            xp.next = x;
+            x.parent = x.prev = xp;
+            if (xpn != null)
+                ((TreeNode<K,V>)xpn).prev = x;
+            //balanceInsertion 对红黑树进行着色或旋转，以达到更多的查找效率，着色或旋转的几种场景如下
+            //着色：新节点总是为红色；如果新节点的父亲是黑色，则不需要重新着色；如果父亲是红色，那么必须通过重新着色或者旋转的方法，再次达到红黑树的5个约束条件
+            //旋转： 父亲是红色，叔叔是黑色时，进行旋转
+            //如果当前节点是父亲的右节点，则进行左旋
+            //如果当前节点是父亲的左节点，则进行右旋
+          
+            //moveRootToFront 方法是把算出来的root放到根节点上
+            moveRootToFront(tab, balanceInsertion(root, x));
+            return null;
+        }
+    }
+}
+```
+
+红黑树的新增，要求大家对红黑树的数据结构有一定的了解。面试的时候，一般只会问到新增节点到红黑树上大概是什么样的一个过程，着色和旋转的细节不会问，因为很难说清楚，但我们要清楚着色指的是给红黑树的节点着上红色或黑色，旋转是为了让红黑树更加平衡，提高查询的效率，总的来说都是为了满足红黑树的 5 个原则：
+
+1. 节点是红色或黑色
+2. 根是黑色
+3. 所有叶子都是黑色
+4. 从任一节点到其每个叶子的所有简单路径都包含相同数目的黑色节点
+5. 从每个叶子到根的所有路径上不能有两个连续的红色节点
+
+#### 查找
+
+HashMap查找主要分为以下三个步骤：
+
+- 根据 hash 算法定位数组的索引位置，equals 判断当前节点是否是我们需要寻找的 key，是的话直接返回，不是的话往下
+- 判断当前节点有无 next 节点，有的话判断是链表类型，还是红黑树类型
+- 分别走链表和红黑树不同类型的查找方法
+
+```java
+// 采用自旋方式从链表中查找 key，e 初始为为链表的头节点
+do {
+    // 如果当前节点 hash 等于 key 的 hash，并且 equals 相等，当前节点就是我们要找的节点
+    // 当 hash 冲突时，同一个 hash 值上是一个链表的时候，我们是通过 equals 方法来比较 key 是否相等的
+    if (e.hash == hash &&
+        ((k = e.key) == key || (key != null && key.equals(k))))
+        return e;
+    // 否则，把当前节点的下一个节点拿出来继续寻找
+} while ((e = e.next) != null);
+```
+
+### TreeMap 和 LinkedHashMap 核心源码解析
+
+#### TreeMap
+
+##### 整体架构
+
+```java
+//比较器，如果外部有传进来 Comparator 比较器，首先用外部的
+//如果外部比较器为空，则使用 key 自己实现的 Comparable#compareTo 方法
+//比较手段和上面日常工作中的比较 demo 是一致的
+private final Comparator<? super K> comparator;
+
+//红黑树的根节点
+private transient Entry<K,V> root;
+
+//红黑树的已有元素大小
+private transient int size = 0;
+
+//树结构变化的版本号，用于迭代过程中的快速失败场景
+private transient int modCount = 0;
+
+//红黑树的节点
+static final class Entry<K,V> implements Map.Entry<K,V> {}
+```
+
+##### 新增节点
+
+1、判断红黑树的节点是否为空，为空的话，新增的节点直接作为根节点
+
+```java
+Entry<K,V> t = root;
+//红黑树根节点为空，直接新建
+if (t == null) {
+    // compare 方法限制了 key 不能为 null
+    compare(key, key); // type (and possibly null) check
+    // 成为根节点
+    root = new Entry<>(key, value, null);
+    size = 1;
+    modCount++;
+    return null;
+}
+```
+
+2、根据红黑树左小右大的特性，进行判断，找到应该新增节点的父节点
+
+```java
+Comparator<? super K> cpr = comparator;
+if (cpr != null) {
+    //自旋找到 key 应该新增的位置，就是应该挂载那个节点的头上
+    do {
+        //一次循环结束时，parent 就是上次比过的对象
+        parent = t;
+        // 通过 compare 来比较 key 的大小
+        cmp = cpr.compare(key, t.key);
+        //key 小于 t，把 t 左边的值赋予 t，因为红黑树左边的值比较小，循环再比
+        if (cmp < 0)
+            t = t.left;
+        //key 大于 t，把 t 右边的值赋予 t，因为红黑树右边的值比较大，循环再比
+        else if (cmp > 0)
+            t = t.right;
+        //如果相等的话，直接覆盖原值
+        else
+            return t.setValue(value);
+        // t 为空，说明已经到叶子节点了
+    } while (t != null);
+}
+```
+
+3、在父节点的左边或右边插入新增节点
+
+```java
+//cmp 代表最后一次对比的大小，小于 0 ，代表 e 在上一节点的左边
+if (cmp < 0)
+    parent.left = e;
+//cmp 代表最后一次对比的大小，大于 0 ，代表 e 在上一节点的右边，相等的情况第二步已经处理了。
+else
+    parent.right = e;
+```
+
+4、着色旋转，达到平衡，结束
+
+#### LinkedHashMap
+
+##### 整体架构
+
+- 按照插入顺序进行访问
+
+- 实现了访问最少最先删除功能，其目的是把很久都没有访问的 key 自动删除
+
+##### 按照插入顺序访问
+
+```java
+// 链表头
+transient LinkedHashMap.Entry<K,V> head;
+
+// 链表尾
+transient LinkedHashMap.Entry<K,V> tail;
+
+// 继承 Node，为数组的每个元素增加了 before 和 after 属性
+static class Entry<K,V> extends HashMap.Node<K,V> {
+    Entry<K,V> before, after;
+    Entry(int hash, K key, V value, Node<K,V> next) {
+        super(hash, key, value, next);
+    }
+}
+
+// 控制两种访问模式的字段，默认 false
+// true 按照访问顺序，会把经常访问的 key 放到队尾
+// false 按照插入顺序提供访问
+final boolean accessOrder;
+
+// 新增节点，并追加到链表的尾部
+Node<K,V> newNode(int hash, K key, V value, Node<K,V> e) {
+    // 新增节点
+    LinkedHashMap.Entry<K,V> p =
+        new LinkedHashMap.Entry<K,V>(hash, key, value, e);
+    // 追加到链表的尾部
+    linkNodeLast(p);
+    return p;
+}
+// link at the end of list
+private void linkNodeLast(LinkedHashMap.Entry<K,V> p) {
+    LinkedHashMap.Entry<K,V> last = tail;
+    // 新增节点等于位节点
+    tail = p;
+    // last 为空，说明链表为空，首尾节点相等
+    if (last == null)
+        head = p;
+    // 链表有数据，直接建立新增节点和上个尾节点之间的前后关系即可
+    else {
+        p.before = last;
+        last.after = p;
+    }
+}
+
+// 初始化时，默认从头节点开始访问
+LinkedHashIterator() {
+    // 头节点作为第一个访问的节点
+    next = head;
+    expectedModCount = modCount;
+    current = null;
+}
+
+final LinkedHashMap.Entry<K,V> nextNode() {
+    LinkedHashMap.Entry<K,V> e = next;
+    if (modCount != expectedModCount)// 校验
+        throw new ConcurrentModificationException();
+    if (e == null)
+        throw new NoSuchElementException();
+    current = e;
+    next = e.after; // 通过链表的 after 结构，找到下一个迭代的节点
+    return e;
+}
+```
+
+##### 访问最少删除策略
+
+###### 示例
+
+```java
+public void testAccessOrder() {
+  // 新建 LinkedHashMap
+  LinkedHashMap<Integer, Integer> map = new LinkedHashMap<Integer, Integer>(4,0.75f,true) {
+    {
+      put(10, 10);
+      put(9, 9);
+      put(20, 20);
+      put(1, 1);
+    }
+
+    @Override
+    // 覆写了删除策略的方法，我们设定当节点个数大于 3 时，就开始删除头节点
+    protected boolean removeEldestEntry(Map.Entry<Integer, Integer> eldest) {
+      return size() > 3;
+    }
+  };
+
+  log.info("初始化：{}",JSON.toJSONString(map));
+  Assert.assertNotNull(map.get(9));
+  log.info("map.get(9)：{}",JSON.toJSONString(map));
+  Assert.assertNotNull(map.get(20));
+  log.info("map.get(20)：{}",JSON.toJSONString(map));
+
+}
+```
+
+######  元素被转移到队尾
+
+```java
+public V get(Object key) {
+    Node<K,V> e;
+    // 调用 HashMap  get 方法
+    if ((e = getNode(hash(key), key)) == null)
+        return null;
+    // 如果设置了 LRU 策略
+    if (accessOrder)
+    // 这个方法把当前 key 移动到队尾
+        afterNodeAccess(e);
+    return e.value;
+}
+```
+
+###### 删除策略
+
+```java
+// 删除很少被访问的元素，被 HashMap 的 put 方法所调用
+void afterNodeInsertion(boolean evict) { 
+    // 得到元素头节点
+    LinkedHashMap.Entry<K,V> first;
+    // removeEldestEntry 来控制删除策略，如果队列不为空，并且删除策略允许删除的情况下，删除头节点
+    if (evict && (first = head) != null && removeEldestEntry(first)) {
+        K key = first.key;
+        // removeNode 删除头节点
+        removeNode(hash(key), key, null, false, true);
+    }
+}
+```
+
+#### Map源码面试问题
+
+**1、说一说HashMap底层数据结构**
+
+HashMap 底层是数组 + 链表 + 红黑树的数据结构，数组的主要作用是方便快速查找，时间复杂度是 O(1)，默认大小是 16，数组的下标索引是通过 key 的 hashcode 计算出来的，数组元素叫做 Node，当多个 key 的 hashcode 一致，但 key 值不同时，单个 Node 就会转化成链表，链表的查询复杂度是 O(n)，当链表的长度大于等于 8 并且数组的大小超过 64 时，链表就会转化成红黑树，红黑树的查询复杂度是 O(log(n))，简单来说，最坏的查询次数相当于红黑树的最大深度。
+
+**2、HashMap、TreeMap、LinkedHashMap 三者有啥相同点，有啥不同点？**
+
+**相同点：**
+
+1. 三者在特定的情况下，都会使用红黑树；
+2. 底层的 hash 算法相同；
+3. 在迭代的过程中，如果 Map 的数据结构被改动，都会报 ConcurrentModificationException 的错误。
+
+**不同点：**
+
+1. HashMap 数据结构以数组为主，查询非常快，TreeMap 数据结构以红黑树为主，利用了红黑树左小右大的特点，可以实现 key 的排序，LinkedHashMap 在 HashMap 的基础上增加了链表的结构，实现了插入顺序访问和最少访问删除两种策略;
+2. 由于三种 Map 底层数据结构的差别，导致了三者的使用场景的不同，TreeMap 适合需要根据 key 进行排序的场景，LinkedHashMap 适合按照插入顺序访问，或需要删除最少访问元素的场景，剩余场景我们使用 HashMap 即可，我们工作中大部分场景基本都在使用 HashMap；
+3. 由于三种 map 的底层数据结构的不同，导致上层包装的 api 略有差别。
+
+**3、说一下Map的hash算法**
+
+```java
+static final int hash(Object key) {
+    int h;
+    return (key == null) ? 0 : (h = key.hashCode()) ^ (h >>> 16);
+}
+key 在数组中的位置公式：tab[(n - 1) & hash]
+```
+
+这其实是一个数学问题，源码中就是通过以上代码来计算 hash 的，首先计算出 key 的 hashcode，因为 key 是 Object，所以会根据 key 的不同类型进行 hashcode 的计算，接着计算 h ^ (h >>> 16) ，这么做的好处是使大多数场景下，算出来的 hash 值比较分散。
+
+一般来说，hash 值算出来之后，要计算当前 key 在数组中的索引下标位置时，可以采用取模的方式，就是索引下标位置 = hash 值 % 数组大小，这样做的好处，就是可以保证计算出来的索引下标值可以均匀的分布在数组的各个索引位置上，但取模操作对于处理器的计算是比较慢的，数学上有个公式，当 b 是 2 的幂次方时，a % b = a &（b-1），所以此处索引位置的计算公式我们可以更换为： (n-1) & hash。
+
+**此问题可以延伸出三个小问题：**
+
+1、为什么不用 key % 数组大小，而是需要用 key 的 hash 值 % 数组大小。
+
+如果 key 是数字，直接用 key % 数组大小是完全没有问题的，但我们的 key 还有可能是字符串，是复杂对象，这时候用 字符串或复杂对象 % 数组大小是不行的，所以需要先计算出 key 的 hash 值。
+
+2、计算 hash 值时，为什么需要右移 16 位
+
+hash 算法是 h ^ (h >>> 16)，为了使计算出的 hash 值更分散，所以选择先将 h 无符号右移 16 位，然后再于 h 异或时，就能达到 h 的高 16 位和低 16 位都能参与计算，减少了碰撞的可能性。
+
+3、为什么把取模操作换成了 & 操作？
+
+key.hashCode() 算出来的 hash 值还不是数组的索引下标，为了随机的计算出索引的下表位置，我们还会用 hash 值和数组大小进行取模，这样子计算出来的索引下标比较均匀分布。
+
+取模操作处理器计算比较慢，处理器对 & 操作就比较擅长，换成了 & 操作，是有数学上证明的支撑，为了提高了处理器处理的速度。
+
+4、为什么提倡数组大小是 2 的幂次方？
+
+因为只有大小是 2 的幂次方时，才能使 hash 值 % n(数组大小) == (n-1) & hash 公式成立。
+
+**4、为解决 hash 冲突，大概有哪些办法？**
+
+1. 好的 hash 算法，细问的话复述一下上题的 hash 算法;
+2. 自动扩容，当数组大小快满的时候，采取自动扩容，可以减少 hash 冲突;
+3. hash 冲突发生时，采用链表来解决;
+4. hash 冲突严重时，链表会自动转化成红黑树，提高遍历速度。
+
+**5、HashMap 是如何扩容的？**
+
+扩容的时机：
+
+1. put 时，发现数组为空，进行初始化扩容，默认扩容大小为 16;
+2. put 成功后，发现现有数组大小大于扩容的门阀值时，进行扩容，扩容为老数组大小的 2 倍;
+
+扩容的门阀是 threshold，每次扩容时 threshold 都会被重新计算，门阀值等于数组的大小 * 影响因子（0.75）。
+
+新数组初始化之后，需要将老数组的值拷贝到新数组上，链表和红黑树都有自己拷贝的方法。
+
+**6、hash 冲突时怎么办？**
+
+hash 冲突指的是 key 值的 hashcode 计算相同，但 key 值不同的情况。
+
+如果桶中元素原本只有一个或已经是链表了，新增元素直接追加到链表尾部；
+
+如果桶中元素已经是链表，并且链表个数大于等于 8 时，此时有两种情况：
+
+1. 如果此时数组大小小于 64，数组再次扩容，链表不会转化成红黑树;
+2. 如果数组大小大于 64 时，链表就会转化成红黑树。
+
+这里不仅仅判断链表个数大于等于 8，还判断了数组大小，数组容量小于 64 没有立即转化的原因，猜测主要是因为红黑树占用的空间比链表大很多，转化也比较耗时，所以数组容量小的情况下冲突严重，我们可以先尝试扩容，看看能否通过扩容来解决冲突的问题。
+
+**7、为什么链表个数大于等于 8 时，链表要转化成红黑树了？**
+
+当链表个数太多了，遍历可能比较耗时，转化成红黑树，可以使遍历的时间复杂度降低，但转化成红黑树，有空间和转化耗时的成本，我们通过泊松分布公式计算，正常情况下，链表个数出现 8 的概念不到千万分之一，所以说正常情况下，链表都不会转化成红黑树，这样设计的目的，是为了防止非正常情况下，比如 hash 算法出了问题时，导致链表个数轻易大于等于 8 时，仍然能够快速遍历。
+
+**延伸问题：红黑树什么时候转变成链表？**
+
+当节点的个数小于等于 6 时，红黑树会自动转化成链表，主要还是考虑红黑树的空间成本问题，当节点个数小于等于 6 时，遍历链表也很快，所以红黑树会重新变成链表。
+
+**8、HashMap 在 put 时，如果数组中已经有了这个 key，我不想把 value 覆盖怎么办？取值时，如果得到的 value 是空时，想返回默认值怎么办？**
+
+如果数组有了 key，但不想覆盖 value ，可以选择 putIfAbsent 方法，这个方法有个内置变量 onlyIfAbsent，内置是 true ，就不会覆盖，我们平时使用的 put 方法，内置 onlyIfAbsent 为 false，是允许覆盖的。
+
+取值时，如果为空，想返回默认值，可以使用 getOrDefault 方法，方法第一参数为 key，第二个参数为你想返回的默认值，如 map.getOrDefault(“2”,“0”)，当 map 中没有 key 为 2 的值时，会默认返回 0，而不是空。
+
+**9、DTO 作为 Map 的 key 时，有无需要注意的点？**
+
+看是什么类型的 Map，如果是 HashMap 的话，一定需要覆写 equals 和 hashCode 方法，因为在 get 和 put 的时候，需要通过 equals 方法进行相等的判断；如果是 TreeMap 的话，DTO 需要实现 Comparable 接口，因为 TreeMap 会使用 Comparable 接口进行判断 key 的大小；如果是 LinkedHashMap 的话，和 HashMap 一样的。
+
+**10、LinkedHashMap 中的 LRU 是什么意思，是如何实现的？**
+
+LRU ，英文全称：Least recently used，中文叫做最近最少访问，在 LinkedHashMap 中，也叫做最少访问删除策略，我们可以通过 removeEldestEntry 方法设定一定的策略，使最少被访问的元素，在适当的时机被删除，原理是在 put 方法执行的最后，LinkedHashMap 会去检查这种策略，如果满足策略，就删除头节点。
+
+保证头节点就是最少访问的元素的原理是：LinkedHashMap 在 get 的时候，都会把当前访问的节点，移动到链表的尾部，慢慢的，就会使头部的节点都是最少被访问的元素。
+
+**11、为什么推荐 TreeMap 的元素最好都实现 Comparable 接口？但 key 是 String 的时候，我们却没有额外的工作呢？**
+
+因为 TreeMap 的底层就是通过排序来比较两个 key 的大小的，所以推荐 key 实现 Comparable 接口，是为了往你希望的排序顺序上发展， 而 String 本身已经实现了 Comparable 接口，所以使用 String 时，我们不需要额外的工作，不仅仅是 String ，其他包装类型也都实现了 Comparable 接口，如 Long、Double、Short 等等。
