@@ -451,3 +451,201 @@ if __name__ == '__main__':
 
 - 与入口文件的位置有关
 - 入口文件不允许使用相对导入
+
+## 9 函数
+
+### 特点
+
+- 功能性
+- 隐藏细节
+- 避免编写重复的代码
+
+### 返回多个值
+
+- 返回值类型是tuple
+
+#### 序列解包
+
+使用多个变量接收多个返回值
+
+```python
+a,b,c = 1,2,3
+d = 1,2,3
+print(type(d))
+# tuple
+```
+
+#### 链式赋值
+
+```python
+a=b=c=1
+```
+
+### 参数类型
+
+#### 必须参数
+
+```python
+def add(x, y):
+	return x + y
+```
+
+#### 关键参数
+
+##### 特点
+
+- 不需要考虑参数的顺序
+- 增加代码的可读性
+
+```python
+add(y=1, x=2)
+```
+
+#### 默认参数
+
+- 必须放在必须参数后面
+
+```python
+def add(x=1, y=2):
+	return x + y
+
+add()
+# 3
+```
+
+#### 可变参数
+
+- \*将tuple中元素平铺开
+- 必须放在必须参数后面
+
+```python
+def demo(*param):
+    print(param)
+    print(type(param))
+    
+demo(1,2,3,4,5,6)
+# (1,2,3,4,5,6)
+#tuple
+
+a=(1,2,3,4,5,6)
+demo(*a)
+# (1,2,3,4,5,6)
+#tuple
+```
+
+#### 关键字可变参数
+
+- \*将dict中元素平铺开
+- 必须放在必须参数后面
+
+```python
+    def demo(**param):
+        print(param)
+        print(type(param))
+
+    demo(a=1, b=2)
+    
+    #m = {'a': 1, 'b': 2}
+    #demo(**m)
+    
+    #{'a': 1, 'b': 2}
+	#<class 'dict'>
+```
+
+### 变量的作用域
+
+#### 作用域链
+
+#### global关键字
+
+**可以将函数内部的局部变量提升为全局变量**
+
+```python
+def demo():
+    global c
+    c = 10
+    
+demo()
+print(c)
+```
+
+## 面向对象
+
+### 类的定义
+
+- 类的最基本作用：封装
+- 建议：对于类单独使用模块定义
+
+### 函数与方法的区别
+
+- 函数：面向过程
+- 方法：面向对象、设计层面
+
+### 类与对象
+
+类：类是现实世界或思维世界的实体在计算机中的反映，它将这些数据以及这些数据上的操作封装在一起
+
+对象：类的实例
+
+### 构造函数
+
+- 构造函数默认return None, 且不可修改
+
+```python
+class Student:
+    sum = 0 # 类变量
+    name = ''
+    age = 0
+
+    # 构造方法
+    def __init__(self, name, age):
+        self.name = name
+        self.age = age
+        # self.__class__.sum += 1
+
+    # 实例方法
+    def to_string(self):
+        print("name = ", self.name)
+        print("age = ", self.age)
+        print("sum = ", Student.sum)
+
+    # 类方法   
+    @classmethod
+    def add_one(cls):
+        cls.sum += 1
+        
+    # 静态方法
+    @staticmethod
+    def add(x, y):
+        return x + y    
+
+if __name__ == '__main__':
+    stu = Student('kris', 20)
+    Student.add_one()
+    stu.to_string()
+    print(Student.add(1, 2))
+```
+
+### 类变量与实例变量
+
+#### 查找顺序
+
+**实例变量 -> 类变量 -> 父类**
+
+### 方法
+
+#### 实例方法
+
+- 显胜于隐：显示声明在方法的第一个入参
+
+##### 在实例方法中访问实例变量和类变量
+
+#### 类方法
+
+- 操作和对象无关的方法，建议使用类方法
+- 可以被类和对象调用
+
+#### 静态方法
+
+- 不建议使用静态方法，与面向对象无关，与普通函数无异
+- 可以被类和对象调用
