@@ -592,10 +592,15 @@ print(c)
 - 构造函数默认return None, 且不可修改
 
 ```python
-class Student:
+class Human:
+    pass
+
+# 继承
+class Student(Human):
     sum = 0 # 类变量
     name = ''
     age = 0
+    __salary = 0 # 私有变量
 
     # 构造方法
     def __init__(self, name, age):
@@ -649,3 +654,440 @@ if __name__ == '__main__':
 
 - 不建议使用静态方法，与面向对象无关，与普通函数无异
 - 可以被类和对象调用
+
+### 成员可见性
+
+- 双下划线表示私有的
+- 注意给对象动态新增实例变量
+
+### 继承
+
+- 支持多继承
+- 子类调用父类的方法：使用super关键字
+
+## 正则表达式
+
+正则表达式是一个特殊的字符序列，一个字符串是否与我们所设定的字符序列相匹配。
+
+- 快速检索文本、实现一些替换文本的操作
+
+#### 字符
+
+##### 元字符
+
+| 元字符 | 描述                          |
+| ------ | ----------------------------- |
+| \d     | 匹配一个数字字符，等价于[0-9] |
+| \w     | 匹配单词字符                  |
+| \s     | 匹配空白字符                  |
+
+##### 普通字符
+
+一般作为定界使用
+
+#### 字符集
+
+```python
+a = 'abc, afc, acd, acc, adc'
+result = re.findall('a[cf]c', a)
+#['afc', 'acc']
+
+result = re.findall('a[c-f]c', a)
+#['afc', 'acc', 'adc']
+```
+
+##### 概括字符集
+
+.**可以匹配到除换行符以外任意字符**
+
+#### 数量词
+
+```
+a = 'python 11 java89php'
+result = re.findall('[a-z]+', a)
+#result = re.findall('[a-z]{1,}', a)
+print(result)
+# ['python', 'java', 'php']
+```
+
+##### 匹配0次1次或多次
+
+| 字符 | 描述              |
+| ---- | ----------------- |
+| ？   | 匹配0次或1次      |
+| +    | 至少匹配一次      |
+| *    | 匹配0次或任意多次 |
+
+```python
+a = 'pytho0python1pythonn2'
+result = re.findall('python*', a)
+#['pytho', 'python', 'pythonn']
+
+result = re.findall('python+', a)
+#['python', 'pythonn']
+
+result = re.findall('python?', a)
+#['pytho', 'python', 'python']
+```
+
+#### 贪婪与非贪婪
+
+**默认是贪婪匹配**
+
+```python
+a = 'python 11 java89php'
+# 贪婪模式
+result = re.findall('[a-z]{3,6}', a)
+print(result)
+# ['python', 'java', 'php']
+
+# 非贪婪模式
+result = re.findall('[a-z]{3,6}?', a)
+print(result)
+# ['pyt', 'hon', 'jav', 'php']
+```
+
+#### 边界匹配符
+
+| 字符 | 描述       |
+| ---- | ---------- |
+| ^    | 开始匹配符 |
+| $    | 结尾匹配符 |
+
+#### 组
+
+```python
+a = 'pythonpythonpythonpython'
+result = re.findall('(python){3}', a)
+# ['python']
+```
+
+#### 匹配模式参数
+
+```python
+a = 'PythonC#JavaPhp'
+# 忽略字母大小写
+result = re.findall('c#', a, re.I)
+# ['C#']
+```
+
+#### 正则替换
+
+```python
+a = 'PythonC#JavaC#PhpC#'
+# count 为0（默认值）时，表示替换到所有匹配到的字符串
+result = re.sub('C#', "Go", a, count=0)
+# PythonGoJavaGoPhpGo
+
+result = re.sub('C#', "Go", a, count=1)
+# PythonGoJavaC#PhpC#
+
+def convert(value):
+    # 获取匹配到的字符
+    matched = value.group()
+    return "[" + matched + "]"
+# 对匹配到的字符串进行自定义处理
+result = re.sub('C#', convert, a, count=0)
+# Python[C#]Java[C#]Php[C#]
+```
+
+##### 把函数作为参数传递
+
+```python
+def convert(value):
+    matched = value.group()
+    if int(matched) >= 6:
+        return '9'
+    else:
+        return '0'
+    
+s = 'A81272C23D2983'
+result = re.sub('\d', convert, s)
+# A90090C00D0990
+```
+
+#### search与match函数
+
+```python
+s = 'A81272C23D2983'
+# 从字符串的开头开始匹配
+result = re.match('\d', s)
+# None
+
+# 匹配到第一个后立即返回匹配结果
+result = re.search('\d', s)
+print(result.group())
+# 8
+```
+
+#### group分组
+
+```python
+s = 'life is short, i use python'
+result = re.findall('life(.*)python', s)
+print(result)
+# [' is short, i use ']
+
+result = re.search('life(.*)python', s)
+print(result.group(1))
+# [' is short, i use ']
+```
+
+## JSON
+
+是一种轻量级数据交换格式，数据格式主要包括JSON Object和JSON Array
+
+- 易于阅读
+- 易于解析
+- 网络传输效率高
+- 跨语言交换
+
+### JSON字符串
+
+符合JSON格式的字符串叫JSON字符串
+
+### 序列化
+
+```python
+student = {"name": "kris", "age": 20}
+json_str = json.dumps(student)
+print(type(json_str))
+<class 'str'>
+```
+
+### 反序列化
+
+将JSON字符串转换为对象的过程
+
+```python
+json_str = '{"name":"kris", "age":20}'
+student = json.loads(json_str)
+print(type(student))
+# <class 'dict'>
+print(student['name'])
+# kris
+```
+
+## Python的高级语法和用法
+
+### 枚举
+
+#### 枚举其实是一个类
+
+```python
+class VIP(Enum):
+    YELLOW = 1
+    GREEN = 2
+    BLUE = 3
+    
+print(VIP.GREEN.name) # 枚举名称
+#GREEN
+print(VIP.GREEN.value) # 枚举值
+# 2
+```
+
+#### 枚举和普通类相比有什么优势
+
+- 枚举的不可变性
+- 枚举的不可重复性
+
+#### 枚举的比较运算
+
+#### 枚举转换
+
+```python
+print(VIP(2))
+# VIP.GREEN
+```
+
+#### 枚举小结
+
+```python
+@unique
+class VIP(IntEnum):
+    YELLOW = 1
+    GREEN = 2
+    BLUE = 3
+```
+
+### 装饰器
+
+作用：简化代码，无需修改代码也可以实现某种功能。
+
+- 符合开闭原则
+
+#### 无参函数
+
+```python
+def decorator(func):
+    def wrapper():
+        print(time.time())
+        func()
+ return wrapper
+
+@decorator
+def f1():
+    print('this is a function.')
+    
+f1()
+# 1621778760.9516318
+# this is a function.
+```
+
+#### 带输入参数的函数
+
+```python
+def decorator(func):
+    def wrapper(*args):
+        print(time.time())
+        func(*args)
+    return wrapper
+
+@decorator
+def f1(a, b):
+    print('this is a function.')
+    print(a + b)
+    
+f(1,2)    
+# 1621779209.5720232
+# this is a function.
+# 3
+```
+
+## 函数式编程
+
+### 一切皆对象
+
+- 函数可以作为另一个函数的参数
+- 函数可以作为另一个函数的返回值
+
+### 闭包
+
+- 定义：函数 + 环境变量
+- 保存现场
+- 函数式编程思想的一种体现
+
+#### 闭包的经典误区
+
+### lambda表达式
+
+```python
+lambda：param_list: expression
+
+def add(x, y):
+    return x + y
+
+f = lambda: x,y: x +y
+print(f(1,2))
+# 3
+```
+
+### 三元表达式
+
+```python
+条件为真时返回的结果 if 条件 else 条件为假时返回的结果
+
+print(1 if 2 > 3 else 0)
+# 0
+```
+
+### 高阶函数
+
+```python
+res = list(map(lambda x: x * x, [1, 2, 3]))
+# [1, 4, 9]
+res = list(filter(lambda x: x > 2, [1, 2, 3]))
+# [3]
+res = reduce(lambda x, y: x + y, [1, 2, 3], 10)
+# 16
+```
+
+#### map
+
+映射
+
+#### reduce
+
+聚合
+
+#### filter
+
+过滤
+
+### 命令式编程VS函数式编程
+
+## 原生爬虫
+
+### 正则分析html
+
+```python
+import re
+from urllib import request
+class Spider():
+    '''
+     This is a class
+    '''
+    url = 'https://www.panda.tv/cate/kingglory'
+    root_pattern = '<div class="video-info">([\s\S]*?)</div>'
+    name_pattern = '</i>([\s\S]*?)</span>'
+    number_pattern = '<span class="video-number">([\s\S]*?)</span>'
+
+    def __fetch_content(self):
+        '''
+        ''' 
+        r = request.urlopen(Spider.url) # This is a HTTP request 
+
+        # This is ....
+        htmls = r.read() 
+        htmls = str(htmls, encoding='utf-8')
+        return htmls
+
+    def __analysis(self, htmls):
+        root_html = re.findall(Spider.root_pattern, htmls)
+
+        anchors = []
+        for html in root_html:
+            name = re.findall(Spider.name_pattern, html)
+            number = re.findall(Spider.number_pattern, html)
+            anchor = {'name':name, 'number':number}
+            anchors.append(anchor)
+
+        return anchors
+    
+    def __refine(self, anchors):
+        l =  lambda anchor: {
+            'name':anchor['name'][0].strip(),
+            'number':anchor['number'][0]
+            }
+        return map(l, anchors)
+
+    def __sort(self, anchors):
+        #filter
+        anchors = sorted(anchors, key=self.__sort_seed,reverse=True)
+        return anchors
+
+    def __sort_seed(self, anchor):
+        r = re.findall('\d*', anchor['number'])
+        number = float(r[0])
+        if '万' in anchor['number']:
+            number *= 10000
+        return number
+
+    def __show(self, anchors):
+        for rank in range(0, len(anchors)):
+            print('rank ' + str(rank + 1)
+            + '  : '+ anchors[rank]['name']
+            + '   ' + anchors[rank]['number'])
+
+    def go(self):
+        htmls = self.__fetch_content()
+        anchors = self.__analysis(htmls)
+        anchors = list(self.__refine(anchors))
+        anchors = self.__sort(anchors)
+        self.__show(anchors)
+
+spider = Spider()
+spider.go()
+```
+
+## Pythonic与python杂记
