@@ -569,7 +569,7 @@ demo()
 print(c)
 ```
 
-## 面向对象
+## 10 面向对象
 
 ### 类的定义
 
@@ -665,7 +665,7 @@ if __name__ == '__main__':
 - 支持多继承
 - 子类调用父类的方法：使用super关键字
 
-## 正则表达式
+## 11 正则表达式
 
 正则表达式是一个特殊的字符序列，一个字符串是否与我们所设定的字符序列相匹配。
 
@@ -833,7 +833,7 @@ print(result.group(1))
 # [' is short, i use ']
 ```
 
-## JSON
+## 12 JSON
 
 是一种轻量级数据交换格式，数据格式主要包括JSON Object和JSON Array
 
@@ -868,7 +868,7 @@ print(student['name'])
 # kris
 ```
 
-## Python的高级语法和用法
+## 13 Python的高级语法和用法
 
 ### 枚举
 
@@ -954,7 +954,7 @@ f(1,2)
 # 3
 ```
 
-## 函数式编程
+## 14 函数式编程
 
 ### 一切皆对象
 
@@ -1016,7 +1016,7 @@ res = reduce(lambda x, y: x + y, [1, 2, 3], 10)
 
 ### 命令式编程VS函数式编程
 
-## 原生爬虫
+## 15 原生爬虫
 
 ### 正则分析html
 
@@ -1090,4 +1090,111 @@ spider = Spider()
 spider.go()
 ```
 
-## Pythonic与python杂记
+## 16 Pythonic与python杂记
+
+### 用字典映射代替switch case语句
+
+```python
+week = {
+    0: "Sunday",
+    1: "Monday"
+}
+day = 0
+dayName = week[day]
+# dayName = week.get(day, 'unkown')
+# Sunday
+```
+
+### 列表推导式
+
+```python
+a = [1, 2, 3]
+# b = list(map(lambda x: x*x, list(filter(lambda x: x > 2, a))))
+b = [i*i for i in a if i > 2]
+#[9]
+```
+
+#### 字典如何编写列表推导式
+
+```python
+a = {
+    'name': 'kris',
+    'age': 30
+}
+b = [key for key, value in a.items()]
+print(b)
+```
+
+### iterator与generator
+
+#### iterator
+
+```python
+class BookCollection:
+
+    def __init__(self):
+        self.data = ['红楼梦', '水浒传', '西游记']
+        self.cur = 0
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self.cur >= len(self.data):
+            raise StopIteration()
+        value = self.data[self.cur]
+        self.cur += 1
+        return value
+    
+    for book in BookCollection():
+        print(book)
+```
+
+#### generator
+
+```python
+def generator(max_value):
+    n = 0
+    while n <= max_value:
+        n += 1
+        yield n
+    g = generator(100)
+    
+    print(next(g))
+    # 1
+    print(next(g))        
+    # 2
+```
+
+### None
+
+空
+
+```python
+print(type(None))
+# NoneType
+```
+
+#### 如何判空？
+
+```python
+if not a:
+    print 'a is empty.'
+
+if a is None:
+    print 'a is None.'
+```
+
+#### 对象存在不一定是True
+
+- None表示不存在
+- False表示假
+
+### 装饰器的副作用
+
+### f关键字做字符串拼接
+
+```python
+name = 'kris'
+print(f'name is {name}')
+```
