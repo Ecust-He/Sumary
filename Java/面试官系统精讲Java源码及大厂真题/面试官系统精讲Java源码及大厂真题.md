@@ -1235,3 +1235,703 @@ LRU ，英文全称：Least recently used，中文叫做最近最少访问，在
 **11、为什么推荐 TreeMap 的元素最好都实现 Comparable 接口？但 key 是 String 的时候，我们却没有额外的工作呢？**
 
 因为 TreeMap 的底层就是通过排序来比较两个 key 的大小的，所以推荐 key 实现 Comparable 接口，是为了往你希望的排序顺序上发展， 而 String 本身已经实现了 Comparable 接口，所以使用 String 时，我们不需要额外的工作，不仅仅是 String ，其他包装类型也都实现了 Comparable 接口，如 Long、Double、Short 等等。
+
+#### HashSet和TreeSet源码解析
+
+##### HashSet
+
+###### 类注释
+
+1. 底层实现基于 HashMap，所以迭代时不能保证按照插入顺序，或者其它顺序进行迭代
+2. add、remove、contanins、size 等方法的耗时性能，是不会随着数据量的增加而增加的，这个主要跟 HashMap 底层的数组数据结构有关，不管数据量多大，**不考虑 hash 冲突的情况下，时间复杂度都是 O (1)**
+3. 线程不安全的，如果需要安全请自行加锁，或者使用 Collections.synchronizedSet
+4. 迭代过程中，如果数据结构被改变，会快速失败的，会抛出 ConcurrentModificationException 异常
+
+###### HashSet 是如何组合 HashMap 的？
+
+HashSet 使用的就是组合 HashMap，其**优点**如下：
+
+- 继承表示父子类是同一个事物，而 Set 和 Map 本来就是想表达两种事物，所以继承不妥，而且 Java 语法限制，子类只能继承一个父类，后续难以扩展。
+- 组合更加灵活，可以任意的组合现有的基础类，并且可以在基础类方法的基础上进行扩展、编排等，而且方法命名可以任意命名，无需和基础类的方法名称保持一致。
+
+```java
+// 把 HashMap 组合进来，key 是 Hashset 的 key，value 是下面的 PRESENT
+private transient HashMap<E,Object> map;
+// HashMap 中的 value
+private static final Object PRESENT = new Object();
+```
+
+1. 我们在使用 HashSet 时，比如 add 方法，只有一个入参，但组合的 Map 的 add 方法却有 key，value 两个入参，相对应上 Map 的 key 就是我们 add 的入参，value 就是第二行代码中的 PRESENT，此处设计非常巧妙，用一个默认值 PRESENT 来代替 Map 的 Value；
+2. 如果 HashSet 是被共享的，当多个线程访问的时候，就会有线程安全问题，因为在后续的所有操作中，并没有加锁.
+
+###### 小结
+
+1. 对组合还是继承的分析和把握
+2. 对复杂逻辑进行一些包装，使吐出去的接口尽量简单好用
+3. 组合其他 api 时，尽量多对组合的 api 多些了解，这样才能更好的使用 api
+
+##### TreeSet
+
+##### 面试题
+
+1、TreeSet 有用过么，平时都在什么场景下使用？
+
+我们一般都是在需要把元素进行排序的时候使用 TreeSet，使用时需要我们注意元素最好实现 Comparable 接口，这样方便底层的 TreeMap 根据 key 进行排序。
+
+2、追问，如果我想实现根据 key 的新增顺序进行遍历怎么办？
+
+要按照 key 的新增顺序进行遍历，首先想到的应该就是 LinkedHashMap，而 LinkedHashSet 正好是基于 LinkedHashMap 实现的，所以我们可以选择使用 LinkedHashSet。
+
+3、追问，如果我想对 key 进行去重，有什么好的办法么？
+
+我们首先想到的是 TreeSet，TreeSet 底层使用的是 TreeMap，TreeMap 在 put 的时候，如果发现 key 是相同的，会把 value 值进行覆盖，所有不会产生重复的 key ，利用这一特性，使用 TreeSet 正好可以去重。
+
+4、说说 TreeSet 和 HashSet 两个 Set 的内部实现结构和原理？
+
+ HashSet 底层对 HashMap 的能力进行封装，比如说 add 方法，是直接使用 HashMap 的 put 方法，比较简单，但在初始化的时候，我看源码有一些感悟：说一下 HashSet 小结的四小点。
+
+TreeSet 主要是对 TreeMap 底层能力进行封装复用，我发现了两种非常有意思的复用思路，重复 TreeSet 两种复用思路。
+
+#### 集合源码对实际工作的帮助和应用
+
+##### 线程安全
+
+我们说集合都是非线程安全的，这里说的非线程安全指的是集合类作为共享变量，被多线程读写的时候，才是不安全的
+
+##### 集合性能
+
+###### **批量新增**
+
+在 List 和 Map 大量数据新增的时候，我们不要使用 for 循环 + add/put 方法新增，这样子会有很大的扩容成本，我们应该尽量使用 addAll 和 putAll 方法进行新增，以 ArrayList 为例写了一个 demo 如下，演示了两种方案的性能对比：
+
+```java
+@Test
+public void testBatchInsert(){
+  // 准备拷贝数据
+  ArrayList<Integer> list = new ArrayList<>();
+  for(int i=0;i<3000000;i++){
+    list.add(i);
+  }
+
+  // for 循环 + add
+  ArrayList<Integer> list2 = new ArrayList<>();
+  long start1 = System.currentTimeMillis();
+  for(int i=0;i<list.size();i++){
+    list2.add(list.get(i));
+  }
+  log.info("单个 for 循环新增 300 w 个，耗时{}",System.currentTimeMillis()-start1);
+
+  // 批量新增
+  ArrayList<Integer> list3 = new ArrayList<>();
+  long start2 = System.currentTimeMillis();
+  list3.addAll(list);
+  log.info("批量新增 300 w 个，耗时{}",System.currentTimeMillis()-start2);
+}
+```
+
+可以看到，批量新增方法性能由于单个新增方法性能，主要原因在于批量新增，只会扩容一次，大大缩短了运行时间，而单个新增，每次到达扩容阀值时，都会进行扩容，在整个过程中就会不断的扩容，浪费了很多时间，我们来看下批量新增的源码：
+
+```java
+public boolean addAll(Collection<? extends E> c) {
+  Object[] a = c.toArray();
+  int numNew = a.length;
+  // 确保容量充足，整个过程只会扩容一次
+  ensureCapacityInternal(size + numNew); 
+  // 进行数组的拷贝
+  System.arraycopy(a, 0, elementData, size, numNew);
+  size += numNew;
+  return numNew != 0;
+}
+```
+
+在容器初始化的时候，最好能给容器赋上初始值，这样可以防止在 put 的过程中不断的扩容，从而缩短时间，上章 HashSet 的源码给我们演示了，给 HashMap 赋初始值的公式为：取括号内两者的最大值（期望的值/0.75+1，默认值 16）
+
+######  批量删除
+
+##### 集合中一些坑
+
+1. 当集合的元素是自定义类时，自定义类强制实现 equals 和 hashCode 方法，并且两个都要实现
+2. 所有集合类，在 for 循环进行删除时，如果直接使用集合类的 remove 方法进行删除，都会快速失败，报 ConcurrentModificationException 的错误，**所以在任意循环删除的场景下，都建议使用迭代器进行删除**
+3. 我们把数组转化成集合时，常使用 Arrays.asList(array)，这个方法有两个坑
+
+```java
+public void testArrayToList(){
+  Integer[] array = new Integer[]{1,2,3,4,5,6};
+  List<Integer> list = Arrays.asList(array);
+
+  // 坑1：修改数组的值，会直接影响原 list
+  log.info("数组被修改之前，集合第一个元素为：{}",list.get(0));
+  array[0] = 10;
+  log.info("数组被修改之前，集合第一个元素为：{}",list.get(0));
+
+  // 坑2：使用 add、remove 等操作 list 的方法时，
+  // 会报 UnsupportedOperationException 异常
+  list.add(7);
+}
+坑 1：数组被修改后，会直接影响到新 List 的值。
+坑 2：不能对新 List 进行 add、remove 等操作，否则运行时会报 UnsupportedOperationException 错误。
+```
+
+4.集合 List 转化成数组，我们通常使用 toArray 这个方法，这个方法很危险，稍微不注意，就踩进大坑，我们示例代码如下：
+
+```java
+public void testListToArray(){
+    List<Integer> list = new ArrayList<Integer>(){{
+      add(1);
+      add(2);
+      add(3);
+      add(4);
+    }};
+
+    // 下面这行被注释的代码这么写是无法转化成数组的，无参 toArray 返回的是 Object[],
+    // 无法向下转化成 List<Integer>，编译都无法通过
+    // List<Integer> list2 = list.toArray();
+
+    // 演示有参 toArray 方法，数组大小不够时，得到数组为 null 情况
+    Integer[] array0 = new Integer[2];
+    list.toArray(array0);
+    log.info("toArray 数组大小不够，array0 数组[0] 值是{},数组[1] 值是{},",array0[0],array0[1]);
+		
+    // 演示数组初始化大小正好，正好转化成数组
+    Integer[] array1 = new Integer[list.size()];
+    list.toArray(array1);
+    log.info("toArray 数组大小正好，array1 数组[3] 值是{}",array1[3]);
+
+    // 演示数组初始化大小大于实际所需大小，也可以转化成数组
+    Integer[] array2 = new Integer[list.size()+2];
+    list.toArray(array2);
+    log.info("toArray 数组大小多了，array2 数组[3] 值是{}，数组[4] 值是{}",array2[3],array2[4]);
+  }
+19:33:07.687 [main] INFO demo.one.ArrayListDemo - toArray 数组大小不够，array0 数组[0] 值是null,数组[1] 值是null,
+19:33:07.697 [main] INFO demo.one.ArrayListDemo - toArray 数组大小正好，array1 数组[3] 值是4
+19:33:07.697 [main] INFO demo.one.ArrayListDemo - toArray 数组大小多了，array2 数组[3] 值是4，数组[4] 值是null
+```
+
+#### Java 7 和 8 有何不同和改进之处
+
+##### 通用区别
+
+######  所有集合都新增了forEach 方法
+
+##### List 区别
+
+rrayList 无参初始化时，Java 7 是直接初始化 10 的大小，Java 8 去掉了这个逻辑，初始化时是空数组，在第一次 add 时才开始按照 10 进行扩容
+
+##### Map区别
+
+###### HashMap
+
+1. 和 ArrayList 一样，Java 8 中 HashMap 在无参构造器中，丢弃了 Java 7 中直接把数组初始化 16 的做法，而是采用在第一次新增的时候，才开始扩容数组大小
+2. hash 算法计算公式不同，Java 8 的 hash 算法更加简单，代码更加简洁
+3. Java 8 的 HashMap 增加了红黑树的数据结构，这个是 Java 7 中没有的，Java 7 只有数组 + 链表的结构，Java 8 中提出了数组 + 链表 + 红黑树的结构，一般 key 是 Java 的 API 时，比如说 String 这些 hashcode 实现很好的 API，很少出现链表转化成红黑树的情况，因为 String 这些 API 的 hash 算法够好了，只有当 key 是我们自定义的类，而且我们覆写的 hashcode 算法非常糟糕时，才会真正使用到红黑树，提高我们的检索速度。
+
+##### 面试题
+
+1、Java 8 在 List、Map 接口上新增了很多方法，为什么 Java 7 中这些接口的实现者不需要强制实现这些方法呢？
+
+主要是因为这些新增的方法被 default 关键字修饰了，default 一旦修饰接口上的方法，我们需要在接口的方法中写默认实现，并且子类无需强制实现这些方法，所以 Java 7 接口的实现者无需感知
+
+2、Java 8 集合新增了 forEach 方法，和普通的 for 循环有啥不同？
+
+新增的 forEach 方法的入参是函数式的接口，比如说 Consumer 和 BiConsumer，这样子做的好处就是封装了 for 循环的代码，让使用者只需关注实现每次循环的业务逻辑，简化了重复的 for 循环代码，使代码更加简洁，普通的 for 循环，每次都需要写重复的 for 循环代码，forEach 把这种重复的计算逻辑吃掉了，使用起来更加方便。
+
+#### Guava实际工作运用和源码
+
+##### 运用工厂模式进行初始化
+
+##### 分组和反转
+
+```java
+// 演示反转排序
+public void testReverse(){
+  List<String> list = new ArrayList<String>(){{
+    add("10");
+    add("20");
+    add("30");
+    add("40");
+  }};
+  log.info("反转之前："+JSON.toJSONString(list));
+  list = Lists.reverse(list);
+  log.info("反转之后："+JSON.toJSONString(list));
+}
+// 打印出来的结果为：
+反转之前：["10","20","30","40"]
+反转之后：["40","30","20","10"]
+
+// 分组
+public void testPartition(){
+  List<String> list = new ArrayList<String>(){{
+    add("10");
+    add("20");
+    add("30");
+    add("40");
+  }};
+  log.info("分组之前："+JSON.toJSONString(list));
+   List<List<String>> list2 = Lists.partition(list,3);
+  log.info("分组之后："+JSON.toJSONString(list2));
+}
+输出结果为：
+分组之前：["10","20","30","40"]
+分组之后：[["10","20","30"],["40"]]
+```
+
+## 3  并发集合类
+
+### CopyOnWriteArrayList 源码解析和设计思路
+
+1. 线程安全的，多线程环境下可以直接使用，无需加锁
+2. 通过锁 + 数组拷贝 + volatile 关键字保证了线程安全
+3. 每次数组操作，都会把数组拷贝一份出来，在新数组上进行操作，操作成功之后再赋值回去
+
+#### 整体架构
+
+1. 加锁
+2. 从原数组中拷贝出新数组
+3. 在新数组上进行操作，并把新数组赋值给数组容器
+4. 解锁
+
+除了加锁之外，CopyOnWriteArrayList 的底层数组还被 volatile 关键字修饰，意思是一旦数组被修改，其它线程立马能够感知到；整体上来说，CopyOnWriteArrayList 就是利用锁 + 数组拷贝 + volatile 关键字保证了 List 的线程安全。
+
+##### 类注释
+
+1. 所有的操作都是线程安全的，因为操作都是在新拷贝数组上进行的
+2. 数组的拷贝虽然有一定的成本，但往往比一般的替代方案效率高
+3. 迭代过程中，不会影响到原来的数组，也不会抛出 ConcurrentModificationException 异常
+
+#### 核心方法源码
+
+##### 新增
+
+```java
+// 添加元素到数组尾部
+public boolean add(E e) {
+    final ReentrantLock lock = this.lock;
+    // 加锁
+    lock.lock();
+    try {
+        // 得到所有的原数组
+        Object[] elements = getArray();
+        int len = elements.length;
+        // 拷贝到新数组里面，新数组的长度是 + 1 的，因为新增会多一个元素
+        Object[] newElements = Arrays.copyOf(elements, len + 1);
+        // 在新数组中进行赋值，新元素直接放在数组的尾部
+        newElements[len] = e;
+        // 替换掉原来的数组
+        setArray(newElements);
+        return true;
+    // finally 里面释放锁，保证即使 try 发生了异常，仍然能够释放锁   
+    } finally {
+        lock.unlock();
+    }
+}
+```
+
+除了加锁之外，还会从老数组中创建出一个新数组，然后把老数组的值拷贝到新数组上，这时候就有一个问题：都已经加锁了，为什么需要拷贝数组，而不是在原来数组上面进行操作呢，原因主要为：
+
+1. volatile 关键字修饰的是数组，如果我们简单的在原来数组上修改其中某几个元素的值，是**无法触发可见性**的，我们必须通过修改数组的内存地址才行，也就说要对数组进行重新赋值才行。
+2. 在新的数组上进行拷贝，对老数组没有任何影响，只有新数组完全拷贝完成之后，外部才能访问到，降低了在赋值过程中，老数组数据变动的影响。
+
+###### 小结
+
+1. 加锁：保证同一时刻数组只能被一个线程操作；
+2. 数组拷贝：保证数组的内存地址被修改，修改后触发 volatile 的可见性，其它线程可以立马知道数组已经被修改；
+3. volatile：值被修改后，其它线程能够立马感知最新值。
+
+##### 删除
+
+```java
+// 删除某个索引位置的数据
+public E remove(int index) {
+    final ReentrantLock lock = this.lock;
+    // 加锁
+    lock.lock();
+    try {
+        Object[] elements = getArray();
+        int len = elements.length;
+        // 先得到老值
+        E oldValue = get(elements, index);
+        int numMoved = len - index - 1;
+        // 如果要删除的数据正好是数组的尾部，直接删除
+        if (numMoved == 0)
+            setArray(Arrays.copyOf(elements, len - 1));
+        else {
+            // 如果删除的数据在数组的中间，分三步走
+            // 1. 设置新数组的长度减一，因为是减少一个元素
+            // 2. 从 0 拷贝到数组新位置
+            // 3. 从新位置拷贝到数组尾部
+            Object[] newElements = new Object[len - 1];
+            System.arraycopy(elements, 0, newElements, 0, index);
+            System.arraycopy(elements, index + 1, newElements, index,
+                             numMoved);
+            setArray(newElements);
+        }
+        return oldValue;
+    } finally {
+        lock.unlock();
+    }
+}
+```
+
+### ConcurrentHashMap 源码解析和设计思路
+
+#### 类注释
+
+1. 所有的操作都是线程安全的，我们在使用时，无需再加锁
+2. 多个线程同时进行 put、remove 等操作时并不会阻塞，可以同时进行，和 HashTable 不同，HashTable 在操作时，会锁住整个 Map
+3. 迭代过程中，即使 Map 结构被修改，也不会抛 ConcurrentModificationException 异常
+4. 除了数组 + 链表 + 红黑树的基本结构外，新增了转移节点，是为了保证扩容时的线程安全的节点
+5. 提供了很多 Stream 流式方法，比如说：forEach、search、reduce 等等
+
+#### 结构
+
+**虽然 ConcurrentHashMap 的底层数据结构，和方法的实现细节和 HashMap 大体一致，但两者在类结构上却没有任何关联**
+
+看 ConcurrentHashMap 源码，我们会发现很多方法和代码和 HashMap 很相似，有的同学可能会问，为什么不继承 HashMap 呢？继承的确是个好办法，但尴尬的是，ConcurrentHashMap 都是在方法中间进行一些加锁操作，也就是说加锁把方法切割了，继承就很难解决这个问题。
+
+#### 核心方法源码
+
+##### put
+
+ConcurrentHashMap 在 put 方法上的整体思路和 HashMap 相同，但在线程安全方面写了很多保障的代码，我们先来看下大体思路：
+
+1. 如果数组为空，初始化，初始化完成之后，走 2
+2. 计算当前槽点有没有值，没有值的话，cas 创建，失败继续自旋（for 死循环），直到成功，槽点有值的话，走 3
+3. 如果槽点是转移节点(正在扩容)，就会一直自旋等待扩容完成之后再新增，不是转移节点走 4
+4. 槽点有值的，先锁定当前槽点，保证其余线程不能操作，如果是链表，新增值到链表的尾部，如果是红黑树，使用红黑树新增的方法新增
+5. 新增完成之后 check 需不需要扩容，需要的话去扩容
+
+```java
+final V putVal(K key, V value, boolean onlyIfAbsent) {
+    if (key == null || value == null) throw new NullPointerException();
+    //计算hash
+    int hash = spread(key.hashCode());
+    int binCount = 0;
+    for (Node<K,V>[] tab = table;;) {
+        Node<K,V> f; int n, i, fh;
+        //table是空的，进行初始化
+        if (tab == null || (n = tab.length) == 0)
+            tab = initTable();
+        //如果当前索引位置没有值，直接创建
+        else if ((f = tabAt(tab, i = (n - 1) & hash)) == null) {
+            //cas 在 i 位置创建新的元素，当 i 位置是空时，即能创建成功，结束for自循，否则继续自旋
+            if (casTabAt(tab, i, null,
+                         new Node<K,V>(hash, key, value, null)))
+                break;                   // no lock when adding to empty bin
+        }
+        //如果当前槽点是转移节点，表示该槽点正在扩容，就会一直等待扩容完成
+        //转移节点的 hash 值是固定的，都是 MOVED
+        else if ((fh = f.hash) == MOVED)
+            tab = helpTransfer(tab, f);
+        //槽点上有值的
+        else {
+            V oldVal = null;
+            //锁定当前槽点，其余线程不能操作，保证了安全
+            synchronized (f) {
+                //这里再次判断 i 索引位置的数据没有被修改
+                //binCount 被赋值的话，说明走到了修改表的过程里面
+                if (tabAt(tab, i) == f) {
+                    //链表
+                    if (fh >= 0) {
+                        binCount = 1;
+                        for (Node<K,V> e = f;; ++binCount) {
+                            K ek;
+                            //值有的话，直接返回
+                            if (e.hash == hash &&
+                                ((ek = e.key) == key ||
+                                 (ek != null && key.equals(ek)))) {
+                                oldVal = e.val;
+                                if (!onlyIfAbsent)
+                                    e.val = value;
+                                break;
+                            }
+                            Node<K,V> pred = e;
+                            //把新增的元素赋值到链表的最后，退出自旋
+                            if ((e = e.next) == null) {
+                                pred.next = new Node<K,V>(hash, key,
+                                                          value, null);
+                                break;
+                            }
+                        }
+                    }
+                    //红黑树，这里没有使用 TreeNode,使用的是 TreeBin，TreeNode 只是红黑树的一个节点
+                    //TreeBin 持有红黑树的引用，并且会对其加锁，保证其操作的线程安全
+                    else if (f instanceof TreeBin) {
+                        Node<K,V> p;
+                        binCount = 2;
+                        //满足if的话，把老的值给oldVal
+                        //在putTreeVal方法里面，在给红黑树重新着色旋转的时候
+                        //会锁住红黑树的根节点
+                        if ((p = ((TreeBin<K,V>)f).putTreeVal(hash, key,
+                                                       value)) != null) {
+                            oldVal = p.val;
+                            if (!onlyIfAbsent)
+                                p.val = value;
+                        }
+                    }
+                }
+            }
+            //binCount不为空，并且 oldVal 有值的情况，说明已经新增成功了
+            if (binCount != 0) {
+                // 链表是否需要转化成红黑树
+                if (binCount >= TREEIFY_THRESHOLD)
+                    treeifyBin(tab, i);
+                if (oldVal != null)
+                    return oldVal;
+                //这一步几乎走不到。槽点已经上锁，只有在红黑树或者链表新增失败的时候
+                //才会走到这里，这两者新增都是自旋的，几乎不会失败
+                break;
+            }
+        }
+    }
+    //check 容器是否需要扩容，如果需要去扩容，调用 transfer 方法去扩容
+    //如果已经在扩容中了，check有无完成
+    addCount(1L, binCount);
+    return null;
+}
+```
+
+###### 数组初始化时的线程安全
+
+数组初始化时，首先通过自旋来保证一定可以初始化成功，然后通过 CAS 设置 SIZECTL 变量的值，来保证同一时刻只能有一个线程对数组进行初始化，CAS 成功之后，还会再次判断当前数组是否已经初始化完成，如果已经初始化完成，就不会再次初始化，通过自旋 + CAS + 双重 check 等手段保证了数组初始化时的线程安全，源码如下：
+
+```java
+//初始化 table，通过对 sizeCtl 的变量赋值来保证数组只能被初始化一次
+private final Node<K,V>[] initTable() {
+    Node<K,V>[] tab; int sc;
+    //通过自旋保证初始化成功
+    while ((tab = table) == null || tab.length == 0) {
+        // 小于 0 代表有线程正在初始化，释放当前 CPU 的调度权，重新发起锁的竞争
+        if ((sc = sizeCtl) < 0)
+            Thread.yield(); // lost initialization race; just spin
+        // CAS 赋值保证当前只有一个线程在初始化，-1 代表当前只有一个线程能初始化
+        // 保证了数组的初始化的安全性
+        else if (U.compareAndSwapInt(this, SIZECTL, sc, -1)) {
+            try {
+                // 很有可能执行到这里的时候，table 已经不为空了，这里是双重 check
+                if ((tab = table) == null || tab.length == 0) {
+                    // 进行初始化
+                    int n = (sc > 0) ? sc : DEFAULT_CAPACITY;
+                    @SuppressWarnings("unchecked")
+                    Node<K,V>[] nt = (Node<K,V>[])new Node<?,?>[n];
+                    table = tab = nt;
+                    sc = n - (n >>> 2);
+                }
+            } finally {
+                sizeCtl = sc;
+            }
+            break;
+        }
+    }
+    return tab;
+}
+```
+
+###### 新增槽点值时的线程安全
+
+1. 通过自旋死循环保证一定可以新增成功。
+2. 当前槽点为空时，通过 CAS 新增。
+3. 当前槽点有值，锁住当前槽点。
+4. 红黑树旋转时，锁住红黑树的根节点，保证同一时刻，当前红黑树只能被一个线程旋转
+
+###### 扩容时的线程安全
+
+ConcurrentHashMap 的扩容时机和 HashMap 相同，都是在 put 方法的最后一步检查是否需要扩容，如果需要则进行扩容，但两者扩容的过程完全不同，ConcurrentHashMap 扩容的方法叫做 transfer，从 put 方法的 addCount 方法进去，就能找到 transfer 方法，transfer 方法的主要思路是：
+
+1. 首先需要把老数组的值全部拷贝到扩容之后的新数组上，先从数组的队尾开始拷贝；
+2. 拷贝数组的槽点时，先把原数组槽点锁住，保证原数组槽点不能操作，成功拷贝到新数组时，把原数组槽点赋值为转移节点；
+3. 这时如果有新数据正好需要 put 到此槽点时，发现槽点为转移节点，就会一直等待，所以在扩容完成之前，该槽点对应的数据是不会发生变化的
+4. 从数组的尾部拷贝到头部，每拷贝成功一次，就把原数组中的节点设置成转移节点
+5. 直到所有数组数据都拷贝到新数组时，直接把新数组整个赋值给数组容器，拷贝完成
+
+```java
+// 扩容主要分 2 步，第一新建新的空数组，第二移动拷贝每个元素到新数组中去
+// tab：原数组，nextTab：新数组
+private final void transfer(Node<K,V>[] tab, Node<K,V>[] nextTab) {
+    // 老数组的长度
+    int n = tab.length, stride;
+    if ((stride = (NCPU > 1) ? (n >>> 3) / NCPU : n) < MIN_TRANSFER_STRIDE)
+        stride = MIN_TRANSFER_STRIDE; // subdivide range
+    // 如果新数组为空，初始化，大小为原数组的两倍，n << 1
+    if (nextTab == null) {            // initiating
+        try {
+            @SuppressWarnings("unchecked")
+            Node<K,V>[] nt = (Node<K,V>[])new Node<?,?>[n << 1];
+            nextTab = nt;
+        } catch (Throwable ex) {      // try to cope with OOME
+            sizeCtl = Integer.MAX_VALUE;
+            return;
+        }
+        nextTable = nextTab;
+        transferIndex = n;
+    }
+    // 新数组的长度
+    int nextn = nextTab.length;
+    // 代表转移节点，如果原数组上是转移节点，说明该节点正在被扩容
+    ForwardingNode<K,V> fwd = new ForwardingNode<K,V>(nextTab);
+    boolean advance = true;
+    boolean finishing = false; // to ensure sweep before committing nextTab
+    // 无限自旋，i 的值会从原数组的最大值开始，慢慢递减到 0
+    for (int i = 0, bound = 0;;) {
+        Node<K,V> f; int fh;
+        while (advance) {
+            int nextIndex, nextBound;
+            // 结束循环的标志
+            if (--i >= bound || finishing)
+                advance = false;
+            // 已经拷贝完成
+            else if ((nextIndex = transferIndex) <= 0) {
+                i = -1;
+                advance = false;
+            }
+            // 每次减少 i 的值
+            else if (U.compareAndSwapInt
+                     (this, TRANSFERINDEX, nextIndex,
+                      nextBound = (nextIndex > stride ?
+                                   nextIndex - stride : 0))) {
+                bound = nextBound;
+                i = nextIndex - 1;
+                advance = false;
+            }
+        }
+        // if 任意条件满足说明拷贝结束了
+        if (i < 0 || i >= n || i + n >= nextn) {
+            int sc;
+            // 拷贝结束，直接赋值，因为每次拷贝完一个节点，都在原数组上放转移节点，所以拷贝完成的节点的数据一定不会再发生变化。
+            // 原数组发现是转移节点，是不会操作的，会一直等待转移节点消失之后在进行操作。
+            // 也就是说数组节点一旦被标记为转移节点，是不会再发生任何变动的，所以不会有任何线程安全的问题
+            // 所以此处直接赋值，没有任何问题。
+            if (finishing) {
+                nextTable = null;
+                table = nextTab;
+                sizeCtl = (n << 1) - (n >>> 1);
+                return;
+            }
+            if (U.compareAndSwapInt(this, SIZECTL, sc = sizeCtl, sc - 1)) {
+                if ((sc - 2) != resizeStamp(n) << RESIZE_STAMP_SHIFT)
+                    return;
+                finishing = advance = true;
+                i = n; // recheck before commit
+            }
+        }
+        else if ((f = tabAt(tab, i)) == null)
+            advance = casTabAt(tab, i, null, fwd);
+        else if ((fh = f.hash) == MOVED)
+            advance = true; // already processed
+        else {
+            synchronized (f) {
+                // 进行节点的拷贝
+                if (tabAt(tab, i) == f) {
+                    Node<K,V> ln, hn;
+                    if (fh >= 0) {
+                        int runBit = fh & n;
+                        Node<K,V> lastRun = f;
+                        for (Node<K,V> p = f.next; p != null; p = p.next) {
+                            int b = p.hash & n;
+                            if (b != runBit) {
+                                runBit = b;
+                                lastRun = p;
+                            }
+                        }
+                        if (runBit == 0) {
+                            ln = lastRun;
+                            hn = null;
+                        }
+                        else {
+                            hn = lastRun;
+                            ln = null;
+                        }
+                        // 如果节点只有单个数据，直接拷贝，如果是链表，循环多次组成链表拷贝
+                        for (Node<K,V> p = f; p != lastRun; p = p.next) {
+                            int ph = p.hash; K pk = p.key; V pv = p.val;
+                            if ((ph & n) == 0)
+                                ln = new Node<K,V>(ph, pk, pv, ln);
+                            else
+                                hn = new Node<K,V>(ph, pk, pv, hn);
+                        }
+                        // 在新数组位置上放置拷贝的值
+                        setTabAt(nextTab, i, ln);
+                        setTabAt(nextTab, i + n, hn);
+                        // 在老数组位置上放上 ForwardingNode 节点
+                        // put 时，发现是 ForwardingNode 节点，就不会再动这个节点的数据了
+                        setTabAt(tab, i, fwd);
+                        advance = true;
+                    }
+                    // 红黑树的拷贝
+                    else if (f instanceof TreeBin) {
+                        // 红黑树的拷贝工作，同 HashMap 的内容，代码忽略
+                        …………
+                        // 在老数组位置上放上 ForwardingNode 节点
+                        setTabAt(tab, i, fwd);
+                        advance = true;
+                    }
+                }
+            }
+        }
+    }
+}
+```
+
+### 并发List和Map源码面试题
+
+1、CopyOnWriteArrayList 和 ArrayList 相比有哪些相同点和不同点？
+
+**相同点**：底层的数据结构是相同的，都是数组的数据结构，提供出来的 API 都是对数组结构进行操作，让我们更好的使用。
+
+**不同点**：后者是线程安全的，在多线程环境下使用，无需加锁，可直接使用。
+
+2、CopyOnWriteArrayList 通过哪些手段实现了线程安全？
+
+- 数组容器被 volatile 关键字修饰，保证了数组内存地址被任意线程修改后，都会通知到其他线程；
+- 对数组的所有修改操作，都进行了加锁，保证了同一时刻，只能有一个线程对数组进行修改，比如我在 add 时，就无法 remove
+- 修改过程中对原数组进行了复制，是在新数组上进行修改的，修改过程中，不会对原数组产生任何影响
+
+3、 在 add 方法中，对数组进行加锁后，不是已经是线程安全了么，为什么还需要对老数组进行拷贝？
+
+的确，对数组进行加锁后，能够保证同一时刻，只有一个线程能对数组进行 add，在同单核 CPU 下的多线程环境下肯定没有问题，但我们现在的机器都是多核 CPU，如果我们不通过复制拷贝新建数组，修改原数组容器的内存地址的话，是无法触发 volatile 可见性效果的，那么其他 CPU 下的线程就无法感知数组原来已经被修改了，就会引发多核 CPU 下的线程安全问题。
+
+假设我们不复制拷贝，而是在原来数组上直接修改值，数组的内存地址就不会变，而数组被 volatile 修饰时，必须当数组的内存地址变更时，才能及时的通知到其他线程，内存地址不变，仅仅是数组元素值发生变化时，是无法把数组元素值发生变动的事实，通知到其它线程的。
+
+4、 对老数组进行拷贝，会有性能损耗，我们平时使用需要注意什么？
+
+在批量操作时，尽量使用 addAll、removeAll 方法，而不要在循环里面使用 add、remove 方法，主要是因为 for 循环里面使用 add 、remove 的方式，在每次操作时，都会进行一次数组的拷贝(甚至多次)，非常耗性能，而 addAll、removeAll 方法底层做了优化，整个操作只会进行一次数组拷贝，由此可见，当批量操作的数据越多时，批量方法的高性能体现的越明显。
+
+5、为什么 CopyOnWriteArrayList 迭代过程中，数组结构变动，不会抛出ConcurrentModificationException 了？
+
+主要是因为 CopyOnWriteArrayList 每次操作时，都会产生新的数组，而迭代时，持有的仍然是老数组的引用，所以我们说的数组结构变动，是用新数组替换了老数组，老数组的结构并没有发生变化，所以不会抛出异常了。
+
+6、插入的数据正好在 List 的中间，请问两种 List 分别拷贝数组几次？为什么？
+
+ArrayList 只需拷贝一次，假设插入的位置是 2，只需要把位置 2 （包含 2）后面的数据都往后移动一位即可，所以拷贝一次。
+
+CopyOnWriteArrayList 拷贝两次，因为 CopyOnWriteArrayList 多了把老数组的数据拷贝到新数组上这一步，可能有的同学会想到这种方式：先把老数组拷贝到新数组，再把 2 后面的数据往后移动一位，这的确是一种拷贝的方式，但 CopyOnWriteArrayList 底层实现更加灵活，而是：把老数组 0 到 2 的数据拷贝到新数组上，预留出新数组 2 的位置，再把老数组 3～ 最后的数据拷贝到新数组上，这种拷贝方式可以减少我们拷贝的数据，虽然是两次拷贝，但拷贝的数据却仍然是老数组的大小，设计的非常巧妙。
+
+7、ConcurrentHashMap 和 HashMap 的相同点和不同点？
+
+8、ConcurrentHashMap 通过哪些手段保证了线程安全？
+
+- 储存 Map 数据的数组被 volatile 关键字修饰，一旦被修改，立马就能通知其他线程，因为是数组，所以需要改变其内存值，才能真正的发挥出 volatile 的可见特性；
+- put 时，如果计算出来的数组下标索引没有值的话，采用无限 for 循环 + CAS 算法，来保证一定可以新增成功，又不会覆盖其他线程 put 进去的值；
+- 如果 put 的节点正好在扩容，会等待扩容完成之后，再进行 put ，保证了在扩容时，老数组的值不会发生变化；
+- 对数组的槽点进行操作时，会先锁住槽点，保证只有当前线程才能对槽点上的链表或红黑树进行操作；
+- 红黑树旋转时，会锁住根节点，保证旋转时的线程安全。
+
+9、描述一下 CAS 算法在 ConcurrentHashMap 中的应用？
+
+CAS 其实是一种乐观锁，一般有三个值，分别为：赋值对象，原值，新值，在执行的时候，会先判断内存中的值是否和原值相等，相等的话把新值赋值给对象，否则赋值失败，整个过程都是原子性操作，没有线程安全问题。
+
+ConcurrentHashMap 的 put 方法中，有使用到 CAS ，是结合无限 for 循环一起使用的，步骤如下：
+
+1. 计算出数组索引下标，拿出下标对应的原值；
+2. CAS 覆盖当前下标的值，赋值时，如果发现内存值和 1 拿出来的原值相等，执行赋值，退出循环，否则不赋值，转到 3；
+3. 进行下一次 for 循环，重复执行 1，2，直到成功为止。
+
+10、ConcurrentHashMap 在 Java 7 和 8 中关于线程安全的做法有啥不同？
+
+非常不一样，拿 put 方法为例，Java 7 的做法是：
+
+1. 把数组进行分段，找到当前 key 对应的是那一段；
+2. 将当前段锁住，然后再根据 hash 寻找对应的值，进行赋值操作。
+
+Java 7 的做法比较简单，缺点也很明显，就是当我们需要 put 数据时，我们会锁住改该数据对应的某一段，这一段数据可能会有很多，比如我只想 put 一个值，锁住的却是一段数据，导致这一段的其他数据都不能进行写入操作，大大的降低了并发性的效率。Java 8 解决了这个问题，从锁住某一段，修改成锁住某一个槽点，提高了并发效率。
+
+不仅仅是 put，删除也是，仅仅是锁住当前槽点，缩小了锁的范围，增大了效率。
