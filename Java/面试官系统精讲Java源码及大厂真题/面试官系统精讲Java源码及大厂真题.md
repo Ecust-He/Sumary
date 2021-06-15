@@ -2209,3 +2209,332 @@ SynchronousQueue 底层结构和其它队列完全不同，有着独特的两种
     }
 ```
 
+##### 非公平的堆栈
+
+### DelayQueue 源码解析
+
+#### 整体设计
+
+DelayQueue 延迟队列底层使用的是锁的能力，比如说要在当前时间往后延迟 5 秒执行，那么当前线程就会沉睡 5 秒，等 5 秒后线程被唤醒时，如果能获取到资源的话，线程即可立马执行。
+
+##### 类注释
+
+1. 队列中元素将在过期时被执行，越靠近队头，越早过期；
+2. 未过期的元素不能够被 take；
+3. 不允许空元素。
+
+```java
+public class DelayQueueDemo {
+	// 队列消息的生产者
+  static class Product implements Runnable {
+    private final BlockingQueue queue;
+    public Product(BlockingQueue queue) {
+      this.queue = queue;
+    }
+    
+    @Override
+    public void run() {
+      try {
+        log.info("begin put");
+        long beginTime = System.currentTimeMillis();
+        queue.put(new DelayedDTO(System.currentTimeMillis() + 2000L,beginTime));//延迟 2 秒执行
+        queue.put(new DelayedDTO(System.currentTimeMillis() + 5000L,beginTime));//延迟 5 秒执行
+        queue.put(new DelayedDTO(System.currentTimeMillis() + 1000L * 10,beginTime));//延迟 10 秒执行
+        log.info("end put");
+      } catch (InterruptedException e) {
+        log.error("" + e);
+      }
+    }
+  }
+	// 队列的消费者
+  static class Consumer implements Runnable {
+    private final BlockingQueue queue;
+    public Consumer(BlockingQueue queue) {
+      this.queue = queue;
+    }
+
+    @Override
+    public void run() {
+      try {
+        log.info("Consumer begin");
+        ((DelayedDTO) queue.take()).run();
+        ((DelayedDTO) queue.take()).run();
+        ((DelayedDTO) queue.take()).run();
+        log.info("Consumer end");
+      } catch (InterruptedException e) {
+        log.error("" + e);
+      }
+    }
+  }
+
+  @Data
+  // 队列元素，实现了 Delayed 接口
+  static class DelayedDTO implements Delayed {
+    Long s;
+    Long beginTime;
+    public DelayedDTO(Long s,Long beginTime) {
+      this.s = s;
+      this.beginTime =beginTime;
+    }
+
+    @Override
+    public long getDelay(TimeUnit unit) {
+      return unit.convert(s - System.currentTimeMillis(), TimeUnit.MILLISECONDS);
+    }
+
+    @Override
+    public int compareTo(Delayed o) {
+      return (int) (this.getDelay(TimeUnit.MILLISECONDS) - o.getDelay(TimeUnit.MILLISECONDS));
+    }
+
+    public void run(){
+      log.info("现在已经过了{}秒钟",(System.currentTimeMillis() - beginTime)/1000);
+    }
+  }
+	// demo 运行入口
+  public static void main(String[] args) throws InterruptedException {
+    BlockingQueue q = new DelayQueue();
+    DelayQueueDemo.Product p = new DelayQueueDemo.Product(q);
+    DelayQueueDemo.Consumer c = new DelayQueueDemo.Consumer(q);
+    new Thread(c).start();
+    new Thread(p).start();
+  }
+}
+打印出来的结果如下：
+06:57:50.544 [Thread-0] Consumer begin
+06:57:50.544 [Thread-1] begin put
+06:57:50.551 [Thread-1] end put
+06:57:52.554 [Thread-0] 延迟了2秒钟才执行
+06:57:55.555 [Thread-0] 延迟了5秒钟才执行
+06:58:00.555 [Thread-0] 延迟了10秒钟才执行
+06:58:00.556 [Thread-0] Consumer end
+```
+
+### ArrayBlockingQueue 源码解析
+
+#### 整体架构
+
+##### 类注释
+
+1. 有界的阻塞数组，容量一旦创建，后续大小无法修改；
+2. 元素是有顺序的，按照先入先出进行排序，从队尾插入数据数据，从队头拿数据；
+3. 队列满时，往队列中 put 数据会被阻塞，队列空时，往队列中拿数据也会被阻塞。
+
+##### 数据结构
+
+```java
+// 队列存放在 object 的数组里面
+// 数组大小必须在初始化的时候手动设置，没有默认大小
+final Object[] items;
+
+// 下次拿数据的时候的索引位置
+int takeIndex;
+
+// 下次放数据的索引位置
+int putIndex;
+
+// 当前已有元素的大小
+int count;
+
+// 可重入的锁
+final ReentrantLock lock;
+
+// take的队列
+private final Condition notEmpty;
+
+// put的队列
+private final Condition notFull;
+```
+
+##### 初始化
+
+```java
+public ArrayBlockingQueue(int capacity, boolean fair) {
+    if (capacity <= 0)
+        throw new IllegalArgumentException();
+    this.items = new Object[capacity];
+    lock = new ReentrantLock(fair);
+    // 队列不为空 Condition，在 put 成功时使用
+    notEmpty = lock.newCondition();
+    // 队列不满 Condition，在 take 成功时使用
+    notFull =  lock.newCondition();
+}
+```
+
+##### 新增数据
+
+```java
+// 新增，如果队列满，无限阻塞
+public void put(E e) throws InterruptedException {
+    // 元素不能为空
+    checkNotNull(e);
+    final ReentrantLock lock = this.lock;
+    lock.lockInterruptibly();
+    try {
+        // 队列如果是满的，就无限等待
+        // 一直等待队列中有数据被拿走时，自己被唤醒
+        while (count == items.length)
+            notFull.await();
+        enqueue(e);
+    } finally {
+        lock.unlock();
+    }
+}
+
+private void enqueue(E x) {
+    // assert lock.getHoldCount() == 1; 同一时刻只能一个线程进行操作此方法
+    // assert items[putIndex] == null;
+    final Object[] items = this.items;
+    // putIndex 为本次插入的位置
+    items[putIndex] = x;
+    // ++ putIndex 计算下次插入的位置
+    // 如果下次插入的位置，正好等于队尾，下次插入就从 0 开始
+    if (++putIndex == items.length)
+        putIndex = 0;
+    count++;
+    // 唤醒因为队列空导致的等待线程
+    notEmpty.signal();
+}
+```
+
+##### 取出数据
+
+```java
+public E take() throws InterruptedException {
+    final ReentrantLock lock = this.lock;
+    lock.lockInterruptibly();
+    try {
+        // 如果队列为空，无限等待
+        // 直到队列中有数据被 put 后，自己被唤醒
+        while (count == 0)
+            notEmpty.await();
+        // 从队列中拿数据
+        return dequeue();
+    } finally {
+        lock.unlock();
+    }
+}
+
+private E dequeue() {
+    final Object[] items = this.items;
+    // takeIndex 代表本次拿数据的位置，是上一次拿数据时计算好的
+    E x = (E) items[takeIndex];
+    // 帮助 gc
+    items[takeIndex] = null;
+    // ++ takeIndex 计算下次拿数据的位置
+    // 如果正好等于队尾的话，下次就从 0 开始拿数据
+    if (++takeIndex == items.length)
+        takeIndex = 0;
+    // 队列实际大小减 1
+    count--;
+    if (itrs != null)
+        itrs.elementDequeued();
+    // 唤醒被队列满所阻塞的线程
+    notFull.signal();
+    return x;
+}
+```
+
+### 队列在源码方面的面试题
+
+**1、说说你对队列的理解，队列和集合的区别**
+
+对队列的理解：
+
+1. 首先队列本身也是个容器，底层也会有不同的数据结构，比如 LinkedBlockingQueue 是底层是链表结构，所以可以维持先入先出的顺序，比如 DelayQueue 底层可以是队列或堆栈，所以可以保证先入先出，或者先入后出的顺序等等，底层的数据结构不同，也造成了操作实现不同；
+2. 部分队列（比如 LinkedBlockingQueue ）提供了暂时存储的功能，我们可以往队列里面放数据，同时也可以从队列里面拿数据，两者可以同时进行；
+3. 队列把生产数据的一方和消费数据的一方进行解耦，生产者只管生产，消费者只管消费，两者之间没有必然联系，队列就像生产者和消费者之间的数据通道一样，如 LinkedBlockingQueue；
+4. 队列还可以对消费者和生产者进行管理，比如队列满了，有生产者还在不停投递数据时，队列可以使生产者阻塞住，让其不再能投递，比如队列空时，有消费者过来拿数据时，队列可以让消费者 hodler 住，等有数据时，唤醒消费者，让消费者拿数据返回，如 ArrayBlockingQueue；
+5. 队列还提供阻塞的功能，比如我们从队列拿数据，但队列中没有数据时，线程会一直阻塞到队列有数据可拿时才返回。
+
+队列和集合的区别：
+
+1. 和集合的相同点，队列（部分例外）和集合都提供了数据存储的功能，底层的储存数据结构是有些相似的，比如说 LinkedBlockingQueue 和 LinkedHashMap 底层都使用的是链表，ArrayBlockingQueue 和 ArrayList 底层使用的都是数组。
+
+2. 和集合的区别：
+
+   2.1 部分队列和部分集合底层的存储结构很相似的，但两者为了完成不同的事情，提供的 API 和其底层的操作实现是不同的。
+
+   2.2 队列提供了阻塞的功能，能对消费者和生产者进行简单的管理，队列空时，会阻塞消费者，有其他线程进行 put 操作后，会唤醒阻塞的消费者，让消费者拿数据进行消费，队列满时亦然。
+
+   2.3 解耦了生产者和消费者，队列就像是生产者和消费者之间的管道一样，生产者只管往里面丢，消费者只管不断消费，两者之间互不关心。
+
+**2、哪些队列具有阻塞的功能，大概是如何阻塞的？**
+
+1. LinkedBlockingQueue 链表阻塞队列和 ArrayBlockingQueue 数组阻塞队列是一类，前者容量是 Integer 的最大值，后者数组大小固定，两个阻塞队列都可以指定容量大小，当队列满时，如果有线程 put 数据，线程会阻塞住，直到有其他线程进行消费数据后，才会唤醒阻塞线程继续 put，当队列空时，如果有线程 take 数据，线程会阻塞到队列不空时，继续 take。
+2. SynchronousQueue 同步队列，当线程 put 时，必须有对应线程把数据消费掉，put 线程才能返回，当线程 take 时，需要有对应线程进行 put 数据时，take 才能返回，反之则阻塞，举个例子，线程 A put 数据 A1 到队列中了，此时并没有任何的消费者，线程 A 就无法返回，会阻塞住，直到有线程消费掉数据 A1 时，线程 A 才能返回。
+
+**3、底层是如何实现阻塞的？**
+
+队列本身并没有实现阻塞的功能，而是利用 Condition 的等待唤醒机制。
+
+相同点：
+
+1. 两者的阻塞机制大体相同，比如在队列满、空时，线程都会阻塞住。
+
+不同点：
+
+1. LinkedBlockingQueue 底层是链表结构，容量默认是 Interge 的最大值，ArrayBlockingQueue 底层是数组，容量必须在初始化时指定。
+2. 两者的底层结构不同，所以 take、put、remove 的底层实现也就不同。
+
+**4、往队列里面 put 数据是线程安全的么？为什么？**
+
+是线程安全的，在 put 之前，队列会自动加锁，put 完成之后，锁会自动释放，保证了同一时刻只会有一个线程能操作队列的数据，以 LinkedBlockingQueue 为例子，put 时，会加 put 锁，并只对队尾 tail 进行操作，take 时，会加 take 锁，并只对队头 head 进行操作，remove 时，会同时加 put 和 take 锁，所以各种操作都是线程安全的，我们工作中可以放心使用。
+
+**5、 take 的时候也会加锁么？既然 put 和 take 都会加锁，是不是同一时间只能运行其中一个方法。**
+
+是的，take 时也会加锁的，像 LinkedBlockingQueue 在执行 take 方法时，在拿数据的同时，会把当前数据删除掉，就改变了链表的数据结构，所以需要加锁来保证线程安全。
+
+这个需要看情况而言，对于 LinkedBlockingQueue 来说，队列的 put 和 take 都会加锁，但两者的锁是不一样的，所以两者互不影响，可以同时进行的，对于 ArrayBlockingQueue 而言，put 和 take 是同一个锁，所以同一时刻只能运行一个方法。
+
+**6、工作中经常使用队列的 put、take 方法有什么危害，如何避免。**
+
+当队列满时，使用 put 方法，会一直阻塞到队列不满为止。
+
+当队列空时，使用 take 方法，会一直阻塞到队列有数据为止。
+
+两个方法都是无限（永远、没有超时时间的意思）阻塞的方法，容易使得线程全部都阻塞住，大流量时，导致机器无线程可用，所以建议在流量大时，使用 offer 和 poll 方法来代替两者，我们只需要设置好超时阻塞时间，这两个方法如果在超时时间外，还没有得到数据的话，就会返回默认值（LinkedBlockingQueue 为例），这样就不会导致流量大时，所有的线程都阻塞住了。
+
+这个也是生产事故常常发生的原因之一，尝试用 put 和 take 方法，在平时自测中根本无法发现，对源码不熟悉的同学也不会意识到会有问题，当线上大流量打进来时，很有可能会发生故障，所以我们平时工作中使用队列时，需要谨慎再谨慎。
+
+**7、把数据放入队列中后，有木有办法让队列过一会儿再执行？**
+
+可以的，DelayQueue 提供了这种机制，可以设置一段时间之后再执行，该队列有个唯一的缺点，就是数据保存在内存中，在重启和断电的时候，数据容易丢失，所以定时的时间我们都不会设置很久，一般都是几秒内，如果定时的时间需要设置很久的话，可以考虑采取延迟队列中间件（这种中间件对数据会进行持久化，不怕断电的发生）进行实现。
+
+**8、DelayQueue 对元素有什么要求么，我把 String 放到队列中去可以么？**
+
+DelayQueue 要求元素必须实现 Delayed 接口，Delayed 本身又实现了 Comparable 接口，Delayed 接口的作用是定义还剩下多久就会超时，给使用者定制超时时间的，Comparable 接口主要用于对元素之间的超时时间进行排序的，两者结合，就可以让越快过期的元素能够排在前面。
+
+所以把 String 放到 DelayQueue 中是不行的，编译都无法通过，DelayQueue 类在定义的时候，是有泛型定义的，泛型类型必须是 Delayed 接口的子类才行。
+
+**9、如何查看 SynchronousQueue 队列的大小？**
+
+此题是个陷进题，题目首先设定了 SynchronousQueue 是可以查看大小的，实际上 SynchronousQueue 本身是没有容量的，所以也无法查看其容量的大小，其内部的 size 方法都是写死的返回 0。
+
+**10、SynchronousQueue 底层有几种数据结构，两者有何不同？**
+
+底层有两种数据结构，分别是队列和堆栈。
+
+**11、假设 SynchronousQueue 底层使用的是堆栈，线程 1 执行 take 操作阻塞住了，然后有线程 2 执行 put 操作，问此时线程 2 是如何把 put 的数据传递给 take 的？**
+
+首先线程 1 被阻塞住，此时堆栈头就是线程 1 了，此时线程 2 执行 put 操作，会把 put 的数据赋值给堆栈头的 match 属性，并唤醒线程 1，线程 1 被唤醒后，拿到堆栈头中的 match 属性，就能够拿到 put 的数据了。
+
+严格上说并不是 put 操作直接把数据传递给了 take，而是 put 操作改变了堆栈头的数据，从而 take 可以从堆栈头上直接拿到数据，堆栈头是 take 和 put 操作之间的沟通媒介。
+
+**12、如果想使用固定大小的队列，有几种队列可以选择，有何不同？**
+
+可以使用 LinkedBlockingQueue 和 ArrayBlockingQueue 两种队列。
+
+前者是链表，后者是数组，链表新增时，只要建立起新增数据和链尾数据之间的关联即可，数组新增时，需要考虑到索引的位置（takeIndex 和 putIndex 分别记录着下次拿数据、放数据的索引位置），如果增加到了数组最后一个位置，下次就要重头开始新增。
+
+**13、ArrayBlockingQueue 可以动态扩容么？用到数组最后一个位置时怎么办？**
+
+不可以的，虽然 ArrayBlockingQueue 底层是数组，但不能够动态扩容的。
+
+假设 put 操作用到了数组的最后一个位置，那么下次 put 就需要从数组 0 的位置重新开始了。
+
+假设 take 操作用到数组的最后一个位置，那么下次 take 的时候也会从数组 0 的位置重新开始。
+
+**14、 ArrayBlockingQueue take 和 put 都是怎么找到索引位置的？是利用 hash 算法计算得到的么？**
+
+ArrayBlockingQueue 有两个属性，为 takeIndex 和 putIndex，分别标识下次 take 和 put 的位置，每次 take 和 put 完成之后，都会往后加一，虽然底层是数组，但和 HashMap 不同，并不是通过 hash 算法计算得到的。
