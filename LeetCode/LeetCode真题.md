@@ -772,6 +772,163 @@ func longestCommonPrefix(strs []string) string {
 
 ### Go
 
+## 17  Letter Combinations of a Phone Number
+
+### 思路
+
+### Java
+
+```java
+class Solution {
+    private String[] digitMap = {
+            "",
+            "",
+            "abc",
+            "def",
+            "ghi",
+            "jkl",
+            "mno",
+            "pqrs",
+            "tuv",
+            "wxyz"
+    };
+    public List<String> letterCombinations(String digits) {
+        List<String> res = new ArrayList<>();
+        if(digits.isEmpty()) {
+            return res;
+        }
+        // [0, index)解析的字符保存在str中
+        letterCombinations(0, "", digits, res);
+        return res;
+    }
+
+    public void letterCombinations(int index, String str, String digits, List<String> res) {
+        if (str.length() == digits.length()) {
+            res.add(str);
+            return;
+        }
+        String target = digitMap[digits.charAt(index) - '0'];
+        for (int i = 0; i < target.length(); i++) {
+            letterCombinations(index + 1, str + target.charAt(i), digits, res);
+        }
+    }
+}
+```
+
+### Python
+
+```python
+# leetcode submit region begin(Prohibit modification and deletion)
+class Solution(object):
+    digitMap = [
+            "",
+            "",
+            "abc",
+            "def",
+            "ghi",
+            "jkl",
+            "mno",
+            "pqrs",
+            "tuv",
+            "wxyz"
+    ]
+
+    def letterCombinations(self, digits):
+        """
+        :type digits: str
+        :rtype: List[str]
+        """
+        if not digits:
+            return []
+        res = []
+        self.combinations(0, '', digits, res)
+        return res
+
+    def combinations(self, index, target_str, digits, res):
+        """
+        :param index: int
+        :param target_str: str
+        :param digits: str
+        :param res: List[str]
+        :return:
+        """
+        if len(target_str) == len(digits):
+            res.append(target_str)
+            return
+        for ch in self.digitMap[int(digits[index])]:
+            self.combinations(index + 1, target_str + ch, digits, res)
+```
+
+### Go
+
+```go
+var digitMap = []string{
+    "",
+    "",
+    "abc",
+    "def",
+    "ghi",
+    "jkl",
+    "mno",
+    "pqrs",
+    "tuv",
+    "wxyz",
+}
+
+func letterCombinations(digits string) []string {
+    var res []string
+    if len(digits) == 0 {
+        return res
+    }
+    letterCombination(0, "", digits, &res)
+    return res
+}
+
+/**
+  digits[0, index)内解析后的字符串保存在str
+*/
+func letterCombination(index int, str string, digits string, res *[]string) {
+    if len(str) == len(digits) {
+        *res = append(*res, str)
+        return
+    }
+    for _, ch := range digitMap[digits[index] -48] {
+        letterCombination(index + 1, str + string(ch), digits, res)
+    }
+}
+```
+
+## 19  Remove Nth Node From End if List
+
+### 思路
+
+### Java
+
+```java
+class Solution {
+    public ListNode removeNthFromEnd(ListNode head, int n) {
+        int sz = 0;
+        ListNode cur = head;
+        while (cur != null) {
+            sz++;
+            cur = cur.next;
+        }
+        ListNode dumyHead = new ListNode(0);
+        dumyHead.next = head;
+        ListNode pre = dumyHead;
+        for (int i = 0; i < sz - n; i++) {
+            pre = pre.next;
+        }
+        pre.next = pre.next.next;
+        return dumyHead.next;
+    }
+}
+```
+
+### Python
+
+### Go
+
 ## 46  Permutations
 
 ### Java
