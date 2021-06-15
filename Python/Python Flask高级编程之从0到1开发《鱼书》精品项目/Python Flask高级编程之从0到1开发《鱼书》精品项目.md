@@ -121,3 +121,101 @@ from app.web import book
 from flask import current_app
 ```
 
+### 数据库表创建方式
+
+1. Database First
+2. Model First
+3. Code First
+
+### 模型映射到数据库
+
+#### base.py
+
+```python
+from datetime import datetime
+
+__author__ = '七月'
+
+from flask_sqlalchemy import SQLAlchemy as _SQLAlchemy, BaseQuery
+from sqlalchemy import Column, Integer, SmallInteger
+from contextlib import contextmanager
+
+
+class SQLAlchemy(_SQLAlchemy):
+    @contextmanager
+    def auto_commit(self):
+        try:
+            yield
+            self.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            raise e
+
+
+class Query(BaseQuery):
+    def filter_by(self, **kwargs):
+        if 'status' not in kwargs.keys():
+            kwargs['status'] = 1
+        return super(Query, self).filter_by(**kwargs)
+
+
+db = SQLAlchemy(query_class=Query)
+
+
+class Base(db.Model):
+    __abstract__ = True
+    create_time = Column('create_time', Integer)
+    status = Column(SmallInteger, default=1)
+
+    def __init__(self):
+        self.create_time = int(datetime.now().timestamp())
+
+    def set_attrs(self, attrs_dict):
+        for key, value in attrs_dict.items():
+            if hasattr(self, key) and key != 'id':
+                setattr(self, key, value)
+
+    @property
+    def create_datetime(self):
+        if self.create_time:
+            return datetime.fromtimestamp(self.create_time)
+        else:
+            return None
+
+    def delete(self):
+        self.status = 0
+```
+
+#### book.py
+
+```python
+from sqlalchemy import Column, Integer, String
+
+from app.models.base import db
+
+__author__ = '七月'
+
+
+class Book(db.Model):
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    title = Column(String(50), nullable=False)
+    author = Column(String(30), default='未名')
+    binding = Column(String(20))
+    publisher = Column(String(50))
+    price = Column(String(20))
+    pages = Column(Integer)
+    pubdate = Column(String(20))
+    isbn = Column(String(15), nullable=False, unique=True)
+    summary = Column(String(1000))
+    image = Column(String(50))
+
+    # MVC M Model 只有数据 = 数据表
+    # ORM 对象关系映射 Code First
+
+    def sample(self):
+        pass
+```
+
+### ORM与CodeFirst的区别
+
+CodeFirst专注于业务模型的设计，而不是专注数据库的设计
