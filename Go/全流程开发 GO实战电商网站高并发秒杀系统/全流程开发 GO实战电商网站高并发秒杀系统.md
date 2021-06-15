@@ -598,3 +598,222 @@ func main()  {
 ```
 
 ## 3  后台管理功能开发之商品管理功能开发
+
+### 商品模型开发
+
+```go
+package datamodels
+
+type Product struct {
+   ID           int64  `json:"id" sql:"ID" imooc:"ID"`
+   ProductName  string `json:"ProductName" sql:"productName" imooc:"ProductName"`
+   ProductNum   int64  `json:"ProductNum" sql:"productNum" imooc:"ProductNum"`
+   ProductImage string `json:"ProductImage" sql:"productImage" imooc:"ProductImage"`
+   ProductUrl   string `json:"ProductUrl" sql:"productUrl" imooc:"ProductUrl"`
+}
+```
+
+### 商品repository开发
+
+#### 数据库连接
+
+```go
+import (
+   "database/sql"
+)
+
+//创建mysql 连接
+func NewMysqlConn() (db *sql.DB, err error) {
+   db, err = sql.Open("mysql", "root:123456@tcp(127.0.0.1:3306)/imooc?charset=utf8")
+   return
+}
+```
+
+#### 插入
+
+```go
+func (p *ProductManager) Insert(product *datamodels.Product) (productId int64,err error) {
+   //1.判断连接是否存在
+   if err=p.Conn();err != nil{
+      return
+   }
+   //2.准备sql
+   sql :="INSERT product SET productName=?,productNum=?,productImage=?,productUrl=?"
+   stmt,errSql := p.mysqlConn.Prepare(sql)
+   defer stmt.Close()
+   if errSql !=nil {
+      return 0,errSql
+   }
+   //3.传入参数
+   result,errStmt:=stmt.Exec(product.ProductName,product.ProductNum,product.ProductImage,product.ProductUrl)
+   if errStmt !=nil {
+      return 0,errStmt
+   }
+   return result.LastInsertId()
+}
+```
+
+#### 删除
+
+```go
+//商品的删除
+func (p *ProductManager)Delete(productID int64) bool  {
+   //1.判断连接是否存在
+   if err:=p.Conn();err != nil{
+      return false
+   }
+   sql := "delete from product where ID=?"
+   stmt,err := p.mysqlConn.Prepare(sql)
+   defer stmt.Close()
+   if err!= nil {
+      return false
+   }
+   _,err = stmt.Exec(strconv.FormatInt(productID,10))
+   if err !=nil {
+      return false
+   }
+   return true
+}
+```
+
+#### 更新
+
+```go
+//商品的更新
+func (p *ProductManager)Update(product *datamodels.Product) error {
+   //1.判断连接是否存在
+   if err:=p.Conn();err != nil{
+      return err
+   }
+
+   sql := "Update product set productName=?,productNum=?,productImage=?,productUrl=? where ID="+strconv.FormatInt(product.ID,10)
+
+   stmt,err := p.mysqlConn.Prepare(sql)
+   defer stmt.Close()
+   if err !=nil {
+      return err
+   }
+
+   _,err = stmt.Exec(product.ProductName,product.ProductNum,product.ProductImage,product.ProductUrl)
+   if err !=nil {
+      return err
+   }
+   return nil
+}
+```
+
+#### 根据商品ID查询商品
+
+```go
+//根据商品ID查询商品
+func (p *ProductManager) SelectByKey(productID int64) (productResult *datamodels.Product,err error) {
+   //1.判断连接是否存在
+   if err=p.Conn();err != nil{
+      return &datamodels.Product{},err
+   }
+   sql := "Select * from "+p.table+" where ID ="+strconv.FormatInt(productID,10)
+   row,errRow :=p.mysqlConn.Query(sql)
+   defer row.Close()
+   if errRow !=nil {
+      return &datamodels.Product{},errRow
+   }
+   result := common.GetResultRow(row)
+   if len(result)==0{
+      return &datamodels.Product{},nil
+   }
+   productResult = &datamodels.Product{}
+   common.DataToStructByTagSql(result,productResult)
+   return
+}
+```
+
+##### 将rows转换为map
+
+```go
+//获取返回值， 获取一条
+func GetResultRow(rows *sql.Rows) map[string]string{
+	columns, _ := rows.Columns()
+	scanArgs := make([]interface{}, len(columns))
+	values := make([][]byte, len(columns))
+	for j := range values {
+		scanArgs[j] = &values[j]
+	}	
+	record := make(map[string]string)
+	for rows.Next() {
+		//将行数据保存到record字典 
+		rows.Scan(scanArgs...)
+		for i, v := range values {
+			if v != nil {
+				//fmt.Println(reflect.TypeOf(col))
+				record[columns[i]] = string(v)
+			}
+		}
+	}
+	return record
+}
+```
+
+##### 根据结构体中sql标签映射数据到结构体中并且转换类型
+
+```go
+//根据结构体中sql标签映射数据到结构体中并且转换类型
+func DataToStructByTagSql(data map[string]string, obj interface{}) {
+	objValue := reflect.ValueOf(obj).Elem()
+	for i := 0; i < objValue.NumField(); i++ {
+		//获取sql对应的值
+		value := data[objValue.Type().Field(i).Tag.Get("sql")]
+		//获取对应字段的名称
+		name := objValue.Type().Field(i).Name
+		//获取对应字段类型
+		structFieldType := objValue.Field(i).Type()
+		//获取变量类型，也可以直接写"string类型"
+		val := reflect.ValueOf(value)
+		var err error
+		if structFieldType != val.Type() {
+			//类型转换
+			val, err = TypeConversion(value, structFieldType.Name()) //类型转换
+			if err != nil {
+
+			}
+		}
+		//设置类型值
+		objValue.FieldByName(name).Set(val)
+	}
+}
+
+//类型转换
+func TypeConversion(value string, ntype string) (reflect.Value, error) {
+	if ntype == "string" {
+		return reflect.ValueOf(value), nil
+	} else if ntype == "time.Time" {
+		t, err := time.ParseInLocation("2006-01-02 15:04:05", value, time.Local)
+		return reflect.ValueOf(t), err
+	} else if ntype == "Time" {
+		t, err := time.ParseInLocation("2006-01-02 15:04:05", value, time.Local)
+		return reflect.ValueOf(t), err
+	} else if ntype == "int" {
+		i, err := strconv.Atoi(value)
+		return reflect.ValueOf(i), err
+	} else if ntype == "int8" {
+		i, err := strconv.ParseInt(value, 10, 64)
+		return reflect.ValueOf(int8(i)), err
+	} else if ntype == "int32" {
+		i, err := strconv.ParseInt(value, 10, 64)
+		return reflect.ValueOf(int64(i)), err
+	} else if ntype == "int64" {
+		i, err := strconv.ParseInt(value, 10, 64)
+		return reflect.ValueOf(i), err
+	} else if ntype == "float32" {
+		i, err := strconv.ParseFloat(value, 64)
+		return reflect.ValueOf(float32(i)), err
+	} else if ntype == "float64" {
+		i, err := strconv.ParseFloat(value, 64)
+		return reflect.ValueOf(i), err
+	}
+
+	//else if .......增加其他一些类型的转换
+
+	return reflect.ValueOf(value), errors.New("未知的类型：" + ntype)
+}
+```
+
