@@ -570,7 +570,7 @@ func (r *RabbitMQ) RecieveTopic() {
 }
 ```
 
-## 2  环境搭建之Iris 框架入门
+## 3  环境搭建之Iris 框架入门
 
 ### MVC目录结构
 
@@ -597,7 +597,7 @@ func main()  {
 }
 ```
 
-## 3  后台管理功能开发之商品管理功能开发
+## 4  后台管理功能开发之商品管理功能开发
 
 ### 商品模型开发
 
@@ -815,5 +815,411 @@ func TypeConversion(value string, ntype string) (reflect.Value, error) {
 
 	return reflect.ValueOf(value), errors.New("未知的类型：" + ntype)
 }
+```
+
+#### 查询所有商品
+
+```go
+//获取所有商品
+func (p *ProductManager)SelectAll()(productArray []*datamodels.Product,errProduct error){
+   //1.判断连接是否存在
+   if err:=p.Conn();err!= nil{
+      return nil,err
+   }
+   sql := "Select * from "+p.table
+   rows,err := p.mysqlConn.Query(sql)
+   defer  rows.Close()
+   if err !=nil {
+      return nil ,err
+   }
+
+   result:= common.GetResultRows(rows)
+   if len(result)==0{
+      return nil,nil
+   }
+
+   for _,v :=range result{
+      product := &datamodels.Product{}
+      common.DataToStructByTagSql(v,product)
+      productArray=append(productArray, product)
+   }
+   return
+}
+```
+
+### 商品管理功能service实现
+
+```go
+type IProductService interface {
+   GetProductByID(int64) (*datamodels.Product,error)
+   GetAllProduct()([]*datamodels.Product,error)
+   DeleteProductByID(int64)bool
+   InsertProduct(product *datamodels.Product)(int64,error)
+   UpdateProduct(product *datamodels.Product)error
+}
+
+type ProductService struct {
+   productRepository repositories.IProduct
+}
+
+//初始化函数
+func NewProductService(repository repositories.IProduct)IProductService   {
+   return &ProductService{repository}
+}
+
+func (p *ProductService)GetProductByID(productID int64) (*datamodels.Product,error)  {
+   return p.productRepository.SelectByKey(productID)
+}
+
+func (p *ProductService) GetAllProduct() ([]*datamodels.Product, error) {
+   return p.productRepository.SelectAll()
+}
+
+func (p *ProductService)DeleteProductByID(productID int64)bool {
+   return p.productRepository.Delete(productID)
+}
+
+func (p *ProductService) InsertProduct(product *datamodels.Product) (int64, error) {
+   return p.productRepository.Insert(product)
+}
+
+func (p *ProductService) UpdateProduct(product *datamodels.Product)error  {
+   return p.productRepository.Update(product)
+}
+```
+
+### 商品管理功能Contoller&View开发
+
+```go
+type ProductController struct {
+   Ctx iris.Context
+   ProductService services.IProductService
+}
+
+func (p *ProductController) GetAll() mvc.View {
+   productArray ,_:=p.ProductService.GetAllProduct()
+   return mvc.View{
+      Name:"product/view.html",
+      Data:iris.Map{
+         "productArray":productArray,
+      },
+   }
+}
+
+//修改商品
+func (p *ProductController) PostUpdate ()  {
+   product :=&datamodels.Product{}
+   p.Ctx.Request().ParseForm()
+   dec := common.NewDecoder(&common.DecoderOptions{TagName:"imooc"})
+   if err:= dec.Decode(p.Ctx.Request().Form,product);err!=nil {
+      p.Ctx.Application().Logger().Debug(err)
+   }
+   err:=p.ProductService.UpdateProduct(product)
+   if err !=nil {
+      p.Ctx.Application().Logger().Debug(err)
+   }
+   p.Ctx.Redirect("/product/all")
+}
+```
+
+### Golang 模板(template)的基本语法
+
+## 5  后台管理功能开发之订单功能开发
+
+### 订单model开发
+
+```go
+type Order struct {
+   ID int64 `sql:"ID"`
+   UserId int64 `sql:"userID"`
+   ProductId int64 `sql:"productID"`
+   OrderStatus int64 `sql:"orderStatus"`
+}
+
+const (
+   OrderWait = iota
+   OrderSuccess  //1
+   OrderFailed //2
+)
+```
+
+### 订单repository开发
+
+```go
+type IOrderRepository interface {
+   Conn() error
+   Insert(*datamodels.Order) (int64,error)
+   Delete(int64) bool
+   Update(*datamodels.Order) error
+   SelectByKey (int64) (*datamodels.Order,error)
+   SelectAll ()([]*datamodels.Order,error)
+   SelectAllWithInfo()(map[int]map[string]string,error)
+}
+
+func NewOrderMangerRepository(table string,sql *sql.DB) IOrderRepository  {
+   return &OrderMangerRepository{table:table,mysqlConn:sql}
+}
+
+type OrderMangerRepository struct {
+   table string
+   mysqlConn *sql.DB
+}
+
+func (o *OrderMangerRepository)Conn() error   {
+   if o.mysqlConn ==nil {
+      mysql,err := common.NewMysqlConn()
+      if err !=nil {
+         return err
+      }
+      o.mysqlConn=mysql
+   }
+   if o.table == "" {
+      o.table = "`order`"
+   }
+
+   return nil
+}
+
+func (o *OrderMangerRepository) Insert(order *datamodels.Order) (productID int64,err error) {
+   if err =o.Conn(); err !=nil {
+      return
+   }
+
+   sql :="INSERT "+o.table+" set userID=?,productID=?,orderStatus=?"
+   stmt ,errStmt := o.mysqlConn.Prepare(sql)
+   defer stmt.Close()
+   if errStmt !=nil {
+      return productID,errStmt
+   }
+   result,errResult :=stmt.Exec(order.UserId,order.ProductId,order.OrderStatus)
+   if errResult!=nil  {
+      return productID,errResult
+   }
+   return result.LastInsertId()
+}
+
+func (o *OrderMangerRepository)Delete(orderID int64) (isOk bool)   {
+   if err :=o.Conn();err !=nil {
+      return
+   }
+   sql :="delete from "+o.table+" where ID =?"
+   stmt,errStmt:=o.mysqlConn.Prepare(sql)
+   defer stmt.Close()
+   if errStmt !=nil {
+      return
+   }
+   _,err := stmt.Exec(orderID)
+   if err !=nil {
+      return
+   }
+   return true
+}
+
+func (o *OrderMangerRepository)Update(order *datamodels.Order) (err error) {
+   if errConn := o.Conn(); errConn != nil {
+      return errConn
+   }
+
+   sql := "Update " + o.table + " set userID=?,productID=?,orderStatus=? Where ID=" + strconv.FormatInt(order.ID, 10)
+   stmt, errStmt := o.mysqlConn.Prepare(sql)
+   defer stmt.Close()
+   if errStmt != nil {
+      return errStmt
+   }
+   _, err = stmt.Exec(order.UserId, order.ProductId, order.OrderStatus)
+   return
+}
+
+func (o *OrderMangerRepository)SelectByKey (orderID int64) (order *datamodels.Order,err error)  {
+   if errConn := o.Conn(); errConn != nil {
+      return &datamodels.Order{},errConn
+   }
+
+   sql :="Select * From "+o.table+" where ID="+ strconv.FormatInt(orderID, 10)
+   row,errRow :=o.mysqlConn.Query(sql)
+   defer row.Close()
+   if errRow!=nil{
+      return &datamodels.Order{},errRow
+   }
+
+   result := common.GetResultRow(row)
+   if len(result) == 0 {
+      return &datamodels.Order{},err
+   }
+
+   order = &datamodels.Order{}
+   common.DataToStructByTagSql(result,order)
+   return
+}
+
+func (o *OrderMangerRepository)SelectAll ()(orderArray []*datamodels.Order,err error)  {
+   if errConn := o.Conn(); errConn != nil {
+      return nil,errConn
+   }
+   sql:="Select * from "+o.table
+   rows ,errRows:=o.mysqlConn.Query(sql)
+   defer rows.Close()
+   if errRows!=nil {
+      return nil,errRows
+   }
+   result := common.GetResultRows(rows)
+   if len(result) == 0 {
+      return nil ,err
+   }
+
+   for _,v :=range result{
+      order :=&datamodels.Order{}
+      common.DataToStructByTagSql(v,order)
+      orderArray=append(orderArray,order)
+   }
+   return 
+}
+
+func (o *OrderMangerRepository) SelectAllWithInfo() (OrderMap map[int]map[string]string, err error) {
+   if errConn := o.Conn(); errConn != nil {
+      return nil, errConn
+   }
+   sql := "Select o.ID,p.productName,o.orderStatus From imooc.order as o left join product as p on o.productID=p.ID"
+   rows, errRows := o.mysqlConn.Query(sql)
+   defer rows.Close()
+   if errRows != nil {
+      return nil, errRows
+   }
+   return common.GetResultRows(rows), err
+}
+```
+
+### 订单管理service实现
+
+```go
+type IOrderService interface {
+   GetOrderByID(int64) (*datamodels.Order,error)
+   DeleteOrderByID(int64) bool
+   UpdateOrder(*datamodels.Order) error
+   InsertOrder(*datamodels.Order) (int64 ,error)
+   GetAllOrder()([]*datamodels.Order,error)
+   GetAllOrderInfo()(map[int]map[string]string,error)
+}
+
+func NewOrderService(repository repositories.IOrderRepository ) IOrderService  {
+   return &OrderService{OrderRepository:repository}
+}
+
+type OrderService struct {
+   OrderRepository repositories.IOrderRepository
+}
+
+func (o *OrderService)GetOrderByID(orderID int64) (order *datamodels.Order,err error)  {
+   return o.OrderRepository.SelectByKey(orderID)
+}
+
+func (o *OrderService)DeleteOrderByID(orderID int64) (isOk bool)  {
+   isOk = o.OrderRepository.Delete(orderID)
+   return
+}
+
+func (o *OrderService)UpdateOrder(order *datamodels.Order) error{
+   return o.OrderRepository.Update(order)
+}
+
+func (o *OrderService)InsertOrder(order *datamodels.Order) (orderID int64,err error)  {
+   return o.OrderRepository.Insert(order)
+}
+
+func (o *OrderService) GetAllOrder()([]*datamodels.Order,error) {
+   return o.OrderRepository.SelectAll()
+}
+
+func (o *OrderService) GetAllOrderInfo()(map[int]map[string]string,error) {
+   return o.OrderRepository.SelectAllWithInfo()
+}
+```
+
+### 订单管理Controller&View实现
+
+```go
+type OrderController struct {
+   Ctx iris.Context
+   OrderService services.IOrderService
+}
+
+func (o *OrderController) Get() mvc.View {
+   orderArray,err:=o.OrderService.GetAllOrderInfo()
+   if err !=nil {
+      o.Ctx.Application().Logger().Debug("查询订单信息失败")
+   }
+
+   return mvc.View{
+      Name:"order/view.html",
+      Data:iris.Map{
+         "order":orderArray,
+      },
+   }
+   
+}
+```
+
+### Go语言中的Tag语法
+
+Tag在运行时可以通过reflection包来读取
+
+```go
+package main
+import (
+    "fmt"
+    "reflect"
+)
+type T struct {
+    f1     string "f one"
+    f2     string
+    f3     string `f three`
+    f4, f5 int64  `f four and five`
+}
+func main() {
+    t := reflect.TypeOf(T{})
+    f1, _ := t.FieldByName("f1")
+    fmt.Println(f1.Tag) // f one
+    f4, _ := t.FieldByName("f4")
+    fmt.Println(f4.Tag) // f four and five
+    f5, _ := t.FieldByName("f5")
+    fmt.Println(f5.Tag) // f four and five
+}
+```
+
+#### 格式
+
+Tags可以由键值对来组成，通过空格符来分割键值 —key1:“value1” key2:“value2” key3:“value3”。如果Tags格式没问题的话，我们可以通过Lookup或者Get来获取键值对的值。
+Lookup回传两个值 —对应的值和是否找到
+
+```go
+type T struct {
+    f string `one:"1" two:"2"blank:""`
+}
+func main() {
+    t := reflect.TypeOf(T{})
+    f, _ := t.FieldByName("f")
+    fmt.Println(f.Tag) // one:"1" two:"2"blank:""
+    v, ok := f.Tag.Lookup("one")
+    fmt.Printf("%s, %t\n", v, ok) // 1, true
+    v, ok = f.Tag.Lookup("blank")
+    fmt.Printf("%s, %t\n", v, ok) // , true
+    v, ok = f.Tag.Lookup("five")
+    fmt.Printf("%s, %t\n", v, ok) // , false
+}
+```
+
+#### 转化
+
+```go
+type T1 struct {
+     f int `json:"foo"`
+ }
+ type T2 struct {
+     f int `json:"bar"`
+ }
+ t1 := T1{10}
+ var t2 T2
+ t2 = T2(t1)
+ fmt.Println(t2) // {10}
 ```
 
