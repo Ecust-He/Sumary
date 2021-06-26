@@ -2538,3 +2538,196 @@ DelayQueue 要求元素必须实现 Delayed 接口，Delayed 本身又实现了 
 **14、 ArrayBlockingQueue take 和 put 都是怎么找到索引位置的？是利用 hash 算法计算得到的么？**
 
 ArrayBlockingQueue 有两个属性，为 takeIndex 和 putIndex，分别标识下次 take 和 put 的位置，每次 take 和 put 完成之后，都会往后加一，虽然底层是数组，但和 HashMap 不同，并不是通过 hash 算法计算得到的。
+
+### 队列在Java其他源码中的应用
+
+#### 队列和线程池的结合
+
+##### 队列在线程池中的作用
+
+#####  线程池中使用到的队列的类型
+
+#### 队列和锁的结合
+
+```java
+ReentrantLock lock = new ReentrantLock();
+try{
+    lock.lock();
+    // do something
+}catch(Exception e){
+  //throw Exception;
+}finally {
+    lock.unlock();
+}
+```
+
+### 整体设计：队列设计思想、工作中使用场景
+
+### 惊叹面试官：由浅入深手写队列
+
+## 5  线程
+
+### Thread源码解析
+
+#### 类注释
+
+##### 线程的状态
+
+1. NEW 表示线程创建成功，但没有运行，在 new Thread 之后，没有 start 之前，线程的状态都是 NEW；
+2. 当我们运行 strat 方法，子线程被创建成功之后，子线程的状态变成 RUNNABLE，RUNNABLE 表示线程正在运行中；
+3. 子线程运行完成、被打断、被中止，状态都会从 RUNNABLE 变成 TERMINATED，TERMINATED 表示线程已经运行结束了；
+4. 如果线程正好在等待获得 monitor lock 锁，比如在等待进入 synchronized 修饰的代码块或方法时，会从 RUNNABLE 变成 BLOCKED，BLOCKED 表示阻塞的意思；
+5. WAITING 和 TIMED_WAITING 类似，都表示在遇到 Object#wait、Thread#join、LockSupport#park 这些方法时，线程就会等待另一个线程执行完特定的动作之后，才能结束等待，只不过 TIMED_WAITING 是带有等待时间的（可以看下面的 join 方法的 demo）。
+
+### Future、ExecutorService 源码解析
+
+### 线程源码面试题
+
+**1、创建子线程时，子线程是得不到父线程的 ThreadLocal，有什么办法可以解决这个问题？**
+
+**2、 子线程 1 去等待子线程 2 执行完成之后才能执行，如何去实现？**
+
+```java
+@Test
+public void testJoin2() throws Exception {
+  Thread thread2 = new Thread(new Runnable() {
+    @Override
+    public void run() {
+      log.info("我是子线程 2,开始沉睡");
+      try {
+        Thread.sleep(2000L);
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      }
+      log.info("我是子线程 2，执行完成");
+    }
+  });
+  Thread thread1 = new Thread(new Runnable() {
+    @Override
+    public void run() {
+      log.info("我是子线程 1，开始运行");
+      try {
+      log.info("我是子线程 1，我在等待子线程 2");
+      // 这里是代码关键  
+      thread2.join();
+      log.info("我是子线程 1，子线程 2 执行完成，我继续执行");
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      }
+      log.info("我是子线程 1，执行完成");
+    }
+  });
+  thread1.start();
+  thread2.start();
+  Thread.sleep(100000);
+}
+```
+
+**3、守护线程和非守护线程的区别？如果我想在项目启动的时候收集代码信息，请问是守护线程好，还是非守护线程好，为什么？**
+
+两者的主要区别是，在 JVM 退出时，JVM 是不会管守护线程的，只会管非守护线程，如果非守护线程还有在运行的，JVM 就不会退出，如果没有非守护线程了，但还有守护线程的，JVM 直接退出。
+
+如果需要在项目启动的时候收集代码信息，就需要看收集工作是否重要了，如果不太重要，又很耗时，就应该选择守护线程，这样不会妨碍 JVM 的退出，如果收集工作非常重要的话，那么就需要非守护进程，这样即使启动时发生未知异常，JVM 也会等到代码收集信息线程结束后才会退出，不会影响收集工作。
+
+**4、 聊聊对 FutureTask 的 get、cancel 方法的理解**
+
+get 方法主要作用是得到 Callable 异步任务执行的结果，无参 get 会一直等待任务执行完成之后才返回，有参 get 方法可以设定固定的时间，在设定的时间内，如果任务还没有执行成功，直接返回异常，在实际工作中，建议多多使用 get 有参方法，少用 get 无参方法，防止任务执行过慢时，多数线程都在等待，造成线程耗尽的问题。
+
+cancel 方法主要用来取消任务，如果任务还没有执行，是可以取消的，如果任务已经在执行过程中了，你可以选择不取消，或者直接打断执行中的任务。
+
+**5、Thread.yield 方法在工作中有什么用？**
+
+yield 方法表示当前线程放弃 cpu，重新参与到 cpu 的竞争中去，再次竞争时，自己有可能得到 cpu 资源，也有可能得不到，这样做的好处是防止当前线程一直霸占 cpu。
+
+我们在工作中可能会写一些 while 自旋的代码，如果我们一直 while 自旋，不采取任何手段，我们会发现 cpu 一直被当前 while 循环占用，如果能预见 while 自旋时间很长，我们会设置一定的判断条件，让当前线程陷入阻塞，如果能预见 while 自旋时间很短，我们通常会使用 Thread.yield 方法，使当前自旋线程让步，不一直霸占 cpu，比如这样：
+
+```java
+boolean stop = false;
+while (!stop){
+  // dosomething
+  Thread.yield();
+}
+```
+
+## 6  锁
+
+### AbstractQueuedSynchronizer 源码解析
+
+#### 类注释
+
+1. 提供了一种框架，自定义了先进先出的同步队列，让获取不到锁的线程能进入同步队列中排队；
+2. 同步器有个状态字段，我们可以通过状态字段来判断能否得到锁，此时设计的关键在于依赖安全的 atomic value 来表示状态（虽然注释是这个意思，但实际上是通过把状态声明为 volatile，在锁里面修改状态值来保证线程安全的）；
+3. 子类可以通过给状态 CAS 赋值来决定能否拿到锁，可以定义那些状态可以获得锁，哪些状态表示获取不到锁（比如定义状态值是 0 可以获得锁，状态值是 1 就获取不到锁）；
+4. 子类可以新建非 public 的内部类，用内部类来继承 AQS，从而实现锁的功能；
+5. AQS 提供了排它模式和共享模式两种锁模式。排它模式下：只有一个线程可以获得锁，共享模式可以让多个线程获得锁，子类 ReadWriteLock 实现了两种模式；
+6. 内部类 ConditionObject 可以被用作 Condition，我们通过 new ConditionObject () 即可得到条件队列；
+7. AQS 实现了锁、排队、锁队列等框架，至于如何获得锁、释放锁的代码并没有实现，比如 tryAcquire、tryRelease、tryAcquireShared、tryReleaseShared、isHeldExclusively 这些方法，AQS 中默认抛 UnsupportedOperationException 异常，都是需要子类去实现的；
+8. AQS 继承 AbstractOwnableSynchronizer 是为了方便跟踪获得锁的线程，可以帮助监控和诊断工具识别是哪些线程持有了锁；
+9. AQS 同步队列和条件队列，获取不到锁的节点在入队时是先进先出，但被唤醒时，可能并不会按照先进先出的顺序执行。
+
+### ReentrantLock 源码解析
+
+### CountDownLatch、Atomic 等其它源码解析
+
+#### CountDownLatch
+
+1. 让一组线程在全部启动完成之后，再一起执行（先启动的线程需要阻塞等待后启动的线程，直到一组线程全部都启动完成后，再一起执行）；
+2. 主线程等待另外一组线程都执行完成之后，再继续执行。
+
+```java
+public class CountDownLatchDemo {
+
+  // 线程任务
+  class Worker implements Runnable {
+    // 定义计数锁用来实现功能 1
+    private final CountDownLatch startSignal;
+    // 定义计数锁用来实现功能 2
+    private final CountDownLatch doneSignal;
+
+    Worker(CountDownLatch startSignal, CountDownLatch doneSignal) {
+      this.startSignal = startSignal;
+      this.doneSignal = doneSignal;
+    }
+		// 子线程做的事情
+    public void run() {
+      try {
+        System.out.println(Thread.currentThread().getName()+" begin");
+        // await 时有两点需要注意：await 时 state 不会发生变化，2：startSignal 的state初始化是 1，所以所有子线程都是获取不到锁的，都需要到同步队列中去等待，达到先启动的子线程等待后面启动的子线程的结果
+        startSignal.await();
+        doWork();
+        // countDown 每次会使 state 减一，doneSignal 初始化为 9，countDown 前 8 次执行都会返回 false (releaseShared 方法)，执行第 9 次时，state 递减为 0，会 countDown 成功，表示所有子线程都执行完了，会释放 await 在 doneSignal 上的主线程
+        doneSignal.countDown();
+        System.out.println(Thread.currentThread().getName()+" end");
+      } catch (InterruptedException ex) {
+      } // return;
+    }
+
+    void doWork() throws InterruptedException {
+      System.out.println(Thread.currentThread().getName()+"sleep 5s …………");
+      Thread.sleep(5000l);
+    }
+  }
+
+  @Test
+  public void test() throws InterruptedException {
+    // state 初始化为 1 很关键，子线程是不断的 await，await 时 state 是不会变化的，并且发现 state 都是 1，所有线程都获取不到锁
+    // 造成所有线程都到同步队列中去等待，当主线程执行 countDown 时，就会一起把等待的线程给释放掉
+    CountDownLatch startSignal = new CountDownLatch(1);
+    // state 初始化成 9，表示有 9 个子线程执行完成之后，会唤醒主线程
+    CountDownLatch doneSignal = new CountDownLatch(9);
+
+    for (int i = 0; i < 9; ++i) // create and start threads
+    {
+      new Thread(new Worker(startSignal, doneSignal)).start();
+    }
+    System.out.println("main thread begin");
+    // 这行代码唤醒 9 个子线程，开始执行(因为 startSignal 锁的状态是 1，所以调用一次 countDown 方法就可以释放9个等待的子线程)
+    startSignal.countDown();
+    // 这行代码使主线程陷入沉睡，等待 9 个子线程执行完成之后才会继续执行(就是等待子线程执行 doneSignal.countDown())
+    doneSignal.await();           
+    System.out.println("main thread end");
+  }
+}
+```
+
+#### Atomic 原子操作类
