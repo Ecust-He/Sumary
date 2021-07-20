@@ -1,5 +1,7 @@
 [TOC]
 
+# JAVA基础
+
 
 
 # 并发编程
@@ -10,7 +12,7 @@
 - CAS
 - AQS
 
-## 线程基础
+## 1  线程基础
 
 ### 线程创建
 
@@ -84,9 +86,17 @@ public synchronized void start() {
 
 ### 线程停止
 
+1、如何正确停止线程？
+
+- 请求方：发出中断信号
+- 被停止方：响应中断
+- 子方法调用方：抛出或恢复中断
+
 ### 线程生命周期
 
-## 线程安全
+## 2  线程安全
+
+多线程并发场景，需要保证同一时刻有且只有一个线程在操作共享资源
 
 ### 并发原子类
 
@@ -94,29 +104,316 @@ public synchronized void start() {
 
 ### 锁
 
+#### 分类
+
+依据不同的分类标准，可以对锁进行不同的分类。
+
+| 分类依据                           | 判断结果 | 类型                                       |
+| ---------------------------------- | -------- | ------------------------------------------ |
+| 并发冲突时是否对资源加锁           | 是       | 悲观锁                                     |
+|                                    | 否       | 乐观锁                                     |
+| 不同线程是否可以共享同一把锁       | 可以     | 共享锁                                     |
+|                                    | 不可以   | 独占锁                                     |
+| 同一个线程是否可以重复获取同一把锁 | 可以     | 可重入锁                                   |
+|                                    | 不可以   | 不可重入锁                                 |
+| 并发冲突时是否自旋转               | 自旋     | 自旋锁                                     |
+|                                    | 阻塞     | 非自旋锁                                   |
+| 加锁时是否可中断                   | 可以     | 可中断锁                                   |
+|                                    | 不可以   | 不可中断锁                                 |
+| 获取锁时是否可以插队               | 可以     | 非公平锁（先尝试插队，如果插队失败再排队） |
+|                                    | 不可以   | 公平锁                                     |
+
+#### sychornized
+
+#### Lock
+
 #### 死锁问题
 
-## ThreadLocal
+### ThreadLocal
 
-### 使用场景
+#### 源码解析
 
-## 线程治理
-
-### 线程池
-
-#### 获取子线程执行结果
-
-
-
-## 线程协作
-
-### CountDownLatch门闩
+每个Thread维护一个ThreadLocalMap（自定义的Hash Map），key为ThreadLocal本身，value为ThreadLocal中保存的数据。
 
 #### 使用场景
 
-- 一等多（所有运动员都到达了终点）
-- 多等一（一声枪响）
+#### 优点
+
+- 线程隔离，线程安全
+- 避免参数层层传递，降低代码耦合度
+
+#### 代码示例
+
+**打印日期**
+
+```java
+// 使用ThreadLocal给每个线程分配一个SimpleDateFormat对象，保证线程安全
+public class ThreadLocalNormalUsage {
+
+    public static ExecutorService threadPool = Executors.newFixedThreadPool(10);
+
+    public static void main(String[] args) throws InterruptedException {
+        for (int i = 0; i < 1000; i++) {
+            int finalI = i;
+            threadPool.submit(() -> System.out.println( new ThreadLocalNormalUsage05().date(finalI)));
+        }
+        threadPool.shutdown();
+    }
+
+    public String date(int seconds) {
+        //参数的单位是毫秒，从1970.1.1 00:00:00 GMT计时
+        Date date = new Date(1000 * seconds);
+        SimpleDateFormat dateFormat = ThreadSafeFormatter.dateFormatThreadLocal2.get();
+        return dateFormat.format(date);
+    }
+}
+
+class ThreadSafeFormatter {
+
+    public static ThreadLocal<SimpleDateFormat> dateFormatThreadLocal = new ThreadLocal<SimpleDateFormat>() {
+        @Override
+        protected SimpleDateFormat initialValue() {
+            return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        }
+    };
+
+    public static ThreadLocal<SimpleDateFormat> dateFormatThreadLocal2 = ThreadLocal
+            .withInitial(() -> new SimpleDateFormat("yyyy-MM-dd HH:mm:ss"));
+}
+```
+
+## 3  线程治理
+
+### 线程池
+
+根据业务需要，使用自定义的线程池
+
+#### 基础知识
+
+##### 核心参数
+
+| 参数 | 说明       |
+| ---- | ---------- |
+|      | 核心线程数 |
+|      | 最大线程数 |
+|      | 空闲时间   |
+|      |            |
+|      | 阻塞队列   |
+
+##### 分类
+
+
+
+#### 操作子线程
+
+##### 取消子线程执行
+
+##### 获取子线程执行结果
+
+## 4  线程协作
+
+同步工具类，用于控制并发流程
+
+### CountDownLatch闭锁
+
+#### 源码解析
+
+#### 使用场景
+
+**控制子流程的开始和结束**
+
+- 一等多（当所有运动员都到达了终点，比赛结束）
+- 多等一（一声枪响，比赛开始）
+
+#### 代码示例
+
+```java
+public static void main(String[] args) throws InterruptedException {
+    CountDownLatch begin = new CountDownLatch(1);
+    CountDownLatch end = new CountDownLatch(5);
+    
+    ExecutorService service = Executors.newFixedThreadPool(5);
+    for (int i = 0; i < 5; i++) {
+        final int no = i + 1;
+        Runnable runnable = new Runnable() {
+            @Override
+            public void run() {
+                System.out.println("No." + no + "准备完毕，等待发令枪");
+                try {
+                    begin.await();
+                    System.out.println("No." + no + "开始跑步了");
+                    Thread.sleep((long) (Math.random() * 10000));
+                    System.out.println("No." + no + "跑到终点了");
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                } finally {
+                    end.countDown();
+                }
+            }
+        };
+        service.submit(runnable);
+    }
+    //裁判员检查发令枪...
+    Thread.sleep(5000);
+    System.out.println("发令枪响，比赛开始！");
+    begin.countDown();
+
+    end.await();
+    System.out.println("所有人到达终点，比赛结束");
+}
+```
+
+### Semaphore信号量
+
+用户可以根据业务需要，一次性获取和释放多个许可证
+
+#### 源码解析
+
+#### 使用场景
+
+- 控制并发数
+
+### CyclicBarrier循环栅栏
+
+循环阻塞一组线程执行
+
+#### 源码分析
+
+#### 使用场景
+
+#### 代码演示
+
+```java
+public class CyclicBarrierDemo {
+    public static void main(String[] args) {
+        CyclicBarrier cyclicBarrier = new CyclicBarrier(5, new Runnable() {
+            @Override
+            public void run() {
+                System.out.println("所有人都到场了， 大家统一出发！");
+            }
+        });
+        for (int i = 0; i < 10; i++) {
+            new Thread(new Task(i, cyclicBarrier)).start();
+        }
+    }
+
+    static class Task implements Runnable{
+        private int id;
+        private CyclicBarrier cyclicBarrier;
+
+        public Task(int id, CyclicBarrier cyclicBarrier) {
+            this.id = id;
+            this.cyclicBarrier = cyclicBarrier;
+        }
+
+        @Override
+        public void run() {
+            System.out.println("线程" + id + "现在前往集合地点");
+            try {
+                Thread.sleep((long) (Math.random()*10000));
+                System.out.println("线程"+id+"到了集合地点，开始等待其他人到达");
+                cyclicBarrier.await();
+                System.out.println("线程"+id+"出发了");
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            } catch (BrokenBarrierException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+}
+```
+
+### Condition
+
+wait/notify等待唤醒机制的**升级版**
+
+#### 源码分析
+
+#### 使用场景
+
+#### 代码演示
+
+**生产者消费者模式**
+
+```java
+public class ConditionDemo {
+
+    private int queueSize = 10;
+    private PriorityQueue<Integer> queue = new PriorityQueue<Integer>(queueSize);
+    private Lock lock = new ReentrantLock();
+    private Condition notFull = lock.newCondition();
+    private Condition notEmpty = lock.newCondition();
+
+    public static void main(String[] args) {
+        ConditionDemo2 conditionDemo2 = new ConditionDemo2();
+        Producer producer = conditionDemo2.new Producer();
+        Consumer consumer = conditionDemo2.new Consumer();
+        producer.start();
+        consumer.start();
+    }
+
+    class Consumer extends Thread {
+
+        @Override
+        public void run() {
+            consume();
+        }
+
+        private void consume() {
+            while (true) {
+                lock.lock();
+                try {
+                    while (queue.size() == 0) {
+                        System.out.println("队列空，等待数据");
+                        try {
+                            notEmpty.await();
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                    queue.poll();
+                    notFull.signalAll();
+                    System.out.println("从队列里取走了一个数据，队列剩余" + queue.size() + "个元素");
+                } finally {
+                    lock.unlock();
+                }
+            }
+        }
+    }
+
+    class Producer extends Thread {
+
+        @Override
+        public void run() {
+            produce();
+        }
+
+        private void produce() {
+            while (true) {
+                lock.lock();
+                try {
+                    while (queue.size() == queueSize) {
+                        System.out.println("队列满，等待有空余");
+                        try {
+                            notFull.await();
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                    queue.offer(1);
+                    notEmpty.signalAll();
+                    System.out.println("向队列插入了一个元素，队列剩余空间" + (queueSize - queue.size()));
+                } finally {
+                    lock.unlock();
+                }
+            }
+        }
+    }
+}
+```
 
 # 高效编程
 
 ## 流式编程
+
