@@ -1,6 +1,6 @@
 [TOC]
 
-## 1  Two Sum
+## 1  ~~Two Sum~~
 
 ### 思路
 
@@ -178,7 +178,7 @@ func addTwoNumbers(l1 *ListNode, l2 *ListNode) *ListNode {
 ### 思路
 
 - 首先需要定义[left, right]区间内保存不重复字符串
-- 使用map，key为当前待考察的字符，value为索引位置
+- 使用map数据结构，key为当前待考察的字符，value为索引位置
 
 ### Java
 
@@ -926,6 +926,284 @@ class Solution {
 ```
 
 ### Python
+
+```python
+class Solution(object):
+    def removeNthFromEnd(self, head, n):
+        """
+        :type head: ListNode
+        :type n: int
+        :rtype: ListNode
+        """
+        sz = 0
+        curNode = head
+        while curNode:
+            sz += 1
+            curNode = curNode.next
+        dumyHead = ListNode(0)
+        dumyHead.next = head
+        preNode = dumyHead
+        for i in range(0, sz - n):
+            preNode = preNode.next
+        preNode.next = preNode.next.next
+        return dumyHead.next
+```
+
+### Go
+
+```go
+func removeNthFromEnd(head *ListNode, n int) *ListNode {
+    sz := 0
+    curNode := head
+	for curNode != nil {
+		sz += 1
+		curNode = curNode.Next
+	}
+	dumyHead := new(ListNode)
+	dumyHead.Next = head
+    preNode := dumyHead
+	for i := 0; i < sz - n; i++ {
+		preNode = preNode.Next
+	}
+	preNode.Next = preNode.Next.Next
+    return dumyHead.Next
+}
+```
+
+## 20  ~~Valid Parentheses~~
+
+### 思路
+
+构造栈数据结构
+
+### Java
+
+```java
+public boolean isValid(String s) {
+    Stack<Character> stack = new Stack<Character>();
+    int len = s.length();
+    for (int i = 0; i < len; i++) {
+        Character c = s.charAt(i);
+        if(c == '{' || c == '[' || c == '(') {
+            stack.push(c);
+        } else {
+            if (stack.isEmpty()) {
+                return false;
+            }
+            Character top = stack.pop();
+            if((top == '{' && c != '}') || (top == '[' && c != ']') || (top == '(' && c != ')')) {
+                return false;
+            }
+        }
+    }
+    if(!stack.isEmpty()) {
+        return false;
+    }
+    return true;
+}
+```
+
+### Python
+
+```python
+def isValid(self, s):
+    """
+    :type s: str
+    :rtype: bool
+    """
+    stack = list()
+    for c in s:
+        if c in ('{', '[', '('):
+            stack.append(c)
+        else:
+            if len(stack) < 1:
+                return False
+            top = stack.pop()
+            if (c == '}' and top != '{') or (c == ']' and top != '[') or (c == ')' and top != '('):
+                return False
+    if len(stack) > 0:
+        return False
+    return True
+```
+
+### Go
+
+```go
+func isValid(s string) bool {
+    var stack Stack
+    for _, byte := range s {
+        c := string(byte)
+        if c == "(" || c == "{" || c == "[" {
+            stack.push(c)
+        } else {
+            if stack.isEmpty() {
+                return false
+            }
+           head := stack.pop()
+            if (c == ")" && head != "(") || (c == "}" && head != "{") || (c == "]" && head != "[") {
+                return false
+            }
+        }
+    }
+    if stack.isNotEmpty() {
+        return false
+    }
+    return true
+}
+
+type Stack []string
+
+func (stack *Stack) push(s string) {
+    *stack = append(*stack, s)
+}
+
+func (stack *Stack) pop() string {
+    top := (*stack)[len(*stack)-1]
+    *stack = (*stack)[:len(*stack)-1]
+    return top
+}
+
+func (stack Stack) isEmpty() bool {
+    return len(stack) <= 0
+}
+
+func (stack Stack) isNotEmpty() bool {
+    return len(stack) > 0
+}
+```
+
+## 21  ~~Merge Two Sorted Lists~~
+
+### Java
+
+```java
+class Solution {
+    public ListNode mergeTwoLists(ListNode l1, ListNode l2) {
+        List<Integer> list = new ArrayList<>();
+        while (l1 != null || l2 != null) {
+            if(l1 != null && l2 != null) {
+                if (l1.val <= l2.val) {
+                    list.add(l1.val);
+                    l1 = l1.next;
+                } else {
+                    list.add(l2.val);
+                    l2 = l2.next;
+                }
+            } else if (l1 != null) {
+                list.add(l1.val);
+                l1 = l1.next;
+            } else {
+                list.add(l2.val);
+                l2 = l2.next;
+            }
+        }
+        ListNode dumyHead = new ListNode(0);
+        ListNode cur = dumyHead;
+        for (Integer num : list) {
+            cur.next = new ListNode(num);
+            cur = cur.next;
+        }
+        return dumyHead.next;
+    }
+}
+```
+
+### Python
+
+```python
+def mergeTwoLists(self, l1, l2):
+    """
+    :type l1: ListNode
+    :type l2: ListNode
+    :rtype: ListNode
+    """
+    res = []
+    while l1 or l2:
+        if l1 and l2:
+            if l1.val <= l2.val:
+                res.append(l1.val)
+                l1 = l1.next
+            else:
+                res.append(l2.val)
+                l2 = l2.next
+        elif l1:
+            res.append(l1.val)
+            l1 = l1.next
+        else:
+            res.append(l2.val)
+            l2 = l2.next
+    dumyhead = ListNode(0)
+    curNode = dumyhead
+    for num in res:
+        curNode.next = ListNode(num)
+        curNode = curNode.next
+    return dumyhead.next
+```
+
+### Go
+
+```go
+func mergeTwoLists(l1 *ListNode, l2 *ListNode) *ListNode {
+   var valSlice []int
+   for l1 != nil || l2 != nil {
+      if l1 != nil && l2 != nil {
+         if l1.Val < l2.Val {
+            valSlice = append(valSlice, l1.Val)
+            l1 = l1.Next
+         } else {
+            valSlice = append(valSlice, l2.Val)
+            l2 = l2.Next
+         }
+         continue
+      }
+      if l1 != nil {
+         valSlice = append(valSlice, l1.Val)
+         l1 = l1.Next
+         continue
+      }
+      if l2 != nil {
+         valSlice = append(valSlice, l2.Val)
+         l2 = l2.Next
+         continue
+      }
+   }
+   dumyHead := new(ListNode)
+   p := dumyHead
+   for _, val := range valSlice {
+      p.Next = &ListNode{val, nil}
+      p = p.Next
+   }
+    return dumyHead.Next
+}
+```
+
+## 24  Swap Nodes in Pairs
+
+### Java
+
+### Python
+
+```python
+def swapPairs(self, head):
+    """
+    :type head: ListNode
+    :rtype: ListNode
+    """
+    dumyHead = ListNode(0)
+    dumyHead.next = head
+    predode = dumyHead
+    while predode.next and predode.next.next:
+        node1 = predode.next
+        node2 = node1.next
+        nextNode = node2.next
+
+        predode.next = node2
+        node2.next = node1
+        node1.next = nextNode
+
+        predode = node1
+    return dumyHead.next
+```
 
 ### Go
 
