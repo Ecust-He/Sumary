@@ -202,6 +202,8 @@ class ThreadSafeFormatter {
 
 ##### 工作流程
 
+![](./线程池工作流程图.png)
+
 ##### 拒绝策略
 
 ##### 分类

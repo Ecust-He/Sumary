@@ -485,7 +485,7 @@ func isPalindrome(x int) bool {
 }
 ```
 
-## 11  container-with-most-water
+## 11  ~~container-with-most-water~~
 
 ### 思路
 
@@ -953,10 +953,10 @@ class Solution(object):
 
 ```go
 func removeNthFromEnd(head *ListNode, n int) *ListNode {
-    sz := 0
+    n := 0
     curNode := head
 	for curNode != nil {
-		sz += 1
+		n += 1
 		curNode = curNode.Next
 	}
 	dumyHead := new(ListNode)
@@ -1179,7 +1179,31 @@ func mergeTwoLists(l1 *ListNode, l2 *ListNode) *ListNode {
 
 ## 24  Swap Nodes in Pairs
 
+### 思路
+
+需要四个变量preNode、node1、node2、nextNode
+
 ### Java
+
+```java
+    public ListNode swapPairs(ListNode head) {
+        ListNode dumyHead = new ListNode(0, head);
+        ListNode preNode = dumyHead;
+        while(preNode.next != null && preNode.next.next != null){
+            ListNode node1 = preNode.next;
+            ListNode node2 = node1.next;
+            ListNode next = node2.next;
+            
+            
+            preNode.next = node2;
+            node2.next = node1;
+            node1.next = next;
+            
+            preNode = node1;
+        }
+        return dumyHead.next;
+    }
+```
 
 ### Python
 
@@ -1206,6 +1230,130 @@ def swapPairs(self, head):
 ```
 
 ### Go
+
+```go
+func swapPairs(head *ListNode) *ListNode {
+    dumyHead := ListNode{Val:0, Next:head}
+    preNode := &dumyHead
+    for preNode.Next != nil && preNode.Next.Next != nil {
+        node1 := preNode.Next
+        node2 := node1.Next
+        nextNode := node2.Next
+        
+        preNode.Next = node2
+        node2.Next = node1
+        node1.Next = nextNode
+        
+        preNode = node1
+    }
+    return dumyHead.Next;
+}
+```
+
+## 26  ~~Remove Duplicates from Sorted Array~~
+
+### Java
+
+```java
+public int removeDuplicates(int[] nums) {
+    if(nums.length == 0){
+        return 0;
+    }
+    int len = 1;//[0,len)保存不重复num
+    for (int i = 1; i < nums.length; i++) {
+        if(nums[i] != nums[len - 1]){
+            nums[len] = nums[i];
+            len++;
+        }
+    }
+    return len;
+}
+```
+
+### Python
+
+```python
+def removeDuplicates(self, nums):
+    """
+    :type nums: List[int]
+    :rtype: int
+    """
+    if len(nums) == 0:
+        return 0
+    # [0, n)区间内保存不重复num
+    n = 1
+    for i in range(1, len(nums)):
+        if nums[i] != nums[n-1]:
+            nums[n] = nums[i]
+            n += 1
+    return n
+```
+
+### Go
+
+```go
+func removeDuplicates(nums []int) int {
+   if len(nums) == 0{
+      return 0
+   }
+   n := 1// [0,n)区间内保存不重复num
+   for i := 1;i < len(nums);i++{
+      if nums[i] != nums[n-1]{
+         nums[n] = nums[i]
+         n += 1    
+      }
+   }
+   return n
+}
+```
+
+## 27  ~~Remove Element~~
+
+### Java
+
+```java
+public int removeElement(int[] nums, int val) {
+    int len = 0;//[0, len)区间内不包含val
+    for(int i = 0; i < nums.length; i ++){
+        if(nums[i] != val) {
+            nums[len++] = nums[i];
+        }            
+    }    
+    return len;
+}
+```
+
+### Python
+
+```python
+def removeElement(self, nums, val):
+    """
+    :type nums: List[int]
+    :type val: int
+    :rtype: int
+    """
+    n = 0
+    for num in nums:
+        if num != val:
+            nums[n] = num
+            n += 1
+    return s
+```
+
+### Go
+
+```go
+func removeElement(nums []int, val int) int {
+    n := 0
+    for i := 0; i < len(nums); i++ {
+        if(nums[i] != val) {
+            nums[n] = nums[i]
+            n += 1
+        }
+    }
+    return n
+}
+```
 
 ## 46  Permutations
 
@@ -1245,3 +1393,90 @@ class Solution {
     }
 }
 ```
+
+### Python
+
+### Go
+
+## 53   ~~Maximum Subarray~~
+
+### 思路
+
+动态规划思想
+
+### Java
+
+```java
+    public int maxSubArray(int[] nums) {
+        int len = nums.length;
+        if(len ==0) {
+            return 0;
+        }
+        if(len == 1){
+            return nums[0];
+        }
+        int[] memo = new int[len];// memo[i]记录以nums[i]结尾的子数组和的最大值
+        memo[0] = nums[0];
+        int max = memo[0];
+        for(int i = 1; i < len; i++) {
+            memo[i] = nums[i];
+            if(memo[i-1] > 0) {
+                memo[i] += memo[i-1];
+            }
+            if(memo[i] > max){
+                max = memo[i];
+            }
+        }
+        return max;
+    }
+```
+
+### Python
+
+```python
+def maxSubArray(nums):
+    """
+    :type nums: List[int]
+    :rtype: int
+    """
+    n = len(nums)
+    if n == 0:
+        return 0
+    if n == 1:
+        return nums[0]
+    memo = [num for num in nums]  # 列表推导式
+    for i in range(1, n):
+        if memo[i - 1] > 0:
+            memo[i] += memo[i - 1]
+    return max(memo)
+```
+
+### Go
+
+```go
+func maxSubArray(nums []int) int {
+    n := len(nums)
+    if n == 0 {
+        return 0
+    }
+    if n == 1 {
+        return nums[0]
+    }
+    
+    var memo = make([]int, n)
+    memo[0] = nums[0]
+    res := memo[0]
+    for i := 1; i < n; i++ {
+        memo[i] = nums[i]
+        if memo[i -1] > 0 {
+            memo[i] += memo[i-1]
+        }
+        if memo[i] > res {
+            res = memo[i]
+        }
+    }
+    return res
+    
+}
+```
+
