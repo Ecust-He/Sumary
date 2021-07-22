@@ -1806,7 +1806,7 @@ func uniquePathsWithObstacles(obstacleGrid [][]int) int {
 }
 ```
 
-## 64  Minimum Path Sum
+## 64  ~~Minimum Path Sum~~
 
 ### Java
 
@@ -1833,512 +1833,104 @@ public int minPathSum(int[][] grid) {
 
 ### Python
 
-### Go + ch, digits, res)
-```
-
 ### Go
 
-```go
-var digitMap = []string{
-    "",
-    "",
-    "abc",
-    "def",
-    "ghi",
-    "jkl",
-    "mno",
-    "pqrs",
-    "tuv",
-    "wxyz",
-}
-
-func letterCombinations(digits string) []string {
-    var res []string
-    if len(digits) == 0 {
-        return res
-    }
-    letterCombination(0, "", digits, &res)
-    return res
-}
-
-/**
-  digits[0, index)内解析后的字符串保存在str
-*/
-func letterCombination(index int, str string, digits string, res *[]string) {
-    if len(str) == len(digits) {
-        *res = append(*res, str)
-        return
-    }
-    for _, ch := range digitMap[digits[index] -48] {
-        letterCombination(index + 1, str + string(ch), digits, res)
-    }
-}
-```
-
-## 19  ~~Remove Nth Node From End if List~~
-
-### 思路
+## 67  Add Binary
 
 ### Java
 
 ```java
-class Solution {
-    public ListNode removeNthFromEnd(ListNode head, int n) {
-        int sz = 0;
-        ListNode cur = head;
-        while (cur != null) {
-            sz++;
-            cur = cur.next;
+public String addBinary(String a, String b) {
+    Stack<Integer> stack1 = putStrIntoStack(a);
+    Stack<Integer> stack2 = putStrIntoStack(b);
+    Stack<Integer> stack = new Stack<>();
+    int carry = 0;
+    while (!stack1.isEmpty() || !stack2.isEmpty() || carry != 0) {
+        int sum = carry;
+        if (!stack1.isEmpty()) {
+            sum += stack1.pop();
         }
-        ListNode dumyHead = new ListNode(0);
-        dumyHead.next = head;
-        ListNode pre = dumyHead;
-        for (int i = 0; i < sz - n; i++) {
-            pre = pre.next;
+        if (!stack2.isEmpty()) {
+            sum += stack2.pop();
         }
-        pre.next = pre.next.next;
-        return dumyHead.next;
+        carry = sum / 2;
+        stack.add(sum % 2);
     }
+    StringBuilder res = new StringBuilder();
+    while (!stack.isEmpty()) {
+        res.append(stack.pop());
+    }
+    return res.toString();
+}
+
+public Stack<Integer> putStrIntoStack(String s){
+    Stack<Integer> stack = new Stack<>();
+    for (int i = 0; i < s.length(); i++) {
+        stack.add(Integer.valueOf(String.valueOf(s.charAt(i))));
+    }
+    return stack;
 }
 ```
 
 ### Python
 
 ```python
-class Solution(object):
-    def removeNthFromEnd(self, head, n):
-        """
-        :type head: ListNode
-        :type n: int
-        :rtype: ListNode
-        """
-        sz = 0
-        curNode = head
-        while curNode:
-            sz += 1
-            curNode = curNode.next
-        dumyHead = ListNode(0)
-        dumyHead.next = head
-        preNode = dumyHead
-        for i in range(0, sz - n):
-            preNode = preNode.next
-        preNode.next = preNode.next.next
-        return dumyHead.next
+def addBinary(self, a, b):
+    """
+    :type a: str
+    :type b: str
+    :rtype: str
+    """
+    stack1 = [s for s in a]
+    stack2 = [s for s in b]
+    stack = []
+    carry = 0
+    while stack1 or stack2 or carry:
+        total = carry
+        if stack1:
+            total += int(stack1.pop())
+        if stack2:
+            total += int(stack2.pop())
+        carry = total / 2
+        total %= 2
+        stack.append(total)
+    res = ''    
+    while stack:
+        res += str(stack.pop())
+    return res  
 ```
 
 ### Go
 
-```go
-func removeNthFromEnd(head *ListNode, n int) *ListNode {
-    n := 0
-    curNode := head
-	for curNode != nil {
-		n += 1
-		curNode = curNode.Next
-	}
-	dumyHead := new(ListNode)
-	dumyHead.Next = head
-    preNode := dumyHead
-	for i := 0; i < sz - n; i++ {
-		preNode = preNode.Next
-	}
-	preNode.Next = preNode.Next.Next
-    return dumyHead.Next
-}
-```
-
-## 20  ~~Valid Parentheses~~
-
-### 思路
-
-构造栈数据结构
+## 70  Climbing Stairs
 
 ### Java
 
 ```java
-public boolean isValid(String s) {
-    Stack<Character> stack = new Stack<Character>();
-    int len = s.length();
-    for (int i = 0; i < len; i++) {
-        Character c = s.charAt(i);
-        if(c == '{' || c == '[' || c == '(') {
-            stack.push(c);
-        } else {
-            if (stack.isEmpty()) {
-                return false;
-            }
-            Character top = stack.pop();
-            if((top == '{' && c != '}') || (top == '[' && c != ']') || (top == '(' && c != ')')) {
-                return false;
-            }
-        }
+public int climbStairs(int n) {
+    if(n == 1 || n == 2) {
+        return n;
+    } 
+    int[] memo = new int[n + 1];
+    memo[1] = 1;
+    memo[2] = 2;    
+    for(int i = 3; i < n + 1; i ++) {
+        memo[i] = memo[i-1] + memo[i-2];
     }
-    if(!stack.isEmpty()) {
-        return false;
-    }
-    return true;
+    return memo[n];
 }
 ```
 
 ### Python
 
-```python
-def isValid(self, s):
-    """
-    :type s: str
-    :rtype: bool
-    """
-    stack = list()
-    for c in s:
-        if c in ('{', '[', '('):
-            stack.append(c)
-        else:
-            if len(stack) < 1:
-                return False
-            top = stack.pop()
-            if (c == '}' and top != '{') or (c == ']' and top != '[') or (c == ')' and top != '('):
-                return False
-    if len(stack) > 0:
-        return False
-    return True
-```
-
 ### Go
 
-```go
-func isValid(s string) bool {
-    var stack Stack
-    for _, byte := range s {
-        c := string(byte)
-        if c == "(" || c == "{" || c == "[" {
-            stack.push(c)
-        } else {
-            if stack.isEmpty() {
-                return false
-            }
-           head := stack.pop()
-            if (c == ")" && head != "(") || (c == "}" && head != "{") || (c == "]" && head != "[") {
-                return false
-            }
-        }
-    }
-    if stack.isNotEmpty() {
-        return false
-    }
-    return true
-}
-
-type Stack []string
-
-func (stack *Stack) push(s string) {
-    *stack = append(*stack, s)
-}
-
-func (stack *Stack) pop() string {
-    top := (*stack)[len(*stack)-1]
-    *stack = (*stack)[:len(*stack)-1]
-    return top
-}
-
-func (stack Stack) isEmpty() bool {
-    return len(stack) <= 0
-}
-
-func (stack Stack) isNotEmpty() bool {
-    return len(stack) > 0
-}
-```
-
-## 21  ~~Merge Two Sorted Lists~~
+## 75  Sort Colors
 
 ### Java
 
-```java
-class Solution {
-    public ListNode mergeTwoLists(ListNode l1, ListNode l2) {
-        List<Integer> list = new ArrayList<>();
-        while (l1 != null || l2 != null) {
-            if(l1 != null && l2 != null) {
-                if (l1.val <= l2.val) {
-                    list.add(l1.val);
-                    l1 = l1.next;
-                } else {
-                    list.add(l2.val);
-                    l2 = l2.next;
-                }
-            } else if (l1 != null) {
-                list.add(l1.val);
-                l1 = l1.next;
-            } else {
-                list.add(l2.val);
-                l2 = l2.next;
-            }
-        }
-        ListNode dumyHead = new ListNode(0);
-        ListNode cur = dumyHead;
-        for (Integer num : list) {
-            cur.next = new ListNode(num);
-            cur = cur.next;
-        }
-        return dumyHead.next;
-    }
-}
-```
+
 
 ### Python
 
-```python
-def mergeTwoLists(self, l1, l2):
-    """
-    :type l1: ListNode
-    :type l2: ListNode
-    :rtype: ListNode
-    """
-    res = []
-    while l1 or l2:
-        if l1 and l2:
-            if l1.val <= l2.val:
-                res.append(l1.val)
-                l1 = l1.next
-            else:
-                res.append(l2.val)
-                l2 = l2.next
-        elif l1:
-            res.append(l1.val)
-            l1 = l1.next
-        else:
-            res.append(l2.val)
-            l2 = l2.next
-    dumyhead = ListNode(0)
-    curNode = dumyhead
-    for num in res:
-        curNode.next = ListNode(num)
-        curNode = curNode.next
-    return dumyhead.next
-```
-
 ### Go
-
-```go
-func mergeTwoLists(l1 *ListNode, l2 *ListNode) *ListNode {
-   var valSlice []int
-   for l1 != nil || l2 != nil {
-      if l1 != nil && l2 != nil {
-         if l1.Val < l2.Val {
-            valSlice = append(valSlice, l1.Val)
-            l1 = l1.Next
-         } else {
-            valSlice = append(valSlice, l2.Val)
-            l2 = l2.Next
-         }
-         continue
-      }
-      if l1 != nil {
-         valSlice = append(valSlice, l1.Val)
-         l1 = l1.Next
-         continue
-      }
-      if l2 != nil {
-         valSlice = append(valSlice, l2.Val)
-         l2 = l2.Next
-         continue
-      }
-   }
-   dumyHead := new(ListNode)
-   p := dumyHead
-   for _, val := range valSlice {
-      p.Next = &ListNode{val, nil}
-      p = p.Next
-   }
-    return dumyHead.Next
-}
-```
-
-## 24  Swap Nodes in Pairs
-
-### 思路
-
-需要四个变量preNode、node1、node2、nextNode
-
-### Java
-
-```java
-    public ListNode swapPairs(ListNode head) {
-        ListNode dumyHead = new ListNode(0, head);
-        ListNode preNode = dumyHead;
-        while(preNode.next != null && preNode.next.next != null){
-            ListNode node1 = preNode.next;
-            ListNode node2 = node1.next;
-            ListNode next = node2.next;
-            
-            
-            preNode.next = node2;
-            node2.next = node1;
-            node1.next = next;
-            
-            preNode = node1;
-        }
-        return dumyHead.next;
-    }
-```
-
-### Python
-
-```python
-def swapPairs(self, head):
-    """
-    :type head: ListNode
-    :rtype: ListNode
-    """
-    dumyHead = ListNode(0)
-    dumyHead.next = head
-    predode = dumyHead
-    while predode.next and predode.next.next:
-        node1 = predode.next
-        node2 = node1.next
-        nextNode = node2.next
-
-        predode.next = node2
-        node2.next = node1
-        node1.next = nextNode
-
-        predode = node1
-    return dumyHead.next
-```
-
-### Go
-
-```go
-func swapPairs(head *ListNode) *ListNode {
-    dumyHead := ListNode{Val:0, Next:head}
-    preNode := &dumyHead
-    for preNode.Next != nil && preNode.Next.Next != nil {
-        node1 := preNode.Next
-        node2 := node1.Next
-        nextNode := node2.Next
-        
-        preNode.Next = node2
-        node2.Next = node1
-        node1.Next = nextNode
-        
-        preNode = node1
-    }
-    return dumyHead.Next;
-}
-```
-
-## 26  ~~Remove Duplicates from Sorted Array~~
-
-### Java
-
-```java
-public int removeDuplicates(int[] nums) {
-    if(nums.length == 0){
-        return 0;
-    }
-    int len = 1;//[0,len)保存不重复num
-    for (int i = 1; i < nums.length; i++) {
-        if(nums[i] != nums[len - 1]){
-            nums[len] = nums[i];
-            len++;
-        }
-    }
-    return len;
-}
-```
-
-### Python
-
-```python
-def removeDuplicates(self, nums):
-    """
-    :type nums: List[int]
-    :rtype: int
-    """
-    if len(nums) == 0:
-        return 0
-    # [0, n)区间内保存不重复num
-    n = 1
-    for i in range(1, len(nums)):
-        if nums[i] != nums[n-1]:
-            nums[n] = nums[i]
-            n += 1
-    return n
-```
-
-### Go
-
-```go
-func removeDuplicates(nums []int) int {
-   if len(nums) == 0{
-      return 0
-   }
-   n := 1// [0,n)区间内保存不重复num
-   for i := 1;i < len(nums);i++{
-      if nums[i] != nums[n-1]{
-         nums[n] = nums[i]
-         n += 1    
-      }
-   }
-   return n
-}
-```
-
-## 27  ~~Remove Element~~
-
-### Java
-
-```java
-public int removeElement(int[] nums, int val) {
-    int len = 0;//[0, len)区间内不包含val
-    for(int i = 0; i < nums.length; i ++){
-        if(nums[i] != val) {
-            nums[len++] = nums[i];
-        }            
-    }    
-    return len;
-}
-```
-
-### Python
-
-```python
-def removeElement(self, nums, val):
-    """
-    :type nums: List[int]
-    :type val: int
-    :rtype: int
-    """
-    n = 0
-    for num in nums:
-        if num != val:
-            nums[n] = num
-            n += 1
-    return s
-```
-
-### Go
-
-```go
-func removeElement(nums []int, val int) int {
-    n := 0
-    for i := 0; i < len(nums); i++ {
-        if(nums[i] != val) {
-            nums[n] = nums[i]
-            n += 1
-        }
-    }
-    return n
-}
-```
-
-## 46  Permutations
-
-### Java
-
-```java
-class Solution {
-    private ArrayList<List<Integer>> res;
-    private boolean[] hasSelected;
-
-    public List<List<Integer>> permut
