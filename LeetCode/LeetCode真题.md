@@ -65,11 +65,11 @@ func twoSum(nums []int, target int) []int {
 }
 ```
 
-## 2  Add Two Numbers
+## 2  ~~Add Two Numbers~~
 
 ### 思路
 
-- 需要考虑进位
+- 加法进位
 
 ### Java
 
@@ -246,7 +246,7 @@ func lengthOfLongestSubstring(s string) int {
 }
 ```
 
-## 4  Median of Two Sorted Arrays
+## 4  ~~Median of Two Sorted Arrays~~
 
 ### 思路
 
@@ -682,7 +682,7 @@ func romanToInt(s string) int {
 }
 ```
 
-## 14  Longest Common Prefix
+## 14  ~~Longest Common Prefix~~
 
 ### 思路
 
@@ -898,7 +898,7 @@ func letterCombination(index int, str string, digits string, res *[]string) {
 }
 ```
 
-## 19  Remove Nth Node From End if List
+## 19  ~~Remove Nth Node From End if List~~
 
 ### 思路
 
@@ -1480,3 +1480,328 @@ func maxSubArray(nums []int) int {
 }
 ```
 
+## 61  ~~Rotate List~~
+
+### 思路
+
+构造虚拟头结点，找到head、tail、newHead、newTail
+
+### Java
+
+```java
+public ListNode rotateRight(ListNode head, int k) {
+    if(head == null) {
+        return null;
+    }
+    int n = 0;
+    ListNode dumyHead = new ListNode(0, head);
+    ListNode tail = dumyHead;
+    while (tail.next != null) {
+        n++;
+        tail = tail.next;
+    }
+
+    int m = k % n;
+    if(m == 0) {
+        return head;
+    }
+
+    ListNode newTail = dumyHead;
+    for (int i = 0; i < n - m; i++) {
+        newTail = newTail.next;
+    }
+    ListNode newHead = newTail.next;
+    tail.next = dumyHead.next;
+    newTail.next = null;
+    return newHead;
+}
+```
+
+### Python
+
+```python
+def rotateRight(self, head, k):
+    """
+    :type head: ListNode
+    :type k: int
+    :rtype: ListNode
+    """
+    if head is None:
+        return None
+    dumyHead = ListNode(0, head)
+    tail = dumyHead
+    n = 0
+    while tail.next:
+        n += 1
+        tail = tail.next
+    if n == 1:
+        return head
+    m = k % n
+    if m == 0:
+        return dumyHead.next
+    newTail = dumyHead
+    for i in range(0, n - m):
+        newTail = newTail.next
+    newHead = newTail.next
+    tail.next = dumyHead.next
+    newTail.next = None
+    return newHead
+```
+
+### Go
+
+```go
+func rotateRight(head *ListNode, k int) *ListNode {
+    if head == nil {
+        return nil
+    }
+    dumyHead := ListNode{Val:0, Next:head}
+    tail := &dumyHead
+    n := 0
+    for ;tail.Next != nil;{
+        n++
+        tail = tail.Next
+    }
+    m := k % n
+    if m == 0 {
+        return head
+    }
+    newTail := &dumyHead
+    for i := 0; i < n -m; i++ {
+        newTail = newTail.Next
+    }
+    newHead := newTail.Next
+    tail.Next = dumyHead.Next
+    newTail.Next = nil
+    return newHead
+}
+```
+
+## 62  ~~Unique Paths~~
+
+### Java
+
+```java
+public int uniquePaths(int m, int n) {
+    int[][] memo = new int[m][n];
+    if(m == 1) {
+        return 1;
+    }
+    for (int i = 0; i < m; i++) {
+        memo[i][0] = 1;
+    }
+    for (int j = 0; j < n; j++) {
+        memo[0][j] = 1;
+    }
+
+    for (int i = 1; i < m; i++) {
+        for (int j = 1; j < n; j++) {
+            memo[i][j] = memo[i-1][j] + memo[i][j-1];
+        }
+    }
+    return memo[m-1][n-1];
+}
+```
+
+### Python
+
+#### 方法一
+
+```python
+def uniquePaths(self, m, n):
+    """
+    :type m: int
+    :type n: int
+    :rtype: int
+    """
+    if m == 1:
+        return 1
+    # memo = [[1 for i in range(0, n)] for j in range(0, m)]
+    memo = [[1 for i in range(0, n)]]*m
+    for i in range(1, m):
+        for j in range(1, n):
+            memo[i][j] = memo[i-1][j] + memo[i][j-1]
+    return memo[m-1][n-1]
+```
+
+#### 方法二
+
+```python
+def uniquePaths(self, m, n):
+    """
+    :type m: int
+    :type n: int
+    :rtype: int
+    """
+    if m == 1:
+        return 1
+    memo = [1 for i in range(0, n)]
+    for i in range(1, m):
+        for j in range(1, n):
+            memo[j] += memo[j-1]
+    return memo[n-1]
+```
+
+### Go
+
+#### 方法一
+
+```go
+// //空间复杂度O(m * n)
+func uniquePaths(m int, n int) int {
+    if m == 1 {
+        return 1
+    }
+    memo := make([][]int, m)
+    for i := 0; i < m; i++ {
+        memo[i] = make([]int, n)
+        memo[i][0] = 1
+    }
+
+    for j := 0; j < n; j++ {
+        memo[0][j] = 1
+    }
+
+    for i := 1; i < m; i++ {
+        for j := 1; j < n; j++ {
+            memo[i][j] = memo[i][j-1] + memo[i-1][j]
+        }
+    }
+    return memo[m-1][n-1]
+}
+```
+
+#### 方法二
+
+```go
+//空间复杂度O(n)
+func uniquePaths(m int, n int) int {
+    if m == 1 {
+        return 1
+    }
+    memo := make([]int, n)
+    for j := 0; j < n; j++ {
+        memo[j] = 1
+    }
+    for i := 1; i < m; i++ {
+        for j := 1; j < n; j++ {
+            memo[j] += memo[j-1]
+        }
+    }
+    return memo[n-1]
+}
+```
+
+## 63  ~~Unique Paths II~~
+
+### Java
+
+```java
+public int uniquePathsWithObstacles(int[][] obstacleGrid) {
+    int m = obstacleGrid.length;
+    int n = obstacleGrid[0].length;
+
+    int[][] memo = new int[m][n];
+
+    if(obstacleGrid[0][0] == 1) {
+        return 0;
+    } else {
+      memo[0][0] = 1;
+    }
+
+    for (int i = 1; i < m; i++) {
+        memo[i][0] = memo[i-1][0];
+        if(obstacleGrid[i][0] == 1) {
+            memo[i][0] = 0;
+        }
+    }
+    for (int j = 1; j < n; j++) {
+        memo[0][j] = memo[0][j-1];
+        if(obstacleGrid[0][j] == 1) {
+            memo[0][j] = 0;
+        }
+    }
+    for (int i = 1; i < m; i++) {
+        for (int j = 1; j < n; j++) {
+            if(obstacleGrid[i][j] == 1) {
+                memo[i][j] = 0;
+            } else {
+                memo[i][j] = memo[i][j-1] + memo[i-1][j];
+            }
+        }
+    }
+    return memo[m-1][n-1];
+}
+```
+
+### Python
+
+```python
+def uniquePathsWithObstacles(self, obstacleGrid):
+    """
+    :type obstacleGrid: List[List[int]]
+    :rtype: int
+    """
+    m = len(obstacleGrid)
+    n = len(obstacleGrid[0])
+    memo = [[0 for i in range(0, n)] for j in range(0, m)]
+    if obstacleGrid[0][0] == 1:
+        return 0
+    else:
+        memo[0][0] = 1
+    for i in range(1, m):
+        memo[i][0] = memo[i-1][0]
+        if obstacleGrid[i][0] == 1:
+            memo[i][0] = 0
+    for j in range(1, n):
+        memo[0][j] = memo[0][j-1]
+        if obstacleGrid[0][j] == 1:
+            memo[0][j] = 0
+    for i in range(1, m):
+        for j in range(1, n):
+            if obstacleGrid[i][j] == 1:
+                memo[i][j] = 0
+            else:
+                memo[i][j] = memo[i][j-1] + memo[i-1][j]
+    return memo[m-1][n-1]
+```
+
+### Go
+
+```go
+func uniquePathsWithObstacles(obstacleGrid [][]int) int {
+    m := len(obstacleGrid)
+    n := len(obstacleGrid[0])
+    memo := make([][]int, m)
+    for i := 0; i < m; i++ {
+        memo[i] = make([]int, n)
+    }
+    if obstacleGrid[0][0] == 1 {
+        return 0
+    } else {
+        memo[0][0] = 1
+    }
+    for i := 1; i < m; i++ {
+        memo[i][0] = memo[i-1][0]
+        if obstacleGrid[i][0] == 1 {
+            memo[i][0] = 0
+        }
+    }
+    for j := 1; j < n; j++ {
+        memo[0][j] = memo[0][j-1]
+        if obstacleGrid[0][j] == 1 {
+            memo[0][j] = 0
+         }
+    }
+    for i := 1; i < m; i++ {
+        for j := 1; j < n; j++ {
+            if obstacleGrid[i][j] == 1 {
+                memo[i][j] = 0
+            } else {
+                memo[i][j] = memo[i-1][j] + memo[i][j-1]
+            }
+        }
+    }
+    return memo[m-1][n-1]
+}
+```
