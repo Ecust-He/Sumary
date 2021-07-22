@@ -188,7 +188,7 @@ class ThreadSafeFormatter {
 
 #### 基础知识
 
-##### 参数
+##### 构造参数
 
 | 参数            | 说明         |
 | --------------- | ------------ |
@@ -200,7 +200,7 @@ class ThreadSafeFormatter {
 | threadFactory   | 线程工厂     |
 | handler         | 拒绝策略     |
 
-##### 工作流程
+##### 执行过程
 
 ![](./线程池工作流程图.png)
 
@@ -269,13 +269,13 @@ public static void main(String[] args) throws InterruptedException {
 
 ### Semaphore信号量
 
-用户可以根据业务需要，一次性获取和释放多个许可证
+用户可以根据业务需要，通过获取和释放多个许可证，控制并发数
 
 #### 源码解析
 
 #### 使用场景
 
-- 控制并发数
+- 接口限流
 
 ### CyclicBarrier循环栅栏
 
