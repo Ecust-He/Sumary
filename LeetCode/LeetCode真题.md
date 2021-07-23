@@ -1355,41 +1355,33 @@ func removeElement(nums []int, val int) int {
 }
 ```
 
-## 46  Permutations
+## 46  ~~Permutations~~
+
+#### 思路
+
+- 对于每个元素可选或不选
+- 回溯
 
 ### Java
 
 ```java
-class Solution {
-    private ArrayList<List<Integer>> res;
-    private boolean[] hasSelected;
+public List<List<Integer>> permute(int[] nums) {
+    ArrayList<List<Integer>> res = new ArrayList<>();
+    permute(nums, new LinkedList<>(), res);
+    return res;
+}
 
-    public List<List<Integer>> permute(int[] nums) {
-        if(nums == null || nums.length == 0) {
-            return res;
-        }
-        res = new ArrayList<List<Integer>>();
-        hasSelected = new boolean[nums.length];
-        permute(nums, new LinkedList<Integer>());
-        return res;
-    }
-
-    //	每次从数组nums中选取一个不重复的数，放入集合selectList
-    public void permute(int[] nums, LinkedList<Integer> selectedList) {
-        if(selectedList.size() == nums.length) {
-            res.add(new ArrayList<Integer>(selectedList));
-            return;
-        }
-        for (int i = 0; i < nums.length; i++) {
-            if(!hasSelected[i]) {
-                hasSelected[i] = true;
-                selectedList.add(nums[i]);
-                permute(nums, selectedList);
-                selectedList.removeLast();
-                hasSelected[i] = false;
-            }
-        }
+public void permute(int[] nums, LinkedList<Integer> selected, ArrayList<List<Integer>> res) {
+    if(selected.size() == nums.length) {
+        res.add(new ArrayList<>(selected));
         return;
+    }
+    for (int i = 0; i < nums.length; i++) {
+        if (!selected.contains(nums[i])) {
+            selected.add(nums[i]);
+            permute(nums, selected, res);
+            selected.removeLast();
+        }
     }
 }
 ```
@@ -1835,7 +1827,7 @@ public int minPathSum(int[][] grid) {
 
 ### Go
 
-## 67  Add Binary
+## 67  ~~Add Binary~~
 
 ### Java
 
@@ -1854,7 +1846,8 @@ public String addBinary(String a, String b) {
             sum += stack2.pop();
         }
         carry = sum / 2;
-        stack.add(sum % 2);
+        sum %= 2;
+        stack.add(sum);
     }
     StringBuilder res = new StringBuilder();
     while (!stack.isEmpty()) {
@@ -1902,7 +1895,7 @@ def addBinary(self, a, b):
 
 ### Go
 
-## 70  Climbing Stairs
+## 70  ~~Climbing Stairs~~
 
 ### Java
 
@@ -1925,11 +1918,137 @@ public int climbStairs(int n) {
 
 ### Go
 
-## 75  Sort Colors
+## 75  ~~Sort Colors~~
 
 ### Java
 
+#### 方法一
 
+```java
+public void sortColors(int[] nums) {
+    int[] freq = new int[3];
+    for (int num : nums) {
+        freq[num]++;
+    }
+    int i = 0;
+    for (int j = 0; j < 3; j++) {
+        while (freq[j] != 0) {
+            nums[i++] = j;
+            freq[j]--;
+        }
+    }
+}
+```
+
+#### 方法二
+
+```java
+public void sortColors(int[] nums) {
+    int n = nums.length;
+    int left = 0; //[0, left)区间内保存数字0
+    int right = n-1;//(right,n-1]区间内保存数字2
+    int i = 0;
+    while (i <= right) {
+        if(nums[i] == 1) {
+            i++;
+        } else if (nums[i] < 1) {
+            swap(nums, i, left);
+            left++;
+            i++;
+        } else {
+            swap (nums, i, right);
+            right--;
+        }
+    }
+}
+
+public void swap(int[] nums, int i, int j) {
+    int temp = nums[i];
+    nums[i] = nums[j];
+    nums[j] = temp;
+}
+```
+
+### Python
+
+```python
+def sortColors(self, nums):
+    """
+    :type nums: List[int]
+    :rtype: None Do not return anything, modify nums in-place instead.
+    """
+    n = len(nums)
+    left = 0
+    right = n - 1
+    i = 0
+    while i <= right:
+        if nums[i] == 1:
+            i += 1
+            elif nums[i] < 1:
+                nums[i], nums[left] = nums[left], nums[i]
+                left += 1
+                i += 1
+                else:
+                    nums[i], nums[right] = nums[right], nums[i]
+                    right -= 1
+```
+
+### Go
+
+```go
+func sortColors(nums []int)  {
+    n := len(nums)
+    i := 0
+    left := 0
+    right := n-1
+    for ;i <= right; {
+       if nums[i] == 1 {
+          i += 1
+      } else {
+         if nums[i] == 0 {
+            nums[i], nums[left] = nums[left], nums[i]
+            left += 1
+            i += 1
+         } else {
+            nums[i], nums[right] = nums[right], nums[i]
+            right -= 1
+         }
+      }
+   }
+}
+```
+
+## 77  Combinations
+
+### Java
+
+```java
+public List<List<Integer>> combine(int n, int k) {
+    ArrayList<List<Integer>> res = new ArrayList<>();
+    combine(n, k, 1, new LinkedList<>(), res);
+    return res;
+}
+
+/**
+ * 从[start, n]区间内选取k个元素保存在selected中
+ * @param n
+ * @param k
+ * @param index
+ * @param selected
+ * @param res
+ */
+public void combine(int n, int k, int start, LinkedList<Integer> selected, ArrayList<List<Integer>> res) {
+    if(k == selected.size()) {
+        res.add(new ArrayList<>(selected));
+        return;
+    }
+    for (int i = start; i <= n; i++) {
+        selected.add(i);
+        combine(n, k, i + 1, selected, res);
+        selected.removeLast();
+    }
+}
+```
 
 ### Python
 
