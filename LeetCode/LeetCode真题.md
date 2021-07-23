@@ -2053,3 +2053,20 @@ public void combine(int n, int k, int start, LinkedList<Integer> selected, Array
 ### Python
 
 ### Go
+
+## 78  Subsets
+
+### Java
+
+### Python
+
+### Go
+
+## 79  Word Search
+
+### Java
+
+### Python
+
+### Go
+
