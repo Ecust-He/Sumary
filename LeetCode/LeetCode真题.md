@@ -2066,6 +2066,356 @@ public void combine(int n, int k, int start, LinkedList<Integer> selected, Array
 
 ### Java
 
+```java
+public boolean exist(char[][] board, String word) {
+    int m = board.length;
+    int n = board[0].length;
+    visited = new boolean[m][n];
+
+    for (int i = 0; i < m; i++) {
+        for (int j = 0; j < n; j++) {
+            if (serchWord(board, m, n, i, j, 0, word)) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+/**
+ * 考察(i, j)位置是否匹配字符word[index]
+ *
+ * @param board
+ * @param m
+ * @param n
+ * @param x
+ * @param y
+ * @param index
+ * @param word
+ * @param visited
+ * @return
+ */
+public boolean serchWord(char[][] board, int m, int n, int x, int y, int index, String word) {
+    if (index == word.length() - 1) {
+        return board[x][y] == word.charAt(index);
+    }
+    if (board[x][y] != word.charAt(index)) {
+        return false;
+    }
+    visited[x][y] = true;
+    for (int k = 0; k < 4; k++) {
+        int newX = x + d[k][0];
+        int newY = y + d[k][1];
+        if (inArea(newX, newY, m, n) && !visited[newX][newY] && serchWord(board, m, n, newX, newY, index + 1, word)) {
+            return true;
+        }
+    }
+    visited[x][y] = false;
+    return false;
+}
+
+
+public boolean inArea(int x, int y, int m, int n) {
+    return x >= 0 && x < m && y >= 0 && y < n;
+}
+```
+
+### Python
+
+### Go
+
+## 82  Remove Duplicates from Sorted List II
+
+### Java
+
+### Python
+
+### Go  
+
+## 83  ~~Remove Duplicates from Sorted List~~
+
+### Java
+
+```java
+public ListNode deleteDuplicates(ListNode head) {
+    if(head == null || head.next == null) {
+        return head;
+    }
+    ListNode dumyHead = new ListNode(0, head);
+    ListNode pre = head;
+    ListNode cur = head.next;
+    while (cur != null) {
+        if(cur.val != pre.val) {
+            pre.next = cur;
+            pre = cur;
+        }
+        cur = cur.next;
+    }
+    pre.next = null;
+    return dumyHead.next;
+}
+```
+
+### Python
+
+### Go
+
+## 88  Merge Sorted Array
+
+### Java
+
+
+
+### Python
+
+### Go
+
+## 91  Decode Ways
+
+### Java
+
+### Python
+
+### Go
+
+## 92  Reverse Linked List II
+
+### Java
+
+```java
+public ListNode reverseBetween(ListNode head, int left, int right) {
+    if(head == null || head.next == null) {
+        return head;
+    }
+    ListNode dumyHead = new ListNode(0, head);
+    ListNode leftPre = dumyHead;
+    for (int i = 0; i < left -1; i++) {
+        leftPre = leftPre.next;
+    }
+    ListNode pre = leftPre.next;
+    ListNode cur = pre.next;
+    ListNode leftNode = leftPre.next;
+    ListNode next = null;
+    for (int i = 0; i < right - left; i++) {
+        next = cur.next;
+        cur.next = pre;
+        pre = cur;
+        cur = next;
+    }
+    leftPre.next = pre;
+    leftNode.next = cur;
+    return dumyHead.next;
+}
+```
+
+### Python
+
+### Go
+
+## 94  ~~Binary Tree Inorder Traversal~~
+
+### Java
+
+```java
+public List<Integer> inorderTraversal(TreeNode root) {
+    if(root == null) {
+        return new ArrayList<>();
+    }
+    ArrayList<Integer> res = new ArrayList<>();
+    res.addAll(inorderTraversal(root.left));
+    res.add(root.val);
+    res.addAll(inorderTraversal(root.right));
+    return res;
+}
+```
+
+### Python
+
+### Go
+
+## 97  Interleaving String
+
+### Java
+
+### Python
+
+### Go
+
+## 100  Same Tree
+
+### Java
+
+### Python
+
+### Go
+
+## 102  ~~Binary Tree Level Order Traversal~~
+
+### Java
+
+```java
+public List<List<Integer>> levelOrder(TreeNode root) {
+    ArrayList<List<Integer>> res = new ArrayList<>();
+    if(root == null) {
+        return res;
+    }
+    Queue<TreeNode> q = new LinkedList<>();
+    q.add(root);
+    while (!q.isEmpty()) {
+        ArrayList<Integer> levelList = new ArrayList<>();
+        final int levelSize = q.size();
+        for (int i = 0; i < levelSize; i++) {
+            TreeNode node = q.poll();
+            levelList.add(node.val);
+            if(node.left !=null) {
+                q.add(node.left);
+            }
+            if(node.right != null) {
+                q.add(node.right);
+            }
+        }
+        res.add(levelList);
+    }
+    return res;
+}
+```
+
+### Python
+
+### Go
+
+## 104  ~~Maximum Depth of Binary Tree~~
+
+### Java
+
+```java
+public int maxDepth(TreeNode root) {
+    if (root == null) {
+        return 0;
+    }
+    return 1 + Math.max(maxDepth(root.left), maxDepth(root.right));
+}
+```
+
+### Python
+
+### Go
+
+## 111  Minimum Depth of Binary Tree
+
+### Java
+
+### Python
+
+### Go
+
+## 112  ~~Path Sum~~
+
+### Java
+
+```java
+public boolean hasPathSum(TreeNode root, int targetSum) {
+    if(root == null) {
+        return false;
+    }
+    if(root.left == null && root.right == null) {
+        return targetSum == root.val;
+    }
+    return hasPathSum(root.left, targetSum - root.val) || hasPathSum(root.right, targetSum - root.val);
+}
+```
+
+### Python
+
+### Go
+
+## 125  Valid Palindrome
+
+### Java
+
+```java
+public boolean isPalindrome(String s) {
+    s = s.toLowerCase();
+    int n = s.length();
+    int i = 0;
+    int j = n - 1;
+    while (i < j) {
+        while (i < j && !isAlphanumericCharacter(s.charAt(i))) {
+            i++;
+        }
+        while (j > i && !isAlphanumericCharacter(s.charAt(j))) {
+            j--;
+        }
+        if(i >= j) {
+            break;
+        }
+        if(s.charAt(i) != s.charAt(j)){
+            return false;
+        }
+        i++;
+        j--;
+    }
+    return true;
+}
+
+public boolean isAlphanumericCharacter(Character c) {
+    return (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9');
+}
+```
+
+### Python
+
+### Go
+
+## 132  Palindrome Partitioning II
+
+### Java
+
+### Python
+
+### Go
+
+## 206  ~~Reverse Linked List~~
+
+### Java
+
+#### 方法一
+
+```java
+// 递归写法
+public ListNode reverseList(ListNode head) {
+    if(head == null || head.next == null) {
+        return head;
+    }
+    ListNode newHead = reverseList(head.next);
+    head.next.next = head;
+    head.next = null;
+    return newHead;
+}
+```
+
+#### 方法二
+
+```java
+// 迭代写法
+public ListNode reverseList(ListNode head) {
+    if(head == null || head.next == null) {
+        return head;
+    }
+    ListNode pre = head;
+    ListNode cur = pre.next;
+    ListNode next;
+    while (cur != null) {
+        next = cur.next;
+        cur.next = pre;
+        pre = cur;
+        cur = next;
+    }
+    head.next = null;
+    return pre;
+}
+```
+
 ### Python
 
 ### Go
