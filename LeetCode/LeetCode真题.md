@@ -2329,7 +2329,7 @@ public boolean hasPathSum(TreeNode root, int targetSum) {
 
 ### Go
 
-## 125  Valid Palindrome
+## 125  ~~Valid Palindrome~~
 
 ### Java
 
@@ -2368,6 +2368,30 @@ public boolean isAlphanumericCharacter(Character c) {
 ### Go
 
 ## 132  Palindrome Partitioning II
+
+### Java
+
+### Python
+
+### Go
+
+## 139  Word Break
+
+### Java
+
+### Python
+
+### Go
+
+## 143  Reorder List
+
+### Java
+
+### Python
+
+### Go
+
+## 144  Minimum Depth of Binary Tree
 
 ### Java
 
