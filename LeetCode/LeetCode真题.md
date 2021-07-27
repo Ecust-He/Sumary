@@ -2399,6 +2399,86 @@ public boolean isAlphanumericCharacter(Character c) {
 
 ### Go
 
+## 145  ~~Binary Tree Postorder Traversal~~
+
+### Java
+
+```java
+public List<Integer> postorderTraversal(TreeNode root) {
+    ArrayList<Integer> res = new ArrayList<>();
+    if(root != null) {
+        res.addAll(postorderTraversal(root.left));
+        res.addAll(postorderTraversal(root.right));
+        res.add(root.val);
+
+    }
+    return res;
+}
+```
+
+### Python
+
+### Go
+
+## 150  Evaluate Reverse Polish Notation
+
+### Java
+
+
+
+### Python
+
+### Go
+
+## 160  Intersection of Two Linked Lists
+
+### Java
+
+### Python
+
+### Go
+
+## 167  Two Sum II - Input array is sorted
+
+### Java
+
+```java
+public int[] twoSum(int[] numbers, int target) {
+    int i = 0;
+    int j = numbers.length - 1;
+    while(i < j) {
+        if(numbers[i] + numbers[j] == target) {
+            return new int[]{i+1, j+1};
+        } else if(numbers[i] + numbers[j] < target) {
+            i++;
+        } else {
+            j--;
+        }
+    }
+    return null;
+}
+```
+
+### Python
+
+### Go
+
+## 168  Excel Sheet Column Title
+
+### Java
+
+### Python
+
+### Go
+
+## 175  Combine Two Tables
+
+```mysql
+# Write your MySQL query statement below
+SELECT p.FirstName, p.LastName, a.City, a.State FROM Person p LEFT JOIN Address a
+ON p.PersonId = a.PersonId;
+```
+
 ## 206  ~~Reverse Linked List~~
 
 ### Java
@@ -2444,3 +2524,153 @@ public ListNode reverseList(ListNode head) {
 
 ### Go
 
+## 217  ~~Contains Duplicate~~
+
+### Java
+
+```java
+public boolean containsDuplicate(int[] nums) {
+    Set<Integer> set = new HashSet<>();
+    for(int num: nums) {
+        if(!set.add(num)) {
+            return true;
+        }
+    }
+    return false;
+}
+```
+
+### Python
+
+### Go
+
+## 219  Contains Duplicate II
+
+### Java
+
+```java
+public boolean containsNearbyDuplicate(int[] nums, int k) {
+    Map<Integer, Integer> map = new HashMap<>();
+    for(int i = 0;i < nums.length; i++) {
+        int num = nums[i];
+        if(map.containsKey(num) && i - map.get(num) <= k) {
+            return true;
+        }            
+        map.put(num, i);
+    }
+    return false;
+}
+```
+
+### Python
+
+### Go
+
+## 220  Contains Duplicate III
+
+### Java
+
+
+
+### Python
+
+### Go
+
+## 225  Implement Stack using Queues
+
+### Java
+
+
+
+### Python
+
+### Go
+
+## 226  Invert Binary Tree
+
+### Java
+
+```java
+public TreeNode invertTree(TreeNode root) {
+    if(root == null) {
+        return null;
+    }
+    TreeNode left = invertTree(root.right); 
+    TreeNode right = invertTree(root.left); 
+    root.left = left;
+    root.right = right;
+    return root;
+}
+```
+
+### Python
+
+### Go
+
+## 231  Power of Two
+
+### Java
+
+### Python
+
+### Go
+
+## 234  Palindrome Linked List
+
+### Java
+
+### Python
+
+### Go
+
+## 160  Intersection of Two Linked Lists
+
+### Java
+
+### Python
+
+### Go
+
+## 160  Intersection of Two Linked Lists
+
+### Java
+
+### Python
+
+### Go
+
+## 160  Intersection of Two Linked Lists
+
+### Java
+
+### Python
+
+### Go
+
+## 160  Intersection of Two Linked Lists
+
+### Java
+
+### Python
+
+### Go
+
+## 160  Intersection of Two Linked Lists
+
+### Java
+
+### Python
+
+### Go
+
+## 160  Intersection of Two Linked Lists
+
+### Java
+
+### Python
+
+### Go
+
+### 
+
+### 
