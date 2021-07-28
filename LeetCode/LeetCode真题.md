@@ -2623,9 +2623,175 @@ public TreeNode invertTree(TreeNode root) {
 
 ### Go
 
-## 160  Intersection of Two Linked Lists
+## 235   Lowest Common Ancestor of a Binary Search Tree
 
 ### Java
+
+### Python
+
+### Go
+
+## 237  Delete Node in a Linked List
+
+### Java
+
+### Python
+
+### Go
+
+## 242   ~~Valid Anagram~~
+
+### Java
+
+#### 方法一
+
+```java
+public boolean isAnagram(String s, String t) {
+    int m = s.length();
+    int n = t.length();
+    if(m != n) {
+        return false;
+    }
+    Map<Character, Integer> map = new HashMap<>();
+    for (int i = 0; i < m; i++) {
+        Character c = s.charAt(i);
+        map.put(c, map.getOrDefault(c,0) + 1);
+    }
+    for (int i = 0; i < n; i++) {
+        Character c = t.charAt(i);
+        if(!map.containsKey(c) || map.get(c) < 1) {
+            return false;
+        }
+        map.put(c, map.get(c) - 1);
+    }
+    return true;
+}
+```
+
+#### 方法二
+
+```java
+public boolean isAnagram(String s, String t) {
+    int[] fre = new int[26];
+    int m = s.length();
+    int n = t.length();
+    if(m != n) {
+        return false;
+    }
+    for (int i = 0; i < m; i++) {
+        fre[s.charAt(i) - 'a']++;
+        fre[t.charAt(i) - 'a']--;
+    }
+    for (int i = 0; i < 26; i++) {
+        if(fre[i] != 0) {
+            return false;
+        }
+    }
+    return true;
+}
+```
+
+### Python
+
+### Go
+
+## 257  Binary Tree Paths
+
+### Java
+
+```java
+public List<String> binaryTreePaths(TreeNode root) {
+    List<String> res = new ArrayList<>();
+    if(root == null) {
+        return res;
+    }
+    if(root.left == null && root.right == null) {
+        res.add(String.valueOf(root.val));
+        return res;
+    }
+    for (String s : binaryTreePaths(root.left)) {
+        res.add(root.val + "->" + s);
+    }
+    for (String s : binaryTreePaths(root.right)) {
+        res.add(root.val + "->" + s);
+    }
+    return res;
+}
+```
+
+### Python
+
+### Go
+
+## 258  ~~Add Digits~~
+
+### Java
+
+```java
+public int addDigits(int num) {
+    while (true) {
+        int sum = 0;
+        while (num > 0) {
+            sum += num % 10;
+            num /= 10;
+        }
+        if (sum < 10) {
+            return sum;
+        }
+        num = sum;
+    }
+}
+```
+
+### Python
+
+### Go
+
+## 263  ~~Ugly Number~~
+
+### Java
+
+```java
+public boolean isUgly(int n) {
+    if(n == 0) {
+        return false;
+    }
+    while (n % 2 == 0) {
+        n /= 2;
+    }
+    while (n % 3 == 0) {
+        n /= 3;
+    }
+    while (n % 5 == 0) {
+        n /= 5;
+    }
+    return n == 1;
+}
+```
+
+### Python
+
+### Go
+
+## 268  Missing Number
+
+### Java
+
+```java
+public int missingNumber(int[] nums) {
+    int n = nums.length;
+    Set<Integer> set = new HashSet<>();
+    for (int num : nums) {
+        set.add(num);
+    }
+    for (int i = 0; i <= n; i++) {
+        if(!set.contains(i)){
+            return i;
+        }
+    }
+    return -1;
+}
+```
 
 ### Python
 
@@ -2638,39 +2804,3 @@ public TreeNode invertTree(TreeNode root) {
 ### Python
 
 ### Go
-
-## 160  Intersection of Two Linked Lists
-
-### Java
-
-### Python
-
-### Go
-
-## 160  Intersection of Two Linked Lists
-
-### Java
-
-### Python
-
-### Go
-
-## 160  Intersection of Two Linked Lists
-
-### Java
-
-### Python
-
-### Go
-
-## 160  Intersection of Two Linked Lists
-
-### Java
-
-### Python
-
-### Go
-
-### 
-
-### 
