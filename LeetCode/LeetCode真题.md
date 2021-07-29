@@ -3035,7 +3035,7 @@ public void swap(char[] chars, int i, int j) {
 
 ### Go
 
-## 343  Integer Break
+## 349  Intersection of Two Arrays
 
 ### Java
 
@@ -3043,7 +3043,15 @@ public void swap(char[] chars, int i, int j) {
 
 ### Go
 
-## 343  Integer Break
+## 350  Intersection of Two Arrays II
+
+### Java
+
+### Python
+
+### Go
+
+## 376  Wiggle Subsequence
 
 ### Java
 
