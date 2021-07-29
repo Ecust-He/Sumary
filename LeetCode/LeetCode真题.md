@@ -2797,7 +2797,253 @@ public int missingNumber(int[] nums) {
 
 ### Go
 
-## 160  Intersection of Two Linked Lists
+## 279  ~~Perfect Squares~~
+
+### Java
+
+```java
+public int numSquares(int n) {
+    Queue<Pair> q = new LinkedList<>();
+    HashSet<Integer> set = new HashSet<>();
+    q.add(new Pair(n, 0));
+    while (!q.isEmpty()) {
+        Pair p = q.poll();
+        int num = p.num;
+        int level = p.level;
+        for (int i = 0; ; i++) {
+            int newNum = num - i * i;
+            if(newNum == 0) {
+                return level + 1;
+            }
+            if(newNum < 0) {
+                break;
+            }
+            if(!set.contains(newNum)) {
+                q.add(new Pair(newNum,  level + 1));
+                set.add(newNum);
+            }
+        }
+    }
+    return 0;
+}
+```
+
+### Python
+
+### Go
+
+## 283  ~~Move Zeroes~~
+
+### Java
+
+```java
+public void moveZeroes(int[] nums) {
+    int n = nums.length;
+    int right = 0;//[0, right)区间内保存非0数字
+    for (int i = 0; i < n; i++) {
+        if(nums[i] != 0) {
+            if(right != i) {
+                swap(nums, right, i);
+            }
+            right++;
+        }
+    }
+}
+public void swap(int[] nums, int i, int j) {
+    int temp = nums[i];
+    nums[i] = nums[j];
+    nums[j] = temp;
+}
+```
+
+### Python
+
+### Go
+
+## 290  Word Pattern
+
+### Java
+
+### Python
+
+### Go
+
+## 300  ~~Longest Increasing Subsequence~~
+
+### Java
+
+```java
+public int lengthOfLIS(int[] nums) {
+    int n = nums.length;
+    if(n == 1) {
+        return 1;
+    }
+    int[] memo = new int[n];// memo[i]记录已nums[i]结尾的最长子序列的长度
+    memo[0] = 1;
+    for (int i = 1; i < n; i++) {
+        memo[i] = 1;
+        for (int j = i - 1; j >= 0; j--) {
+            if(nums[j] < nums[i]) {
+                memo[i] = Math.max(memo[i], 1 + memo[j]);
+            }
+        }
+    }
+    int maxLen = 0;
+    for (int i = 0; i < n; i++) {
+        if(memo[i] > maxLen) {
+            maxLen = memo[i];
+        }
+    }
+    return maxLen;
+}
+```
+
+### Python
+
+### Go
+
+## 326  ~~Power of Three~~
+
+### Java
+
+```java
+public boolean isPowerOfThree(int n) {
+    if(n == 0) {
+        return false;
+    }
+    while (n % 3 == 0) {
+        n /= 3;
+    }
+    return n == 1;
+}
+```
+
+### Python
+
+### Go
+
+## 328  Odd Even Linked List
+
+### Java
+
+### Python
+
+### Go
+
+## 337  House Robber III
+
+### Java
+
+### Python
+
+### Go
+
+## 341  Flatten Nested List Iterator
+
+### Java
+
+### Python
+
+### Go
+
+## 343  Integer Break
+
+### Java
+
+### Python
+
+### Go
+
+## 344  ~~Reverse String~~
+
+### Java
+
+```java
+public void reverseString(char[] s) {
+    int n = s.length;
+    int i = 0;
+    int j = n - 1;
+    while (i < j) {
+        swap(s, i, j);
+        i++;
+        j--;
+    }
+}
+
+public void swap(char[] s, int i, int j) {
+    char c = s[i];
+    s[i] = s[j];
+    s[j] = c;
+}
+```
+
+### Python
+
+### Go
+
+## 345  ~~Reverse Vowels of a String~~
+
+### Java
+
+```java
+public String reverseVowels(String s) {
+    char[] vowels = {'a', 'e', 'i', 'o', 'u', 'A', 'E', 'I', 'O', 'U'};
+    Set<Character> vowelList = new HashSet<>();
+    for (int i = 0; i < vowels.length; i++) {
+        vowelList.add(vowels[i]);
+    }
+    char[] chars = s.toCharArray();
+    int n = chars.length;
+    int i = 0;
+    int j = n - 1;
+    while (i < j) {
+        while (i < j && !vowelList.contains(chars[i])) {
+            i++;
+        }
+        while (i < j && !vowelList.contains(chars[j])) {
+            j--;
+        }
+        if(i >= j) {
+            break;
+        }
+        swap(chars, i, j);
+        i++;
+        j--;
+    }
+    StringBuilder sb = new StringBuilder();
+    for (int k = 0; k < chars.length; k++) {
+        sb.append(chars[k]);
+    }
+    return sb.toString();
+}
+public void swap(char[] chars, int i, int j) {
+    char c = chars[i];
+    chars[i] = chars[j];
+    chars[j] = c;
+}
+```
+
+### Python
+
+### Go
+
+## 347  Top K Frequent Elements
+
+### Java
+
+### Python
+
+### Go
+
+## 343  Integer Break
+
+### Java
+
+### Python
+
+### Go
+
+## 343  Integer Break
 
 ### Java
 
