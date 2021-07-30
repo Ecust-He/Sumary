@@ -3058,3 +3058,93 @@ public void swap(char[] chars, int i, int j) {
 ### Python
 
 ### Go
+
+## 392  ~~Is Subsequence~~
+
+### Java
+
+```java
+public boolean isSubsequence(String s, String t) {
+    int m = s.length();
+    int n = t.length();
+    int i = 0;
+    int j = 0;
+    while (i < m && j < n) {
+        while (i < m && j < n && t.charAt(j) != s.charAt(i)) {
+            j++;
+        }
+        if(i >= m) {
+            return true;
+        }
+        if(j >= n) {
+            break;
+        }
+        i++;
+        j++;
+    }
+    if(i >= m) {
+        return true;
+    }
+    return false;
+}
+```
+
+### Python
+
+### Go
+
+## 404  Sum of Left Leaves
+
+### Java
+
+### Python
+
+### Go
+
+## 416  Partition Equal Subset Sum
+
+### Java
+
+### Python
+
+### Go
+
+## 435  Non-overlapping Intervals
+
+### Java
+
+### Python
+
+### Go
+
+## 437  Path Sum III
+
+### Java
+
+### Python
+
+### Go
+
+## 438  Find All Anagrams in a String
+
+### Java
+
+### Python
+
+### Go
+
+## 441   Arranging Coins
+
+### Java
+
+### Python
+
+### Go
+
+## 445   Add Two Numbers II
+
+### Java
+
+### Python
+
+### Go
