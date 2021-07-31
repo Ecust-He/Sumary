@@ -3133,7 +3133,7 @@ public boolean isSubsequence(String s, String t) {
 
 ### Go
 
-## 441   Arranging Coins
+## 441  Arranging Coins
 
 ### Java
 
@@ -3141,7 +3141,113 @@ public boolean isSubsequence(String s, String t) {
 
 ### Go
 
-## 445   Add Two Numbers II
+## 445  Add Two Numbers II
+
+### Java
+
+### Python
+
+### Go
+
+## 455  ~~Assign Cookies~~
+
+### 思路
+
+贪婪算法
+
+### Java
+
+```java
+public int findContentChildren(int[] g, int[] s) {
+    int m = g.length;
+    int n = s.length;
+    int i = 0;
+    int j = 0;
+    int count = 0;
+    Arrays.sort(g);
+    Arrays.sort(s);
+    while (true) {
+        while (i < m && j < n && s[j] < g[i]) {
+            j++;
+        }
+        if (i >= m || j >= n) {
+            break;
+        }
+        count++;
+        j++;
+        i++;
+    }
+    return count;
+}
+```
+
+### Python
+
+### Go
+
+## 474  Ones and Zeroes
+
+### Java
+
+### Python
+
+### Go
+
+## 494  Target Sum
+
+### Java
+
+### Python
+
+### Go
+
+## 507  ~~Perfect Number~~
+
+### Java
+
+```java
+public boolean checkPerfectNumber(int num) {
+    if(num == 1) {
+        return false;
+    }
+    int sum = 0;
+    for (int i = 2; i <= Math.sqrt(num); i++) {
+        if(num % i == 0) {
+            sum += i + num / i;
+        }
+    }
+    return sum == num - 1;
+}
+```
+
+### Python
+
+### Go
+
+## 509  Fibonacci Number
+
+### Java
+
+```java
+public int fib(int n) {
+    if (n == 0 || n == 1) {
+        return n;
+    }
+    int[] memo = new int[n + 1];
+    memo[0] = 0;
+    memo[1] = 1;
+    for (int i = 2; i <= n; i++) {
+        memo[i] = memo[i - 1] + memo[i - 2];
+    }
+    return memo[n];
+}
+```
+
+### Python
+
+### Go
+
+## 530  Minimum Absolute Difference in BST
 
 ### Java
 
