@@ -3247,7 +3247,105 @@ public int fib(int n) {
 
 ### Go
 
-## 530  Minimum Absolute Difference in BST
+## 530  ~~Minimum Absolute Difference in BST~~
+
+### Java
+
+```java
+public int getMinimumDifference(TreeNode root) {
+    List<Integer> res = inOrder(root);
+    int min = Integer.MAX_VALUE;
+    for (int i = 1; i < res.size(); i++) {
+        int diff = res.get(i) - res.get(i-1);
+        if(diff < min) {
+            min = diff;
+        }
+    }
+    return min;
+}
+
+public List<Integer> inOrder(TreeNode root) {
+    ArrayList<Integer> res = new ArrayList<>();
+    if(root == null) {
+        return res;
+    }
+    res.addAll(inOrder(root.left));
+    res.add(root.val);
+    res.addAll(inOrder(root.right));
+    return res;
+}
+```
+
+### Python
+
+### Go
+
+## 538  Convert BST to Greater Tree
+
+### Java
+
+### Python
+
+### Go
+
+## 557  Reverse Words in a String III
+
+### Java
+
+```java
+public String reverseWords(String s) {
+    int n = s.length();
+    String[] words = s.split(" ");
+    StringBuilder sb = new StringBuilder();
+    for (String word : words) {
+        int m = word.length();
+        for (int i = m - 1; i >= 0; i--) {
+            sb.append(String.valueOf(word.charAt(i)));
+        }
+        sb.append(" ");
+    }
+    sb.deleteCharAt(sb.length() -1);
+    return sb.toString();
+}
+```
+
+### Python
+
+### Go
+
+## 559  Maximum Depth of N-ary Tree
+
+### Java
+
+### Python
+
+### Go
+
+## 557  Reverse Words in a String III
+
+### Java
+
+### Python
+
+### Go
+
+## 557  Reverse Words in a String III
+
+### Java
+
+### Python
+
+### Go
+
+## 557  Reverse Words in a String III
+
+### Java
+
+### Python
+
+### Go
+
+## 557  Reverse Words in a String III
 
 ### Java
 
