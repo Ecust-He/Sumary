@@ -3321,7 +3321,7 @@ public String reverseWords(String s) {
 
 ### Go
 
-## 557  Reverse Words in a String III
+## 561  Array Partition I
 
 ### Java
 
@@ -3329,7 +3329,7 @@ public String reverseWords(String s) {
 
 ### Go
 
-## 557  Reverse Words in a String III
+## 595  Array Partition I
 
 ### Java
 
@@ -3337,7 +3337,7 @@ public String reverseWords(String s) {
 
 ### Go
 
-## 557  Reverse Words in a String III
+## 617  Merge Two Binary Trees
 
 ### Java
 
@@ -3345,7 +3345,213 @@ public String reverseWords(String s) {
 
 ### Go
 
-## 557  Reverse Words in a String III
+## 637  ~~Average of Levels in Binary Tree~~
+
+### Java
+
+```java
+    ArrayList<Double> res = new ArrayList<>();
+    Queue<TreeNode> q = new LinkedList<>();
+    q.add(root);
+    while (!q.isEmpty()) {
+        int size = q.size();
+        double levelTotal = 0;
+        for (int i = 0; i < size; i++) {
+            TreeNode node = q.poll();
+            levelTotal += node.val;
+            if(node.left != null) {
+                q.add(node.left);
+            }
+            if(node.right != null) {
+                q.add(node.right);
+            }
+        }
+        res.add(levelTotal / size);
+    }
+    return res;
+}
+```
+
+### Python
+
+### Go
+
+## 645  Set Mismatch
+
+### Java
+
+### Python
+
+### Go
+
+## 653  Two Sum IV - Input is a BST
+
+### Java
+
+```java
+public boolean findTarget(TreeNode root, int k) {
+    ArrayList<Integer> list = inOrderTraversal(root);
+    int n = list.size();
+    int i = 0;
+    int j = n - 1;
+    while (i < j) {
+        if(list.get(i) + list.get(j) == k) {
+            return true;
+        } else if(list.get(i) + list.get(j) < k) {
+            i++;
+        }else {
+            j--;
+        }
+    }
+    return false;
+}
+
+public ArrayList<Integer> inOrderTraversal(TreeNode root) {
+    ArrayList<Integer> res = new ArrayList<>();
+    if(root == null) {
+        return res;
+    }
+    res.addAll(inOrderTraversal(root.left));
+    res.add(root.val);
+    res.addAll(inOrderTraversal(root.right));
+    return res;
+}
+```
+
+### Python
+
+### Go
+
+## 657  Robot Return to Origin
+
+### Java
+
+```java
+public boolean judgeCircle(String moves) {
+    int x = 0;
+    int y = 0;
+    for (int i = 0; i < moves.length(); i++) {
+        char c = moves.charAt(i);
+        if(c == 'R') {
+            x++;
+        } else if(c == 'L') {
+            x--;
+        } else if(c == 'U') {
+            y++;
+        } else {
+            y--;
+        }
+    }
+    return x == 0 && y == 0;
+}
+```
+
+### Python
+
+### Go
+
+## 677  Map Sum Pairs
+
+### Java
+
+### Python
+
+### Go
+
+## 680  Valid Palindrome II
+
+### Java
+
+```java
+public boolean validPalindrome(String s) {
+    int i = 0;
+    int j = s.length() - 1;
+    while (i < j) {
+        if(s.charAt(i) != s.charAt(j)) {
+            break;
+        }
+        i++;
+        j--;
+    }
+    if(i >=j) {
+        return true;
+    }
+    return isPalindrome(s, i+1, j) || isPalindrome(s, i, j-1);
+}
+
+public boolean isPalindrome(String s, int i, int j) {
+    while (i < j) {
+        if(s.charAt(i) != s.charAt(j)) {
+            return false;
+        }
+        i++;
+        j--;
+    }
+    return true;
+}
+```
+
+### Python
+
+### Go
+
+## 653  Two Sum IV - Input is a BST
+
+### Java
+
+### Python
+
+### Go
+
+## 653  Two Sum IV - Input is a BST
+
+### Java
+
+### Python
+
+### Go
+
+## 653  Two Sum IV - Input is a BST
+
+### Java
+
+### Python
+
+### Go
+
+## 653  Two Sum IV - Input is a BST
+
+### Java
+
+### Python
+
+### Go
+
+## 653  Two Sum IV - Input is a BST
+
+### Java
+
+### Python
+
+### Go
+
+## 653  Two Sum IV - Input is a BST
+
+### Java
+
+### Python
+
+### Go
+
+## 653  Two Sum IV - Input is a BST
+
+### Java
+
+### Python
+
+### Go
+
+## 653  Two Sum IV - Input is a BST
 
 ### Java
 
