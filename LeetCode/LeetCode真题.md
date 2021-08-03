@@ -69,7 +69,7 @@ func twoSum(nums []int, target int) []int {
 
 ### 思路
 
-- 加法进位
+- 注意加法进位
 
 ### Java
 
@@ -3458,7 +3458,7 @@ public boolean judgeCircle(String moves) {
 
 ### Go
 
-## 680  Valid Palindrome II
+## 680  ~~Valid Palindrome II~~
 
 ### Java
 
@@ -3495,7 +3495,129 @@ public boolean isPalindrome(String s, int i, int j) {
 
 ### Go
 
-## 653  Two Sum IV - Input is a BST
+## 686  ~~Repeated String Match~~
+
+### Java
+
+```java
+public int repeatedStringMatch(String a, String b) {
+    int m = a.length();
+    int n = b.length();
+    int times = n % m == 0 ? n / m : n / m + 1;
+    StringBuilder sb = new StringBuilder();
+    for (int i = 0; i < times; i++) {
+        sb.append(a);
+    }
+    if(sb.toString().indexOf(b) > -1) {
+        return times;
+    }
+    sb.append(a);
+    if(sb.toString().indexOf(b) > -1) {
+        return times + 1;
+    }
+    return -1;
+}
+```
+
+### Python
+
+### Go
+
+## 692  ~~Top K Frequent Words~~
+
+### Java
+
+```java
+public List<String> topKFrequent(String[] words, int k) {
+    HashMap<String, Integer> fre = new HashMap<>();
+    for (String word : words) {
+        fre.put(word , fre.getOrDefault(word, 0) + 1);
+    }
+    Queue<String> q = new PriorityQueue<>((s1, s2) -> {
+        if(fre.get(s1) == fre.get(s2)) {
+            return s2.compareTo(s1);
+        }
+        return fre.get(s1) - fre.get(s2);
+    });
+    for (String word : fre.keySet()) {
+        q.add(word);
+        if(q.size() > k) {
+            q.poll();
+        }
+    }
+    List<String> ret = new ArrayList<>();
+    Stack<String> stack = new Stack<>();
+    while (!q.isEmpty()) {
+        stack.add(q.poll());
+    }
+    while (!stack.isEmpty()) {
+        ret.add(stack.pop());
+    }
+    return ret;
+}
+```
+
+### Python
+
+### Go
+
+## 700  ~~Search in a Binary Search Tree~~
+
+### Java
+
+```java
+public TreeNode searchBST(TreeNode root, int val) {
+    if (root == null) {
+        return null;
+    }
+    if(root.val == val) {
+        return root;
+    } else if(root.val > val) {
+        return searchBST(root.left, val);
+    } else {
+        return searchBST(root.right, val);
+    }
+}
+```
+
+### Python
+
+### Go
+
+## 703  ~~Kth Largest Element in a Stream~~
+
+### Java
+
+```java
+class KthLargest {
+
+    Queue<Integer> q = new PriorityQueue<>();
+    int k;
+    public KthLargest(int k, int[] nums) {
+        this.k = k;
+        for (int num : nums) {
+            q.add(num);
+            if(q.size() > k) {
+                q.poll();
+            }
+        }
+    }
+    
+    public int add(int val) {
+        q.add(val);
+        if(q.size() > k) {
+            q.poll();
+        }
+        return q.peek();
+    }
+}
+```
+
+### Python
+
+### Go
+
+## 705  Design HashSet
 
 ### Java
 
@@ -3503,7 +3625,7 @@ public boolean isPalindrome(String s, int i, int j) {
 
 ### Go
 
-## 653  Two Sum IV - Input is a BST
+## 709   To Lower Case
 
 ### Java
 
@@ -3511,7 +3633,66 @@ public boolean isPalindrome(String s, int i, int j) {
 
 ### Go
 
-## 653  Two Sum IV - Input is a BST
+## 728  ~~Self Dividing Numbers~~
+
+### Java
+
+```java
+public List<Integer> selfDividingNumbers(int left, int right) {
+    ArrayList<Integer> res = new ArrayList<>();
+    for (int i = left; i <= right; i++) {
+        if(isSelfDividingNumber(i)) {
+            res.add(i);
+        }
+    }
+    return res;
+}
+
+public boolean isSelfDividingNumber(int i) {
+    final int num = i;
+    while (i > 0) {
+        int remain = i % 10;
+        if(remain == 0) {
+            return false;
+        }
+        if(num % remain != 0) {
+            return false;
+        }
+        i /= 10;
+    }
+    return true;
+}
+```
+
+### Python
+
+### Go
+
+## 771  ~~Jewels and Stones~~
+
+### Java
+
+```java
+public int numJewelsInStones(String jewels, String stones) {
+    HashSet<Character> set = new HashSet<>();
+    for (int i = 0; i < jewels.length(); i++) {
+        set.add(jewels.charAt(i));
+    }
+    int count = 0;
+    for (int i = 0; i < stones.length(); i++) {
+        if(set.contains(stones.charAt(i))) {
+            count++;
+        }
+    }
+    return count;
+}
+```
+
+### Python
+
+### Go
+
+## 804  ~~Unique Morse Code Words~~
 
 ### Java
 
@@ -3519,7 +3700,7 @@ public boolean isPalindrome(String s, int i, int j) {
 
 ### Go
 
-## 653  Two Sum IV - Input is a BST
+## 832  Flipping an Image
 
 ### Java
 
@@ -3527,7 +3708,7 @@ public boolean isPalindrome(String s, int i, int j) {
 
 ### Go
 
-## 653  Two Sum IV - Input is a BST
+## 844  Backspace String Compare
 
 ### Java
 
@@ -3535,7 +3716,136 @@ public boolean isPalindrome(String s, int i, int j) {
 
 ### Go
 
-## 653  Two Sum IV - Input is a BST
+## 872  ~~Leaf-Similar Trees~~
+
+### Java
+
+```java
+public boolean leafSimilar(TreeNode root1, TreeNode root2) {
+    List<Integer> list1 = findAllLeaf(root1);
+    List<Integer> list2 = findAllLeaf(root2);
+    int m = list1.size();
+    int n = list2.size();
+    if(m != n) {
+        return false;
+    }
+    for (int i = 0; i < m; i++) {
+        if(list1.get(i) != list2.get(i)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+public List<Integer> findAllLeaf(TreeNode root) {
+    List<Integer> res = new ArrayList<>();
+    if(root == null) {
+        return res;
+    }
+    res.addAll(findAllLeaf(root.left));
+    if(root.left == null && root.right == null) {
+        res.add(root.val);
+        return res;
+    }
+    res.addAll(findAllLeaf(root.right));
+    return res;
+}
+```
+
+### Python
+
+### Go
+
+## 876  ~~Middle of the Linked List~~
+
+### Java
+
+```java
+public ListNode middleNode(ListNode head) {
+    ListNode p = head;
+    int len = 0;
+    while (p != null) {
+        len++;
+        p = p.next;
+    }
+    p = head;
+    for (int i = 0; i < len / 2; i++) {
+        p = p.next;
+    }
+    return p;
+}
+```
+
+### Python
+
+### Go
+
+## 897  ~~Increasing Order Search Tree~~
+
+### Java
+
+```java
+public TreeNode increasingBST(TreeNode root) {
+    List<Integer> res = inOrderTraversal(root);
+    TreeNode dumyHead = new TreeNode(0);
+    TreeNode p = dumyHead;
+    for (Integer num : res) {
+        p.right = new TreeNode(num);
+        p = p.right;
+    }
+    return dumyHead.right;
+}
+
+public List<Integer> inOrderTraversal(TreeNode root) {
+    List<Integer> res = new ArrayList<>();
+    if(root == null) {
+        return res;
+    }
+    res.addAll(inOrderTraversal(root.left));
+    res.add(root.val);
+    res.addAll(inOrderTraversal(root.right));
+    return res;
+}
+```
+
+### Python
+
+### Go
+
+## 905  ~~Sort Array By Parity~~
+
+### Java
+
+```java
+public int[] sortArrayByParity(int[] nums) {
+    int n = nums.length;
+    int left = n - 1;//(left,n)区间内所有数都是奇数
+    int i = 0;
+    while (true) {
+        while (i < left && nums[i] % 2 == 0) {
+            i++;
+        }
+        if(i >= left) {
+            return nums;
+        }
+        swap(nums, i, left);
+        left--;
+    }
+
+}
+
+public void  swap(int[] nums, int i, int j) {
+    int t = nums[i];
+    nums[i] = nums[j];
+    nums[j] = t;
+}
+```
+
+### Python
+
+### Go
+
+## 922  Sort Array By Parity II
 
 ### Java
 
@@ -3543,7 +3853,115 @@ public boolean isPalindrome(String s, int i, int j) {
 
 ### Go
 
-## 653  Two Sum IV - Input is a BST
+## 938  ~~Range Sum of BST~~
+
+### Java
+
+#### 方法一
+
+```java
+public int rangeSumBST(TreeNode root, int low, int high) {
+    int sum = 0;
+    if(root == null) {
+        return 0;
+    }
+    Stack<TreeNode> stack = new Stack<>();
+    stack.add(root);
+    int val = root.val;
+    if(val >= low && val <= high) {
+        sum += val;
+    }
+    while (!stack.isEmpty()) {
+        TreeNode p = stack.pop();
+        if(p.left != null) {
+            stack.add(p.left);
+            val = p.left.val;
+            if(val >= low && val <= high) {
+                sum += val;
+            }
+        }
+        if(p.right != null) {
+            stack.add(p.right);
+            val = p.right.val;
+            if(val >= low && val <= high) {
+                sum += val;
+            }
+        }
+    }
+    return sum;
+}
+```
+
+#### 方法二
+
+```java
+public int rangeSumBST(TreeNode root, int low, int high) {
+    if(root == null) {
+        return 0;
+    }
+    int sum = 0;
+    sum += rangeSumBST(root.left, low, high);
+    if(root.val >= low &&root.val <= high) {
+        sum += root.val;
+    }
+    sum += rangeSumBST(root.right, low, high);
+    return sum;
+}
+```
+
+### Python
+
+### Go
+
+## 965  ~~Univalued Binary Tree~~
+
+### Java
+
+```java
+public boolean isUnivalTree(TreeNode root) {
+    if(root == null) {
+        return true;
+    }
+    if(root.left != null) {
+        if(root.val != root.left.val) {
+            return false;
+        }
+    }
+    if(root.right != null) {
+        if(root.val != root.right.val) {
+            return false;
+        }
+    }
+    return isUnivalTree(root.left) && isUnivalTree(root.right);
+}
+```
+
+### Python
+
+### Go
+
+## 977  Squares of a Sorted Array
+
+### Java
+
+```java
+public int[] sortedSquares(int[] nums) {
+    int n = nums.length;
+    int[] ret = new int[n];
+    for (int i = 0; i < n; i++) {
+        int num = nums[i];
+        ret[i] = num * num;
+    }
+    Arrays.sort(ret);
+    return ret;
+}
+```
+
+### Python
+
+### Go
+
+## 1002  Find Common Characters
 
 ### Java
 
@@ -3551,7 +3969,235 @@ public boolean isPalindrome(String s, int i, int j) {
 
 ### Go
 
-## 653  Two Sum IV - Input is a BST
+## 1019  Next Greater Node In Linked List
+
+### Java
+
+### Python
+
+### Go
+
+## 1022   Sum of Root To Leaf Binary Numbers
+
+### Java
+
+### Python
+
+### Go
+
+## 1114  print in Order
+
+### Java
+
+### Python
+
+### Go
+
+## 1122  Relative Sort Array
+
+### Java
+
+### Python
+
+### Go
+
+## 1160  Find Words That Can Be Formed by Characters
+
+### Java
+
+### Python
+
+### Go
+
+## 1200  Minimum Absolute Difference
+
+### Java
+
+### Python
+
+### Go
+
+## 1221  Split a String in Balanced Strings
+
+### Java
+
+```java
+public int balancedStringSplit(String s) {
+    int count = 0;
+    int RNum = 0;
+    int LNum = 0;
+    for (int i = 0; i < s.length(); i++) {
+        Character c = s.charAt(i);
+        if(RNum == LNum) {
+            count ++;
+        }
+        if(c == 'R') {
+            RNum++;
+        }
+        if(c == 'L') {
+            LNum++;
+        }
+    }
+    return count;
+}
+```
+
+### Python
+
+### Go
+
+## 1290  ~~Convert Binary Number in a Linked List to Integer~~
+
+### Java
+
+```java
+public int getDecimalValue(ListNode head) {
+    Stack<Integer> stack = new Stack<>();
+    ListNode p = head;
+    while (p != null) {
+        stack.add(p.val);
+        p = p.next;
+    }
+    int sum = 0;
+    int i = 0;
+    while (!stack.isEmpty()) {
+        sum += stack.pop() * Math.pow(2, i);
+        i++;
+    }
+    return sum;
+}
+```
+
+### Python
+
+### Go
+
+## 1295  ~~Find Numbers with Even Number of Digits~~
+
+### Java
+
+
+
+### Python
+
+### Go
+
+## 1299  Replace Elements with Greatest Element on Right Side
+
+### Java
+
+### Python
+
+### Go
+
+## 1304  Find N Unique Integers Sum up to Zero
+
+### Java
+
+### Python
+
+### Go
+
+## 1309  Decrypt String from Alphabet to Integer Mapping
+
+### Java
+
+### Python
+
+### Go
+
+## 1313  Decompress Run-Length Encoded List
+
+### Java
+
+### Python
+
+### Go
+
+## 1337  The K Weakest Rows in a Matrix
+
+### Java
+
+### Python
+
+### Go
+
+## 1351  Count Negative Numbers in a Sorted Matrix
+
+### Java
+
+### Python
+
+### Go
+
+## 1365  How Many Numbers Are Smaller Than the Current Number
+
+### Java
+
+```java
+public int[] smallerNumbersThanCurrent(int[] nums) {
+    int n = nums.length;
+    int[] ret = new int[n];
+    for (int i = 0; i < n; i++) {
+        int count = 0;
+        for (int j = 0; j < n; j++) {
+            if(nums[j] < nums[i] && i != j) {
+                count++;
+            }
+        }
+        ret[i] = count;
+    }
+    return ret;
+}
+```
+
+### Python
+
+### Go
+
+## 1385  Find the Distance Value Between Two Arrays
+
+### Java
+
+### Python
+
+### Go
+
+## 1394  Find Lucky Integer in an Array
+
+### Java
+
+```java
+public int findLucky(int[] arr) {
+    HashMap<Integer, Integer> fre = new HashMap<>();
+    for (int num : arr) {
+        fre.put(num, fre.getOrDefault(num, 0) + 1);
+    }
+    int luckyNum = -1;
+    for (Map.Entry<Integer, Integer> entry : fre.entrySet()) {
+        if(entry.getKey() == entry.getValue()) {
+            if(entry.getKey() > luckyNum) {
+                luckyNum = entry.getKey();
+            }
+        }
+    }
+    return luckyNum;
+}
+```
+
+### Python
+
+### Go
+
+## 1413  Minimum Value to Get Positive Step by Step Sum
+
+### Java
+
+### Python
+
+### Go
+
+## 1436  Destination City
 
 ### Java
 
