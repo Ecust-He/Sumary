@@ -94,6 +94,24 @@ public synchronized void start() {
 
 ### 线程生命周期
 
+### JMM
+
+#### happens-before原则
+
+##### 定义
+
+A happens before B，即A先于B发生，则A的执行结果对B可见。
+
+##### 性质
+
+- 传递性
+
+#### Java内存抽象模型
+
+**主内存**和线程的**工作内存**
+
+### 线程间通信
+
 ## 2  线程安全
 
 多线程竞争共享资源时，需要保证同一时刻有且只有一个线程在操作共享资源
@@ -123,9 +141,31 @@ public synchronized void start() {
 
 #### sychornized
 
+##### 底层原理
+
+###### 对象锁机制
+
+```bash
+javap -v xx.class
+```
+
+查看java的字节码文件发现，monitorenter和monitorexit两个指令可以理解为执行代码块前的加锁和退出同步代码块时的解锁。
+
+##### 特点
+
+不需要显示释放锁
+
 #### Lock
 
+#### 基于volatile + CAS实现同步锁
+
 #### 死锁问题
+
+#### 注意事项
+
+1. 锁的选取需要综合考虑是否超时获取锁、获取到锁时是否可被中断等条件
+2. 加锁的粒度尽可能小
+3. 防止死锁
 
 ### ThreadLocal
 
@@ -200,7 +240,7 @@ class ThreadSafeFormatter {
 | threadFactory   | 线程工厂     |
 | handler         | 拒绝策略     |
 
-##### 执行过程
+##### 工作流程
 
 ![](./线程池工作流程图.png)
 
@@ -418,6 +458,10 @@ public class ConditionDemo {
 ```
 
 # 高效编程
+
+## Lambda表达式
+
+把函数作为方法入参
 
 ## 流式编程
 
