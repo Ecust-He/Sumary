@@ -4,7 +4,7 @@
 
 ### 思路
 
-- 使用Map数据结构
+- 使用Map数据结构，key为target - nums[i]，value为i
 
 ### Java
 
@@ -177,7 +177,7 @@ func addTwoNumbers(l1 *ListNode, l2 *ListNode) *ListNode {
 
 ### 思路
 
-- 首先需要定义[left, right]区间内保存不重复字符串
+- 首先需要定义[(eft, right]区间内保存不重复字符串
 - 使用map数据结构，key为当前待考察的字符，value为索引位置
 
 ### Java
@@ -246,11 +246,12 @@ func lengthOfLongestSubstring(s string) int {
 }
 ```
 
-## 4  ~~Median of Two Sorted Arrays~~
+## 4  Median of Two Sorted Arrays
 
 ### 思路
 
 - 需要开辟新的空间保存合并之后的数组
+- 循环不变式：两个数组至少有一个未遍历结束
 
 ### Java
 
