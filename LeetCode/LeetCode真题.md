@@ -349,7 +349,17 @@ func findMedianSortedArrays(nums1 []int, nums2 []int) float64 {
 }
 ```
 
-## 7  Reverse Integer
+## 5  Longest Palindromic Substring
+
+### 思路
+
+### Java
+
+### Python
+
+### Go
+
+## 7  ~~Reverse Integer~~
 
 ### 思路
 
@@ -405,7 +415,7 @@ func reverse(x int) int {
 }
 ```
 
-## 9  Palindrome Number
+## 9  ~~Palindrome Number~~
 
 ### 思路
 
@@ -490,7 +500,8 @@ func isPalindrome(x int) bool {
 
 ### 思路
 
-已短板一边为准
+- 指针对撞
+- 已短板一边为准
 
 ### Java
 
@@ -563,7 +574,7 @@ func maxArea(height []int) int {
 }
 ```
 
-## 13  Roman to Integer
+## 13  ~~Roman to Integer~~
 
 ### 思路
 
@@ -693,27 +704,24 @@ func romanToInt(s string) int {
 ### Java
 
 ```java
-class Solution {
-    public String longestCommonPrefix(String[] strs) {
-        int len = strs.length;
-        if(len == 0) {
-            return "";
-        }
-        if(len == 1) {
-            return strs[0];
-        }
-        String commonPrefix = strs[0];
-        for (int i = 1; i < len; i++) {
-            while (!strs[i].startsWith(commonPrefix)) {
-                if (commonPrefix.length() > 1) {
-                    commonPrefix = commonPrefix.substring(0, commonPrefix.length() - 1);
-                } else {
-                    return "";
-                }
-            }
-        }
-        return commonPrefix;
+public String longestCommonPrefix(String[] strs) {
+    int len = strs.length;
+    if(len == 0) {
+        return "";
     }
+    if(len == 1) {
+        return strs[0];
+    }
+    String commonPrefix = strs[0];
+    for (int i = 1; i < len; i++) {
+        while (!strs[i].startsWith(commonPrefix)) {
+            if (commonPrefix.length() == 0) {
+                return "";
+            }
+            commonPrefix = commonPrefix.substring(0, commonPrefix.length() - 1);
+        }
+    }
+    return commonPrefix;
 }
 ```
 
@@ -767,7 +775,46 @@ func longestCommonPrefix(strs []string) string {
 
 ### 思路
 
+- 先排序
+- i，j，k三个数，每个位置的数字不能重复
+
 ### Java
+
+```java
+public List<List<Integer>> threeSum(int[] nums) {
+    int len = nums.length;
+    List<List<Integer>> res = new ArrayList<>();
+    if(len < 3) {
+        return res;
+    }
+    Arrays.sort(nums);
+    for (int i = 0; i < len - 2; i++) {
+        if(i > 0 && nums[i] == nums[i-1]) {
+            continue;
+        }
+        int j = i + 1;
+        int k = len -1;
+        while (j < k) {
+            if(nums[i] + nums[j] + nums[k] == 0) {
+                res.add(Arrays.asList(nums[i], nums[j], nums[k]));
+                j++;
+                k--;
+                while (j < k && nums[j] == nums[j-1]) {
+                    j++;
+                }
+                while (j < k && nums[k] == nums[k+1]){
+                    k--;
+                }
+            } else if(nums[i] + nums[j] + nums[k] < 0) {
+                j++;
+            } else {
+                k--;
+            }
+        }
+    }
+    return res;
+}
+```
 
 ### Python
 
