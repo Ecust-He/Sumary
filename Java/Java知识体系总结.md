@@ -98,7 +98,13 @@ public synchronized void start() {
 
 ### Java内存模型
 
-线程对内存的访问（读写操作）没有统一的规范，主内存和缓存会存在数据不一致性问题；为了解决这个问题，JVM屏蔽了底层硬件和操作系统的差异，抽象出**主内存**和**工作内存**的概念
+线程对内存的访问（读写操作）没有统一的规范，会出现**缓存不一致**问题；为了解决这个问题，JVM屏蔽了底层硬件和操作系统的差异，抽象出**主内存**和**工作内存**的概念；Java内存模型主要围绕在并发过程中如何处理**原子性**、**可见性**、**有序性**三大特性展开的，可以解除缓存一致性问题。
+
+#### 特性
+
+- 原子性
+- 可见性
+- 有序性
 
 ### happens-before原则
 
@@ -106,17 +112,25 @@ public synchronized void start() {
 
 A happens before B，即A先于B发生，则A的执行结果对B可见。
 
-#### 性质
+#### 规则
 
-- 传递性
+JMM定义了如下的happens-before原则，已此保证有序性。
 
-### as-if-serial原则
+- 程序顺序规则：一个线程（单线程）中的每一个操作，happens-before于该线程后续任意操作
 
-不管指令如何重排序，（单线程）最终的执行结果不能改变。
+- 锁规则：对一个线程的**加锁**happens-before线程的**解锁**
+
+- volatile规则：volatile变量的**写**happens-before volatile变量的**读**
+
+- 传递性：A happens-before B，且B happens-before C，则A happens-before C
 
 ### 指令重排序
 
 定义：编译器和处理器为了优化程序性能而对指令进行重新排序。
+
+#### as-if-serial语义
+
+不管指令如何重排序，（单线程）最终的执行结果不能改变。
 
 ### volatile关键字
 
@@ -127,7 +141,7 @@ A happens before B，即A先于B发生，则A的执行结果对B可见。
 
 #### 使用场景
 
-- 纯赋值操作
+- 纯赋值操作（i++不适用）
 - 作为触发器
 
 ## 3  线程安全
@@ -178,6 +192,118 @@ javap -v xx.class
 #### 基于volatile + CAS实现同步锁
 
 #### 死锁问题
+
+##### 死锁的四个必要条件
+
+- 互斥条件
+- 请求与保持
+- 循环等待
+
+- 不可剥夺
+
+##### 典型案例
+
+###### 银行转账问题
+
+```java
+/**
+ * 描述：     多人同时转账，依然很危险
+ */
+public class MultiTransferMoney {
+
+    private static final int NUM_ACCOUNTS = 500;
+    private static final int NUM_MONEY = 1000;
+    private static final int NUM_ITERATIONS = 1000000;
+    private static final int NUM_THREADS = 20;
+
+    public static void main(String[] args) {
+
+        Random rnd = new Random();
+        Account[] accounts = new Account[NUM_ACCOUNTS];
+        for (int i = 0; i < accounts.length; i++) {
+            accounts[i] = new Account(NUM_MONEY);
+        }
+        class TransferThread extends Thread {
+
+            @Override
+            public void run() {
+                for (int i = 0; i < NUM_ITERATIONS; i++) {
+                    int fromAcct = rnd.nextInt(NUM_ACCOUNTS);
+                    int toAcct = rnd.nextInt(NUM_ACCOUNTS);
+                    int amount = rnd.nextInt(NUM_MONEY);
+                    TransferMoney.transferMoney(accounts[fromAcct], accounts[toAcct], amount);
+                }
+                System.out.println("运行结束");
+            }
+        }
+        for (int i = 0; i < NUM_THREADS; i++) {
+            new TransferThread().start();
+        }
+    }
+}
+```
+
+```java
+public class TransferMoney implements Runnable {
+    
+    static Object lock = new Object();
+
+    public static void transferMoney(Account from, Account to, int amount) {
+        class Helper {
+            public void transfer() {
+                if (from.balance - amount < 0) {
+                    System.out.println("余额不足，转账失败。");
+                    return;
+                }
+                from.balance -= amount;
+                to.balance = to.balance + amount;
+                System.out.println("成功转账" + amount + "元");
+            }
+        }
+        int fromHash = System.identityHashCode(from);
+        int toHash = System.identityHashCode(to);
+        if (fromHash < toHash) {
+            synchronized (from) {
+                synchronized (to) {
+                    new Helper().transfer();
+                }
+            }
+        }
+        else if (fromHash > toHash) {
+            synchronized (to) {
+                synchronized (from) {
+                    new Helper().transfer();
+                }
+            }
+        }else  {
+            synchronized (lock) {
+                synchronized (to) {
+                    synchronized (from) {
+                        new Helper().transfer();
+                    }
+                }
+            }
+        }
+
+    }
+
+    static class Account {
+
+        public Account(int balance) {
+            this.balance = balance;
+        }
+
+        int balance;
+
+    }
+}
+```
+
+###### 哲学家就餐问题
+
+#### 活锁问题
+
+
 
 #### 注意事项
 
