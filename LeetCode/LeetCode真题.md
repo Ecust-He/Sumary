@@ -820,9 +820,19 @@ public List<List<Integer>> threeSum(int[] nums) {
 
 ### Go
 
-## 17  Letter Combinations of a Phone Number
+## 16  3Sum Closest
+
+### Java
+
+### Python
+
+### Go
+
+## 17  ~~Letter Combinations of a Phone Number~~
 
 ### 思路
+
+- 逐一翻译字符串中的每一个字符，并保存
 
 ### Java
 
@@ -851,7 +861,7 @@ class Solution {
     }
 
     public void letterCombinations(int index, String str, String digits, List<String> res) {
-        if (str.length() == digits.length()) {
+        if (index == digits.length()) {
             res.add(str);
             return;
         }
@@ -949,6 +959,9 @@ func letterCombination(index int, str string, digits string, res *[]string) {
 ## 19  ~~Remove Nth Node From End if List~~
 
 ### 思路
+
+- 求出链表的长度
+- 找出待删除节点的前一个节点
 
 ### Java
 
@@ -1122,6 +1135,10 @@ func (stack Stack) isNotEmpty() bool {
 
 ## 21  ~~Merge Two Sorted Lists~~
 
+### 思路
+
+循环不变式：至少有一个链表未遍历完成
+
 ### Java
 
 ```java
@@ -1235,19 +1252,23 @@ func mergeTwoLists(l1 *ListNode, l2 *ListNode) *ListNode {
 
 ```java
     public ListNode swapPairs(ListNode head) {
+        if(head == null) {
+            return null;
+        }
         ListNode dumyHead = new ListNode(0, head);
-        ListNode preNode = dumyHead;
-        while(preNode.next != null && preNode.next.next != null){
-            ListNode node1 = preNode.next;
-            ListNode node2 = node1.next;
-            ListNode next = node2.next;
-            
-            
-            preNode.next = node2;
+        ListNode pre = dumyHead;
+        ListNode node1;
+        ListNode node2;
+        ListNode next;
+        while (pre.next != null && pre.next.next != null) {
+            node1 = pre.next;
+            node2 = node1.next;
+            next = node2.next;
+
+            pre.next = node2;
             node2.next = node1;
             node1.next = next;
-            
-            preNode = node1;
+            pre = node1;
         }
         return dumyHead.next;
     }
@@ -1298,7 +1319,11 @@ func swapPairs(head *ListNode) *ListNode {
 }
 ```
 
-## 26  ~~Remove Duplicates from Sorted Array~~
+## 26  Remove Duplicates from Sorted Array
+
+### 思路
+
+- 保证[0, len)区间内数字不重复
 
 ### Java
 
