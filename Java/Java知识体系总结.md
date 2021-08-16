@@ -152,6 +152,18 @@ JMM定义了如下的happens-before原则，已此保证有序性。
 
 ### 并发容器
 
+#### CopyOnWriteArrayList
+
+##### 底层原理
+
+底层数据结构是数组，当向数组中添加、删除元素时，通过数组拷贝方式拷贝出一个新数组并在新数组上完成更新操作，当更新操作完成之后再将数组的引用指向更新后的新数组。
+
+加锁时使用ReentrantLock锁
+
+#### ConcurrentHashMap
+
+##### 底层原理
+
 ### 锁
 
 #### 分类
@@ -181,7 +193,7 @@ JMM定义了如下的happens-before原则，已此保证有序性。
 javap -v xx.class
 ```
 
-查看java的字节码文件发现，monitorenter和monitorexit两个指令可以理解为执行代码块前的加锁和退出同步代码块时的解锁。
+查看java的字节码文件，monitorenter和monitorexit两个指令可以理解为执行代码块前的加锁和退出同步代码块时的解锁。
 
 ##### 特点
 
