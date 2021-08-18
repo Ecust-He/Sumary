@@ -154,15 +154,42 @@ JMM定义了如下的happens-before原则，已此保证有序性。
 
 #### CopyOnWriteArrayList
 
-##### 底层原理
+##### 源码实现
 
-底层数据结构是数组，当向数组中添加、删除元素时，通过数组拷贝方式拷贝出一个新数组并在新数组上完成更新操作，当更新操作完成之后再将数组的引用指向更新后的新数组。
+底层数据结构是**数组**，当向数组中添加、删除元素时，拷贝出一个新的数组并在新数组上完成更新操作，当更新操作完成之后再将数组的引用指向更新后的新数组。
 
-加锁时使用ReentrantLock锁
+加锁时使用ReentrantLock锁，加锁的粒度是整个方法体。
 
 #### ConcurrentHashMap
 
-##### 底层原理
+##### 源码实现
+
+底层数据结构是**数组+链表+红黑树**，并通过cas + synchronized关键字保证线程安全
+
+###### 构造方法
+
+若不指定初始容量（无参数构造方法），默认是16；
+
+```java
+/**
+ * The default initial table capacity.  Must be a power of 2
+ * (i.e., at least 1) and at most MAXIMUM_CAPACITY.
+ */	
+private static final int DEFAULT_CAPACITY = 16;
+```
+
+若指定初始化容量，如果大于MAXIMUM_CAPACITY的一半则取MAXIMUM_CAPACITY；否则取大于输入参数且最近的**2的整数次幂**作为初始化容量；
+
+```java
+public ConcurrentHashMap(int initialCapacity) {
+    if (initialCapacity < 0)
+        throw new IllegalArgumentException();
+    int cap = ((initialCapacity >= (MAXIMUM_CAPACITY >>> 1)) ?
+               MAXIMUM_CAPACITY :
+               tableSizeFor(initialCapacity + (initialCapacity >>> 1) + 1));
+    this.sizeCtl = cap;
+}
+```
 
 ### 锁
 
