@@ -2,6 +2,8 @@
 
 # JAVA基础
 
+## 异常体系
+
 
 
 # 并发编程
@@ -18,6 +20,8 @@
 
 1、创建线程有哪几种方式？哪种方式更好？
 
+本质一样，run方法内容来源不同
+
 ```java
 public void run() {
     if (target != null) {
@@ -25,6 +29,8 @@ public void run() {
     }
 }
 ```
+
+2、创建线程时，既传入了Runnable对象，又继承了Thread类重写run方法，此时执行哪一个run方法？
 
 ### 线程启动
 
@@ -88,11 +94,203 @@ public synchronized void start() {
 
 1、如何正确停止线程？
 
-- 请求方：发出中断信号
-- 被停止方：响应中断
-- 子方法调用方：抛出或恢复中断
+**使用通知方式而不是强制停止**
 
-### 线程生命周期
+- 请求方：发出中断信号
+- 被停止方：及时检测并响应中断
+- 子方法调用方：恢复中断状态
+
+### 生命周期
+
+### Thread类方法
+
+#### sleep
+
+#### yield
+
+#### join
+
+主线程等待子线程执行完毕之后才会执行
+
+```java
+synchronized (thread) {
+    thread.wait();
+}
+```
+
+### Object类方法
+
+#### wait/notofy
+
+放在同步代码块中执行
+
+##### 生产者消费者模式演示
+
+```java
+public class ProducerConsumerModel {
+    public static void main(String[] args) {
+        EventStorage eventStorage = new EventStorage();
+        Producer producer = new Producer(eventStorage);
+        Consumer consumer = new Consumer(eventStorage);
+        new Thread(producer).start();
+        new Thread(consumer).start();
+    }
+}
+
+class Producer implements Runnable {
+
+    private EventStorage storage;
+
+    public Producer(
+            EventStorage storage) {
+        this.storage = storage;
+    }
+
+    @Override
+    public void run() {
+        for (int i = 0; i < 100; i++) {
+            storage.put();
+        }
+    }
+}
+
+class Consumer implements Runnable {
+
+    private EventStorage storage;
+
+    public Consumer(
+            EventStorage storage) {
+        this.storage = storage;
+    }
+
+    @Override
+    public void run() {
+        for (int i = 0; i < 100; i++) {
+            storage.take();
+        }
+    }
+}
+
+class EventStorage {
+
+    private int maxSize;
+    private LinkedList<Date> storage;
+
+    public EventStorage() {
+        maxSize = 10;
+        storage = new LinkedList<>();
+    }
+
+    public synchronized void put() {
+        while (storage.size() == maxSize) {
+            try {
+                wait();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        storage.add(new Date());
+        System.out.println("仓库里有了" + storage.size() + "个产品。");
+        notify();
+    }
+
+    public synchronized void take() {
+        while (storage.size() == 0) {
+            try {
+                wait();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        System.out.println("拿到了" + storage.poll() + "，现在仓库还剩下" + storage.size());
+        notify();
+    }
+}
+```
+
+##### 两个线程交替打印0~100的奇偶数
+
+###### 用synchronized关键字实现
+
+```java
+public class WaitNotifyPrintOddEvenSyn {
+
+    private static int count;
+
+    private static final Object lock = new Object();
+
+    //新建2个线程
+    //1个只处理偶数，第二个只处理奇数（用位运算）
+    //用synchronized来通信
+    public static void main(String[] args) {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (count < 100) {
+                    synchronized (lock) {
+                        if ((count & 1) == 0) {
+                            System.out.println(Thread.currentThread().getName() + ":" + count++);
+                        }
+                    }
+                }
+            }
+        }, "偶数").start();
+
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (count < 100) {
+                    synchronized (lock) {
+                        if ((count & 1) == 1) {
+                            System.out.println(Thread.currentThread().getName() + ":" + count++);
+                        }
+                    }
+                }
+            }
+        }, "奇数").start();
+    }
+}
+```
+
+###### 用wait和notify方法实现
+
+```java
+public class WaitNotifyPrintOddEveWait {
+
+    private static int count = 0;
+    private static final Object lock = new Object();
+
+
+    public static void main(String[] args) {
+        new Thread(new TurningRunner(), "偶数").start();
+        new Thread(new TurningRunner(), "奇数").start();
+    }
+
+    //1. 拿到锁，我们就打印
+    //2. 打印完，唤醒其他线程，自己就休眠
+    static class TurningRunner implements Runnable {
+
+        @Override
+        public void run() {
+            while (count <= 100) {
+                synchronized (lock) {
+                    //拿到锁就打印
+                    System.out.println(Thread.currentThread().getName() + ":" + count++);
+                    lock.notify();
+                    if (count <= 100) {
+                        try {
+                            //如果任务还没结束，就让出当前的锁，并休眠
+                            lock.wait();
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+```
 
 ## 2  底层原理
 
@@ -413,6 +611,65 @@ public class TransferMoney implements Runnable {
 ```
 
 ###### 哲学家就餐问题
+
+```java
+public class DiningPhilosophers {
+
+    public static class Philosopher implements Runnable {
+
+        private Object leftChopstick;
+
+        private Object rightChopstick;
+
+        public Philosopher(Object leftChopstick, Object rightChopstick) {
+            this.leftChopstick = leftChopstick;
+            this.rightChopstick = rightChopstick;
+        }
+
+        @Override
+        public void run() {
+            try {
+                while (true) {
+                    doAction("Thinking");
+                    synchronized (leftChopstick) {
+                        doAction("Picked up left chopstick");
+                        synchronized (rightChopstick) {
+                            doAction("Picked up right chopstick - eating");
+                            doAction("Put down right chopstick");
+                        }
+                        doAction("Put down left chopstick");
+                    }
+                }
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+
+        private void doAction(String action) throws InterruptedException {
+            System.out.println(Thread.currentThread().getName() + " " + action);
+            Thread.sleep((long) (Math.random() * 10));
+        }
+    }
+
+    public static void main(String[] args) {
+        Philosopher[] philosophers = new Philosopher[5];
+        Object[] chopsticks = new Object[philosophers.length];
+        for (int i = 0; i < chopsticks.length; i++) {
+            chopsticks[i] = new Object();
+        }
+        for (int i = 0; i < philosophers.length; i++) {
+            Object leftChopstick = chopsticks[i];
+            Object rightChopstick = chopsticks[(i + 1) % chopsticks.length];
+            if (i == philosophers.length - 1) {
+                philosophers[i] = new Philosopher(rightChopstick, leftChopstick);
+            } else {
+                philosophers[i] = new Philosopher(leftChopstick, rightChopstick);
+            }
+            new Thread(philosophers[i], "哲学家" + (i + 1) + "号").start();
+        }
+    }
+}
+```
 
 #### 活锁问题
 
