@@ -102,11 +102,24 @@ public synchronized void start() {
 
 ### 生命周期
 
-### Thread类方法
+### Thread和Object类方法
 
 #### sleep
 
+暂停当前线程，把CPU时间片让给其他线程执行
+
+- 线程睡眠期间会释放占用的CPU时间片，但不会释放对象锁（如果当前线程获取到对象锁）
+- 线程苏醒时，继续执行
+
 #### yield
+
+当前线程让出CPU时间片，线程状态转换为就绪状态，并重新竞争CPU的调度权。
+
+- yield设计初衷是为了防止过度使用CPU
+
+##### 使用场景
+
+当前线程让出CPU的使用权
 
 #### join
 
@@ -118,11 +131,11 @@ synchronized (thread) {
 }
 ```
 
-### Object类方法
-
-#### wait/notofy
+#### wait/notify
 
 放在同步代码块中执行
+
+- wait会释放当前持有的对象锁
 
 ##### 生产者消费者模式演示
 
@@ -291,6 +304,32 @@ public class WaitNotifyPrintOddEveWait {
     }
 }
 ```
+
+#### 面试题
+
+##### 1、sleep和yield方法的异同？
+
+相同点：
+
+让出CPU的使用权
+
+不同点：
+
+- 调用sleep方法，线程苏醒后继续之前的执行；调用yield方法，当前线程进入就绪状态，是否运行取决于CPU的调度
+
+##### 2、sleep和wait方法的异同？
+
+相同点：
+
+
+
+不同点：
+
+- wait是Object类的方法，而sleep是Thread类的方法
+- wait方法需要在同步代码块中执行，而sleep方法不需要
+- wait方法会让出对象锁，而sleep方法不会让出对象锁
+- sleep方法可以通过interrupt方法中断，而wait方法不可以
+- sleep方法需要等到睡眠时间自动苏醒，而wait方法可以通过notify或notifyAll方法随时唤醒
 
 ## 2  底层原理
 
