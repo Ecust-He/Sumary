@@ -106,16 +106,17 @@ public synchronized void start() {
 
 #### sleep
 
-暂停当前线程，把CPU时间片让给其他线程执行
+暂停当前线程，线程进入阻塞状态，把CPU时间片让给其他线程执行
 
 - 线程睡眠期间会释放占用的CPU时间片，但不会释放对象锁（如果当前线程获取到对象锁）
 - 线程苏醒时，继续执行
 
 #### yield
 
-当前线程让出CPU时间片，线程状态转换为就绪状态，并重新竞争CPU的调度权。
+当前线程让出CPU时间片，线程状态转换为就绪状态，并重新竞争CPU的调度权
 
 - yield设计初衷是为了防止过度使用CPU
+- 让其他线程有机会运行，但不能保证某个特定的线程能够获得CPU资源；是否可以获取CPU时间片运行取决于调度器
 
 ##### 使用场景
 
@@ -133,7 +134,7 @@ synchronized (thread) {
 
 #### wait/notify
 
-放在同步代码块中执行
+必须放在synchronized同步代码块中执行，为了避免使用者出现Lost Wake-Up Problem（通知丢失问题）
 
 - wait会释放当前持有的对象锁
 
@@ -307,29 +308,22 @@ public class WaitNotifyPrintOddEveWait {
 
 #### 面试题
 
-##### 1、sleep和yield方法的异同？
-
-相同点：
-
-让出CPU的使用权
-
-不同点：
+##### 1、sleep和yield方法的区别？
 
 - 调用sleep方法，线程苏醒后继续之前的执行；调用yield方法，当前线程进入就绪状态，是否运行取决于CPU的调度
 
-##### 2、sleep和wait方法的异同？
-
-相同点：
-
-
-
-不同点：
+##### 2、sleep和wait方法的区别？
 
 - wait是Object类的方法，而sleep是Thread类的方法
-- wait方法需要在同步代码块中执行，而sleep方法不需要
-- wait方法会让出对象锁，而sleep方法不会让出对象锁
+- wait方法用于线程间通信，sleep方法用于短时间暂停当前线程
+- wait方法需要在synchronized同步代码块中执行，而sleep方法不需要
+- wait方法会让出对象锁，而sleep方法不会释放对象锁
 - sleep方法可以通过interrupt方法中断，而wait方法不可以
 - sleep方法需要等到睡眠时间自动苏醒，而wait方法可以通过notify或notifyAll方法随时唤醒
+
+### 异常处理
+
+为线程自定义异常处理类
 
 ## 2  底层原理
 
@@ -380,6 +374,41 @@ JMM定义了如下的happens-before原则，已此保证有序性。
 
 - 纯赋值操作（i++不适用）
 - 作为触发器
+
+### 单例模式
+
+| 模式                        | 特点                     | 是否线程安全       |
+| --------------------------- | ------------------------ | ------------------ |
+| 懒汉模式                    | 懒加载，使用时进行实例化 | 否                 |
+| 懒汉模式+synchronized关键字 |                          | 是（不推荐）       |
+| 双重检查模式                |                          | 是（推荐，面试用） |
+| 饿汉模式（静态常量）        | 类加载时进行初始化       | 是                 |
+| 饿汉模式（静态代码块）      | 类加载时进行初始化       | 是                 |
+| 内部静态类                  |                          | 是                 |
+| 枚举类                      |                          | 是                 |
+
+```java
+// 双重检查
+public class Singleton {
+
+    // volatile禁止指令重排序
+    private volatile static Singleton instance;
+
+    private Singleton() {}
+
+    public static Singleton getInstance() {
+        if (instance == null) {
+            synchronized (Singleton6.class) {
+                if (instance == null) {
+                    // 创建对象 1、在堆区分配内存 2、实例化对象 3、引用指向对象
+                    instance = new Singleton();
+                }
+            }
+        }
+        return instance;
+    }
+}
+```
 
 ## 3  线程安全
 
@@ -531,7 +560,7 @@ final V putVal(K key, V value, boolean onlyIfAbsent) {
 javap -v xx.class
 ```
 
-查看java的字节码文件，monitorenter和monitorexit两个指令可以理解为执行代码块前的加锁和退出同步代码块时的解锁。
+查看java的字节码文件，monitorenter（执行代码块前的加锁）和monitorexit（退出同步代码块时的解锁）两个指令。
 
 ##### 特点
 
@@ -545,11 +574,10 @@ javap -v xx.class
 
 ##### 死锁的四个必要条件
 
-- 互斥条件
-- 请求与保持
-- 循环等待
-
-- 不可剥夺
+- 互斥条件（同一时刻，某个资源只能被一个线程占用）
+- 请求与保持（**吃着碗里的看着锅里的**，即线程占用至少一个资源，又提出了新的资源请求，而该资源被其他线程占用，所以当前线程处于等待状态）
+- 不可剥夺（已持有的资源在线程未使用完之前，不可被强行剥夺，只能等待获取资源的线程主动释放）
+- 循环等待（**你等我，我等你**，线程间形成了头尾相接的循环等待资源关系）
 
 ##### 典型案例
 
@@ -712,7 +740,89 @@ public class DiningPhilosophers {
 
 #### 活锁问题
 
+```java
+public class LiveLock {
 
+    static class Spoon {
+
+        private Diner owner;
+
+        public Spoon(Diner owner) {
+            this.owner = owner;
+        }
+
+        public Diner getOwner() {
+            return owner;
+        }
+
+        public void setOwner(Diner owner) {
+            this.owner = owner;
+        }
+
+        public synchronized void use() {
+            System.out.printf("%s吃完了!", owner.name);
+        }
+    }
+
+    static class Diner {
+
+        private String name;
+        private boolean isHungry;
+
+        public Diner(String name) {
+            this.name = name;
+            isHungry = true;
+        }
+
+        public void eatWith(Spoon spoon, Diner spouse) {
+            while (isHungry) {
+                if (spoon.owner != this) {
+                    try {
+                        Thread.sleep(1);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    continue;
+                }
+                Random random = new Random();
+                if (spouse.isHungry && random.nextInt(10) < 9) {
+                    System.out.println(name + ": 亲爱的" + spouse.name + "你先吃吧");
+                    spoon.setOwner(spouse);
+                    continue;
+                }
+
+                spoon.use();
+                isHungry = false;
+                System.out.println(name + ": 我吃完了");
+                spoon.setOwner(spouse);
+
+            }
+        }
+    }
+
+
+    public static void main(String[] args) {
+        Diner husband = new Diner("牛郎");
+        Diner wife = new Diner("织女");
+
+        Spoon spoon = new Spoon(husband);
+
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                husband.eatWith(spoon, wife);
+            }
+        }).start();
+
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                wife.eatWith(spoon, husband);
+            }
+        }).start();
+    }
+}
+```
 
 #### 注意事项
 
