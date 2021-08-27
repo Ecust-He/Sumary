@@ -657,7 +657,8 @@ abstract static class Sync extends AbstractQueuedSynchronizer {
 
 ###### 公平锁和非公平锁
 
-先尝试插队，如果插队失败再排队
+- 先尝试插队，如果插队失败再排队
+- 非公平锁性能好，但可能会导致饥饿情况；由于频繁的线程上下文切换，公平锁性能较差
 
 **NonfairSync 非公平锁源码实现**
 
@@ -720,6 +721,7 @@ static final class FairSync extends Sync {
 ```
 
 ```java
+// 主要用来判断线程是否需要排队
 public final boolean hasQueuedPredecessors() {
     // The correctness of this depends on head being initialized
     // before tail and on head.next being accurate if the current
@@ -729,12 +731,301 @@ public final boolean hasQueuedPredecessors() {
     Node s;
     return h != t &&
         ((s = h.next) == null || s.thread != Thread.currentThread());
+    // 结果一：返回false，不需要排队
+    	// 情况一：队列为空
+    	// 情况二：头节点有后继节点，且后继节点和头节点是相同线程
+}
+```
+
+**代码演示**
+
+```java
+public class FairLock {
+
+    public static void main(String[] args) {
+        PrintQueue printQueue = new PrintQueue();
+        Thread thread[] = new Thread[10];
+        for (int i = 0; i < 10; i++) {
+            thread[i] = new Thread(new Job(printQueue));
+        }
+        for (int i = 0; i < 10; i++) {
+            thread[i].start();
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+}
+
+class Job implements Runnable {
+
+    PrintQueue printQueue;
+
+    public Job(PrintQueue printQueue) {
+        this.printQueue = printQueue;
+    }
+
+    @Override
+    public void run() {
+        System.out.println(Thread.currentThread().getName() + "开始打印");
+        printQueue.printJob(new Object());
+        System.out.println(Thread.currentThread().getName() + "打印完毕");
+    }
+}
+
+class PrintQueue {
+
+    private Lock queueLock = new ReentrantLock(false);
+
+    public void printJob(Object document) {
+        queueLock.lock();
+        try {
+            int duration = new Random().nextInt(10) + 1;
+            System.out.println(Thread.currentThread().getName() + "正在打印，需要" + duration);
+            Thread.sleep(duration * 1000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally {
+            queueLock.unlock();
+        }
+
+        queueLock.lock();
+        try {
+            int duration = new Random().nextInt(10) + 1;
+            System.out.println(Thread.currentThread().getName() + "正在打印，需要" + duration+"秒");
+            Thread.sleep(duration * 1000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally {
+            queueLock.unlock();
+        }
+    }
 }
 ```
 
 ###### 可重入锁
 
 ###### 读写锁
+
+**特点**
+
+- 多读一写
+- 写锁可降级，读锁不可升级
+- 若当前持有的锁是读锁，后面是一个写线程，那么写线程后面的读线程无法获取读锁，这是jdk为了避免写线程过分饥渴采取的策略。
+
+**读锁源码实现**
+
+```java
+public final void acquireShared(int arg) {
+    if (tryAcquireShared(arg) < 0)
+        doAcquireShared(arg);
+}
+
+// 返回值小于 0 代表没有获取到共享锁(读锁)，大于 0 代表获取到
+protected final int tryAcquireShared(int unused) {
+	/*
+	 * Walkthrough:
+	 * 1. If write lock held by another thread, fail.
+	 * 2. Otherwise, this thread is eligible for
+	 *    lock wrt state, so ask if it should block
+	 *    because of queue policy. If not, try
+	 *    to grant by CASing state and updating count.
+	 *    Note that step does not check for reentrant
+	 *    acquires, which is postponed to full version
+	 *    to avoid having to check hold count in
+	 *    the more typical non-reentrant case.
+	 * 3. If step 2 fails either because thread
+	 *    apparently not eligible or CAS fails or count
+	 *    saturated, chain to version with full retry loop.
+	 */
+	Thread current = Thread.currentThread();
+	int c = getState();
+    // 有其他线程持有写锁，当前线程不能获取到读锁
+	if (exclusiveCount(c) != 0 &&
+		getExclusiveOwnerThread() != current)
+		return -1;
+	int r = sharedCount(c);
+	if (!readerShouldBlock() &&
+		r < MAX_COUNT &&
+		compareAndSetState(c, c + SHARED_UNIT)) {
+        // 第一个获取读锁的线程
+		if (r == 0) {
+			firstReader = current;
+			firstReaderHoldCount = 1;
+		} else if (firstReader == current) {// 重入获取读锁
+			firstReaderHoldCount++;
+		} else {
+			HoldCounter rh = cachedHoldCounter;
+			if (rh == null || rh.tid != getThreadId(current))
+				cachedHoldCounter = rh = readHolds.get();
+			else if (rh.count == 0)
+				readHolds.set(rh);
+			rh.count++;
+		}
+		return 1;
+	}
+	return fullTryAcquireShared(current);
+}
+```
+
+**写锁源码实现**
+
+```java
+public void lock() {
+    sync.acquire(1);
+}
+
+public final void acquire(int arg) {
+    // 如果获取锁失败，则进入到阻塞队列等待
+	if (!tryAcquire(arg) &&
+		acquireQueued(addWaiter(Node.EXCLUSIVE), arg))
+		selfInterrupt();
+}
+
+protected final boolean tryAcquire(int acquires) {
+	/*
+	 * Walkthrough:
+	 * 1. If read count nonzero or write count nonzero
+	 *    and owner is a different thread, fail.
+	 * 2. If count would saturate, fail. (This can only
+	 *    happen if count is already nonzero.)
+	 * 3. Otherwise, this thread is eligible for lock if
+	 *    it is either a reentrant acquire or
+	 *    queue policy allows it. If so, update state
+	 *    and set owner.
+	 */
+	Thread current = Thread.currentThread();
+	int c = getState();
+	int w = exclusiveCount(c);
+	if (c != 0) {
+		// (Note: if c != 0 and w == 0 then shared count != 0)
+        // 有其他线程获取写锁，则不能获取写锁
+		if (w == 0 || current != getExclusiveOwnerThread())
+			return false;
+		if (w + exclusiveCount(acquires) > MAX_COUNT)
+			throw new Error("Maximum lock count exceeded");
+		// Reentrant acquire
+		setState(c + acquires);
+		return true;
+	}
+	if (writerShouldBlock() ||
+		!compareAndSetState(c, c + acquires))
+		return false;
+	setExclusiveOwnerThread(current);
+	return true;
+}
+```
+
+**使用场景**
+
+- 读写分离场景，降低加锁粒度
+
+**代码示例**
+
+```java
+// 这是一个关于缓存操作的故事
+class CachedData {
+    Object data;
+    volatile boolean cacheValid;
+    // 读写锁实例
+    final ReentrantReadWriteLock rwl = new ReentrantReadWriteLock();
+
+    void processCachedData() {
+        // 获取读锁
+        rwl.readLock().lock();
+        if (!cacheValid) { // 如果缓存过期了，或者为 null
+            // 释放掉读锁，然后获取写锁 (后面会看到，没释放掉读锁就获取写锁，会发生死锁情况)
+            rwl.readLock().unlock();
+            rwl.writeLock().lock();
+
+            try {
+                if (!cacheValid) { // 重新判断，因为在等待写锁的过程中，可能前面有其他写线程执行过了
+                    data = ...
+                    cacheValid = true;
+                }
+                // 获取读锁 (持有写锁的情况下，是允许获取读锁的，称为 “锁降级”，反之不行。)
+                rwl.readLock().lock();
+            } finally {
+                // 释放写锁，此时还剩一个读锁
+                rwl.writeLock().unlock(); // Unlock write, still hold read
+            }
+        }
+
+        try {
+            use(data);
+        } finally {
+            // 释放读锁
+            rwl.readLock().unlock();
+        }
+    }
+}
+```
+
+```java
+演示非公平和公平的ReentrantReadWriteLock的策略
+    public class NonfairBargeDemo {
+
+    private static ReentrantReadWriteLock reentrantReadWriteLock = new ReentrantReadWriteLock(
+            true);
+
+    private static ReentrantReadWriteLock.ReadLock readLock = reentrantReadWriteLock.readLock();
+    private static ReentrantReadWriteLock.WriteLock writeLock = reentrantReadWriteLock.writeLock();
+
+    private static void read() {
+        System.out.println(Thread.currentThread().getName() + "开始尝试获取读锁");
+        readLock.lock();
+        try {
+            System.out.println(Thread.currentThread().getName() + "得到读锁，正在读取");
+            try {
+                Thread.sleep(20);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        } finally {
+            System.out.println(Thread.currentThread().getName() + "释放读锁");
+            readLock.unlock();
+        }
+    }
+
+    private static void write() {
+        System.out.println(Thread.currentThread().getName() + "开始尝试获取写锁");
+        writeLock.lock();
+        try {
+            System.out.println(Thread.currentThread().getName() + "得到写锁，正在写入");
+            try {
+                Thread.sleep(40);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        } finally {
+            System.out.println(Thread.currentThread().getName() + "释放写锁");
+            writeLock.unlock();
+        }
+    }
+
+    public static void main(String[] args) {
+        new Thread(()->write(),"Thread1").start();
+        new Thread(()->read(),"Thread2").start();
+        new Thread(()->read(),"Thread3").start();
+        new Thread(()->write(),"Thread4").start();
+        new Thread(()->read(),"Thread5").start();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                Thread thread[] = new Thread[1000];
+                for (int i = 0; i < 1000; i++) {
+                    thread[i] = new Thread(() -> read(), "子线程创建的Thread" + i);
+                }
+                for (int i = 0; i < 1000; i++) {
+                    thread[i].start();
+                }
+            }
+        }).start();
+    }
+}
+```
 
 #### 基于volatile + CAS实现同步锁
 
