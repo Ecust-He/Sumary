@@ -372,7 +372,7 @@ JMM定义了如下的happens-before原则，已此保证有序性。
 
 #### 使用场景
 
-- 纯赋值操作（i++不适用）
+- 纯赋值操作（不适用i++等复合操作）
 - 作为触发器
 
 ### 单例模式
@@ -531,6 +531,16 @@ final V putVal(K key, V value, boolean onlyIfAbsent) {
 }
 ```
 
+### 不可变对象
+
+#### final关键字
+
+|          | 说明                     |
+| -------- | ------------------------ |
+| 修饰类   | 类不可被继承             |
+| 修饰方法 | 方法不可在子类中重写     |
+| 修饰对象 | 引用不可重新指向新的对象 |
+
 ### 锁
 
 #### 分类
@@ -560,7 +570,16 @@ final V putVal(K key, V value, boolean onlyIfAbsent) {
 javap -v xx.class
 ```
 
-查看java的字节码文件，monitorenter（执行代码块前的加锁）和monitorexit（退出同步代码块时的解锁）两个指令。
+查看java的字节码文件，monitorenter和monitorexit两个指令；字面理解就是监视进入，监视退出。可以理解为代码块执行前的加锁，和退出同步时的解锁。
+
+```bash
+    4: monitorenter
+    5: getstatic    #9    // Field java/lang/System.out:Ljava/io/PrintStream; 
+    8: ldc           #15   // String hello
+    10: invokevirtual #17  // Method java/io/PrintStream.println:(Ljava/lang/String;)V
+    13: aload_1
+    14: monitorexit
+```
 
 ##### 特点
 
@@ -1029,6 +1048,19 @@ class CachedData {
 
 #### 基于volatile + CAS实现同步锁
 
+**CAS是乐观锁的一种典型实现**
+
+乐观锁的实现主要两个步骤：
+
+- 冲突检测
+- 数据更新
+
+##### CAS的缺陷
+
+- ABA问题
+- 循环时间长，开销大
+- 只能保证一个共享变量的原子操作
+
 #### 死锁问题
 
 ##### 死锁的四个必要条件
@@ -1348,6 +1380,8 @@ class ThreadSafeFormatter {
 
 根据业务需要，使用自定义的线程池
 
+线程复用
+
 #### 基础知识
 
 ##### 构造参数
@@ -1368,7 +1402,23 @@ class ThreadSafeFormatter {
 
 ##### 拒绝策略
 
+当任务队列已满且线程池中线程数量达到maximumPoolSize时，执行任务的拒绝策略。
+
+| 拒绝策略            | 说明                                           |
+| ------------------- | ---------------------------------------------- |
+| AbortPolicy（默认） | 丢弃任务并抛出RejectedExecutionException       |
+| DiscardPolicy       | 丢弃任务，但不抛出异常                         |
+| DiscardOldestPolicy | 丢弃队列中最前面的任务，并重新添加被拒绝的任务 |
+| CallerRunsPolicy    | 又调用线程处理该任务                           |
+
 ##### 分类
+
+| Executors的静态方法     | 说明     | 阻塞队列            | 优劣 |
+| ----------------------- | -------- | ------------------- | ---- |
+| newFixedThreadPool      | 固定线程 | LinkedBlockingQueue | OOM  |
+| newSingleThreadExecutor | 单线程   | LinkedBlockingQueue |      |
+| newCachedThreadPool     | 带缓存   | SynchronousQueue    |      |
+| newScheduledThreadPool  | 可调度   | DelayedWorkQueue    |      |
 
 #### 操作子线程
 
@@ -1583,7 +1633,66 @@ public class ConditionDemo {
 
 ## Lambda表达式
 
-把函数作为方法入参
+函数式编程风格，将函数作为方法入参（处理逻辑参数化）
+
+### 函数式接口
+
+#### 定义
+
+- FunctionalInterface注解修饰
+- 有且只有一个抽象方法
+
+#### 常用函数式接口
+
+| 接口           |                    | 说明     |
+| -------------- | ------------------ | -------- |
+| Predicate<T>   | boolean test(T t); | 断言     |
+| Supplier<T>    | T get();           | 生成对象 |
+| Consumer<T>    | void accept(T t);  | 消费数据 |
+| Function<T, R> | R apply(T t);      | 数据转换 |
+
+### 方法引用
+
+通过方法引用替代Lambda表达式
 
 ## 流式编程
+
+集合是面向存储，流是面向对象
+
+### 流的组成
+
+#### 数据源
+
+#### 中间操作
+
+| 分类   | 方法                                                  | 描述 |
+| ------ | ----------------------------------------------------- | ---- |
+| 无状态 | peek                                                  | 遍历 |
+|        | filter                                                | 过滤 |
+|        | map、mapToInt、mapToLong、mapToDouble                 | 映射 |
+|        | flatMap、flatMapToInt、flatMapToLong、flatMapToDouble | 平铺 |
+| 有状态 | distinct                                              | 去重 |
+|        | sorted                                                | 排序 |
+|        | limit                                                 | 截取 |
+|        | skip                                                  | 跳过 |
+
+#### 终端操作
+
+| 分类       | 方法                          | 描述 |
+| ---------- | ----------------------------- | ---- |
+| 非短路操作 | foreach                       | 遍历 |
+|            | count                         | 计数 |
+|            | min、max                      | 最值 |
+|            | reduce                        | 归约 |
+|            | collect                       | 收集 |
+| 短路操作   | findFirst、findAny            | 查找 |
+|            | anyMatch、allMatch、noneMatch | 匹配 |
+
+### 流的创建
+
+## Optional的使用
+
+解决引用存在和引用缺失问题
+
+## TWR关闭资源
 
