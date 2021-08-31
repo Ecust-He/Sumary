@@ -1378,29 +1378,27 @@ class ThreadSafeFormatter {
 
 ### 线程池
 
-根据业务需要，使用自定义的线程池
+- 用于管理线程，避免增加创建线程和销毁线程的资源消耗
+- 提高响应速度
+- 线程复用
 
-线程复用
+#### 核心参数
 
-#### 基础知识
+| 参数            | 说明                                   |
+| --------------- | -------------------------------------- |
+| corePoolSize    | 核心线程数                             |
+| maximumPoolSize | 最大线程数 = 核心线程数 + 非核心线程数 |
+| keepAliveTime   | 非核心线程闲置超时时长                 |
+| unit            | keepAliveTime的单位                    |
+| workQueue       | 阻塞队列                               |
+| threadFactory   | 线程工厂                               |
+| handler         | 拒绝策略                               |
 
-##### 构造参数
-
-| 参数            | 说明         |
-| --------------- | ------------ |
-| corePoolSize    | 核心线程数   |
-| maximumPoolSize | 最大线程数   |
-| keepAliveTime   | 空闲时间     |
-| unit            | 空闲时间单位 |
-| workQueue       | 阻塞队列     |
-| threadFactory   | 线程工厂     |
-| handler         | 拒绝策略     |
-
-##### 工作流程
+#### 工作流程
 
 ![](./线程池工作流程图.png)
 
-##### 拒绝策略
+#### 拒绝策略
 
 当任务队列已满且线程池中线程数量达到maximumPoolSize时，执行任务的拒绝策略。
 
@@ -1411,20 +1409,176 @@ class ThreadSafeFormatter {
 | DiscardOldestPolicy | 丢弃队列中最前面的任务，并重新添加被拒绝的任务 |
 | CallerRunsPolicy    | 又调用线程处理该任务                           |
 
-##### 分类
+#### 工作队列
 
-| Executors的静态方法     | 说明     | 阻塞队列            | 优劣 |
-| ----------------------- | -------- | ------------------- | ---- |
-| newFixedThreadPool      | 固定线程 | LinkedBlockingQueue | OOM  |
-| newSingleThreadExecutor | 单线程   | LinkedBlockingQueue |      |
-| newCachedThreadPool     | 带缓存   | SynchronousQueue    |      |
-| newScheduledThreadPool  | 可调度   | DelayedWorkQueue    |      |
+#### 常见线程池
+
+| 分类     | Executors的静态方法     | 阻塞队列            | 优劣 | 使用场景       |
+| -------- | ----------------------- | ------------------- | ---- | -------------- |
+| 固定线程 | newFixedThreadPool      | LinkedBlockingQueue | OOM  | 任务少、时间长 |
+| 单线程   | newSingleThreadExecutor | LinkedBlockingQueue |      | 串行执行任务   |
+| 带缓存   | newCachedThreadPool     | SynchronousQueue    |      | 任务多、时间短 |
+| 可调度   | newScheduledThreadPool  | DelayedWorkQueue    |      | 周期性执行任务 |
+
+##### newFixedThreadPool
+
+##### newSingleThreadExecutor
+
+##### newCachedThreadPool
+
+##### newScheduledThreadPool
 
 #### 操作子线程
+
+##### 暂停/恢复子线程执行
+
+```java
+public class PauseableThreadPool extends ThreadPoolExecutor {
+
+    private final ReentrantLock lock = new ReentrantLock();
+    private Condition unpaused = lock.newCondition();
+    private boolean isPaused;
+
+
+    public PauseableThreadPool(int corePoolSize, int maximumPoolSize, long keepAliveTime,
+            TimeUnit unit,
+            BlockingQueue<Runnable> workQueue) {
+        super(corePoolSize, maximumPoolSize, keepAliveTime, unit, workQueue);
+    }
+
+    public PauseableThreadPool(int corePoolSize, int maximumPoolSize, long keepAliveTime,
+            TimeUnit unit, BlockingQueue<Runnable> workQueue,
+            ThreadFactory threadFactory) {
+        super(corePoolSize, maximumPoolSize, keepAliveTime, unit, workQueue, threadFactory);
+    }
+
+    public PauseableThreadPool(int corePoolSize, int maximumPoolSize, long keepAliveTime,
+            TimeUnit unit, BlockingQueue<Runnable> workQueue,
+            RejectedExecutionHandler handler) {
+        super(corePoolSize, maximumPoolSize, keepAliveTime, unit, workQueue, handler);
+    }
+
+    public PauseableThreadPool(int corePoolSize, int maximumPoolSize, long keepAliveTime,
+            TimeUnit unit, BlockingQueue<Runnable> workQueue,
+            ThreadFactory threadFactory, RejectedExecutionHandler handler) {
+        super(corePoolSize, maximumPoolSize, keepAliveTime, unit, workQueue, threadFactory,
+                handler);
+    }
+
+    // 在每个任务执行之前添加钩子函数
+    @Override
+    protected void beforeExecute(Thread t, Runnable r) {
+        super.beforeExecute(t, r);
+        lock.lock();
+        try {
+            while (isPaused) {
+                unpaused.await();
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    private void pause() {
+        lock.lock();
+        try {
+            isPaused = true;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public void resume() {
+        lock.lock();
+        try {
+            isPaused = false;
+            unpaused.signalAll();
+        } finally {
+            lock.unlock();
+        }
+    }
+}
+```
 
 ##### 取消子线程执行
 
 ##### 获取子线程执行结果
+
+```java
+// 批量提交任务，并获取子线程的执行结果
+public class MultiFutures {
+
+    public static void main(String[] args) throws InterruptedException {
+        ExecutorService service = Executors.newFixedThreadPool(20);
+        ArrayList<Future> futures = new ArrayList<>();
+        for (int i = 0; i < 20; i++) {
+            Future<Integer> future = service.submit(new CallableTask());
+            futures.add(future);
+        }
+        Thread.sleep(5000);
+        for (int i = 0; i < 20; i++) {
+            Future<Integer> future = futures.get(i);
+            try {
+                Integer integer = future.get();
+                System.out.println(integer);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            } catch (ExecutionException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    static class CallableTask implements Callable<Integer> {
+
+        @Override
+        public Integer call() throws Exception {
+            Thread.sleep(3000);
+            return new Random().nextInt();
+        }
+    }
+}
+```
+
+##### 获取子线程执行时抛出的异常
+
+```java
+// 抛出异常时机是在执行get方法
+public class GetException {
+
+    public static void main(String[] args) {
+        ExecutorService service = Executors.newFixedThreadPool(20);
+        Future<Integer> future = service.submit(new CallableTask());
+
+        try {
+            for (int i = 0; i < 5; i++) {
+                System.out.println(i);
+                Thread.sleep(500);
+            }
+            System.out.println(future.isDone());
+            future.get();
+            System.out.println(future.isDone());
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+            System.out.println("InterruptedException异常");
+        } catch (ExecutionException e) {
+            e.printStackTrace();
+            System.out.println("ExecutionException异常");
+        }
+    }
+
+
+    static class CallableTask implements Callable<Integer> {
+
+        @Override
+        public Integer call() throws Exception {
+            throw new IllegalArgumentException("Callable抛出异常");
+        }
+    }
+}
+```
 
 ## 5  线程协作
 
@@ -1655,11 +1809,20 @@ public class ConditionDemo {
 
 通过方法引用替代Lambda表达式
 
+|      | 语法             | Lambda表达式写法          | 双冒号::写法     |
+| ---- | ---------------- | ------------------------- | ---------------- |
+|      | 对象名::成员方法 | str -> str.toUpperCase()  | str::toUpperCase |
+|      | 类名::静态方法   | n -> Math.abs(n)          | Math::abs        |
+|      | 类名::构造方法   | name -> new Person(name)  | Person::new      |
+|      | 数组::构造方法   | length -> new int[length] | int[]::new       |
+
 ## 流式编程
 
 集合是面向存储，流是面向对象
 
 ### 流的组成
+
+支持链式调用
 
 #### 数据源
 
