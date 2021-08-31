@@ -102,7 +102,7 @@ public synchronized void start() {
 
 ### 生命周期
 
-### Thread和Object类方法
+### Thread和Object类重要方法
 
 #### sleep
 
@@ -1378,7 +1378,9 @@ class ThreadSafeFormatter {
 
 ### 线程池
 
-- 用于管理线程，避免增加创建线程和销毁线程的资源消耗
+线程池解决的核心为题是资源管理问题。
+
+- 降低资源消耗
 - 提高响应速度
 - 线程复用
 
@@ -1579,6 +1581,60 @@ public class GetException {
     }
 }
 ```
+
+#### 关闭线程池
+
+|               |                                              |
+| ------------- | -------------------------------------------- |
+| shutdown()    | 执行后停止接受新任务，会把队列的任务执行完毕 |
+| shutdownNow() | 停止接受新任务，并中止所有任务               |
+
+```java
+// 优雅关闭线程池示例
+public class ShutDown {
+
+    public static void main(String[] args) throws InterruptedException {
+        ExecutorService executorService = Executors.newFixedThreadPool(10);
+        for (int i = 0; i < 100; i++) {
+            executorService.execute(new ShutDownTask());
+        }
+        Thread.sleep(1500);
+        executorService.shutdown();
+        while (!executorService.awaitTermination(1L, TimeUnit.SECONDS)) {
+            System.out.println("线程正在执行中。。。");
+        }
+        System.out.println("线程已终止");
+        System.out.println(executorService.isShutdown());
+        System.out.println(executorService.isTerminated());
+    }
+}
+
+class ShutDownTask implements Runnable {
+    
+    @Override
+    public void run() {
+        try {
+            Thread.sleep(500);
+            System.out.println(Thread.currentThread().getName());
+        } catch (InterruptedException e) {
+            System.out.println(Thread.currentThread().getName() + "被中断了");
+        }
+    }
+}
+```
+
+#### 面试题
+
+**1、如何合理的配置线程池大小？**
+
+需要根据任务类型来配置线程池大小
+
+| 任务类型  | 判断条件             | 线程池大小参考值 |
+| --------- | -------------------- | ---------------- |
+| CPU密集型 | 内存中排序、转换等   | N + 1            |
+| IO密集型  | 涉及网络、文件读取等 | 2N               |
+
+具体的设置根据实际情况进行调整
 
 ## 5  线程协作
 
