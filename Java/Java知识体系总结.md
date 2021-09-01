@@ -6,6 +6,10 @@
 
 
 
+
+
+------
+
 # 并发编程
 
 **常见名词**
@@ -102,14 +106,13 @@ public synchronized void start() {
 
 ### 生命周期
 
-### Thread和Object类重要方法
+### Thread和Object类重要方法解析
 
 #### sleep
 
-暂停当前线程，线程进入阻塞状态，把CPU时间片让给其他线程执行
+当前线程进入阻塞状态，把CPU时间片让给其他线程执行
 
 - 线程睡眠期间会释放占用的CPU时间片，但不会释放对象锁（如果当前线程获取到对象锁）
-- 线程苏醒时，继续执行
 
 #### yield
 
@@ -138,7 +141,7 @@ synchronized (thread) {
 
 - wait会释放当前持有的对象锁
 
-##### 生产者消费者模式演示
+**生产者消费者模式演示**
 
 ```java
 public class ProducerConsumerModel {
@@ -222,9 +225,9 @@ class EventStorage {
 }
 ```
 
-##### 两个线程交替打印0~100的奇偶数
+**两个线程交替打印0~100的奇偶数**
 
-###### synchronized关键字实现
+**synchronized关键字实现**
 
 ```java
 public class WaitNotifyPrintOddEvenSyn {
@@ -266,7 +269,7 @@ public class WaitNotifyPrintOddEvenSyn {
 }
 ```
 
-###### wait和notify方法实现
+**wait和notify方法实现**
 
 ```java
 public class WaitNotifyPrintOddEveWait {
@@ -308,11 +311,11 @@ public class WaitNotifyPrintOddEveWait {
 
 #### 面试题
 
-##### 1、sleep和yield方法的区别？
+**1、sleep和yield方法的区别？**
 
 - 调用sleep方法，线程苏醒后继续之前的执行；调用yield方法，当前线程进入就绪状态，是否运行取决于CPU的调度
 
-##### 2、sleep和wait方法的区别？
+**2、sleep和wait方法的区别？**
 
 | wait方法                              | sleep方法                 |
 | ------------------------------------- | ------------------------- |
@@ -434,7 +437,7 @@ public class Singleton {
 
 底层数据结构是**数组+链表+红黑树**，并通过cas + synchronized关键字保证线程安全
 
-###### 构造方法
+**构造方法**
 
 若不指定初始容量（无参数构造方法），默认是16；
 
@@ -459,7 +462,7 @@ public ConcurrentHashMap(int initialCapacity) {
 }
 ```
 
-###### put方法
+**put方法**
 
 ```java
 /** Implementation for put and putIfAbsent */
@@ -1388,6 +1391,8 @@ class ThreadSafeFormatter {
 
 #### 核心参数
 
+ThreadPoolExecutor中的参数
+
 | 参数            | 说明                                   |
 | --------------- | -------------------------------------- |
 | corePoolSize    | 核心线程数                             |
@@ -1417,20 +1422,54 @@ class ThreadSafeFormatter {
 
 #### 常见线程池
 
-| 分类     | Executors的静态方法     | 阻塞队列            | 优劣 | 使用场景       |
-| -------- | ----------------------- | ------------------- | ---- | -------------- |
-| 固定线程 | newFixedThreadPool      | LinkedBlockingQueue | OOM  | 任务少、时间长 |
-| 单线程   | newSingleThreadExecutor | LinkedBlockingQueue |      | 串行执行任务   |
-| 带缓存   | newCachedThreadPool     | SynchronousQueue    |      | 任务多、时间短 |
-| 可调度   | newScheduledThreadPool  | DelayedWorkQueue    |      | 周期性执行任务 |
-
 ##### newFixedThreadPool
+
+```java
+public static ExecutorService newFixedThreadPool(int nThreads) {
+    return new ThreadPoolExecutor(nThreads, nThreads,
+                                  0L, TimeUnit.MILLISECONDS,
+                                  new LinkedBlockingQueue<Runnable>());
+}
+```
+
+###### 使用场景
+
+适用于处理CPU密集型的任务，即适用于执行耗时时间长的任务
 
 ##### newSingleThreadExecutor
 
+```java
+public static ExecutorService newSingleThreadExecutor() {
+    return new FinalizableDelegatedExecutorService
+        (new ThreadPoolExecutor(1, 1,
+                                0L, TimeUnit.MILLISECONDS,
+                                new LinkedBlockingQueue<Runnable>()));
+}
+```
+
+###### 使用场景
+
+适用于串行执行任务的场景，一个任务一个任务的执行。
+
 ##### newCachedThreadPool
 
+```java
+public static ExecutorService newCachedThreadPool() {
+    return new ThreadPoolExecutor(0, Integer.MAX_VALUE,
+                                  60L, TimeUnit.SECONDS,
+                                  new SynchronousQueue<Runnable>());
+}
+```
+
+###### 使用场景
+
+适用于并发量大、耗时时间短任务的场景
+
 ##### newScheduledThreadPool
+
+###### 使用场景
+
+适用于周期性执行任务的场景
 
 #### 任务的管理
 
@@ -1841,6 +1880,8 @@ public class ConditionDemo {
 }
 ```
 
+
+
 # 高效编程
 
 ## Lambda表达式
@@ -1856,12 +1897,12 @@ public class ConditionDemo {
 
 #### 常用函数式接口
 
-| 接口           |                    | 说明     |
-| -------------- | ------------------ | -------- |
-| Predicate<T>   | boolean test(T t); | 断言     |
-| Supplier<T>    | T get();           | 生成对象 |
-| Consumer<T>    | void accept(T t);  | 消费数据 |
-| Function<T, R> | R apply(T t);      | 数据转换 |
+| 接口           | 函数描述     | 说明     |
+| -------------- | ------------ | -------- |
+| Predicate<T>   | T -> boolean | 断言     |
+| Supplier<T>    | () -> T      | 生成对象 |
+| Consumer<T>    | T -> void    | 消费数据 |
+| Function<T, R> | T -> R       | 数据转换 |
 
 ### 方法引用
 
@@ -1982,6 +2023,59 @@ public class StreamConstructor {
 ## Optional的使用
 
 解决引用存在和引用缺失问题
+
+### Optional的创建
+
+```java
+// 创建空的Optional对象
+Optional.empty();
+
+// 使用非null值创建Optional对象
+Optional.of("zhangxiaoxi");
+
+// 使用任意值创建Optional对象
+Optional optional = Optional.ofNullable("zhangxiaoxi");
+```
+
+### 引用存在和引用缺失的使用
+
+```java
+    /**
+     * 判断是否引用缺失的方法(建议不直接使用)
+     */
+    optional.isPresent();
+
+    /**
+     * 当optional引用存在时执行
+     * 类似的方法：map filter flatMap
+     */
+    optional.ifPresent(System.out::println);
+
+
+    /**
+     * 当optional引用缺失时执行
+     */
+    optional.orElse("引用缺失");
+    optional.orElseGet(() -> {
+        // 自定义引用缺失时的返回值
+        return "自定义引用缺失";
+    });
+    optional.orElseThrow(() -> {
+        throw new RuntimeException("引用缺失异常");
+    });
+}
+```
+
+### Stream和Optional的关系
+
+```java
+public static void stream(List<String> list) {
+	Optional.ofNullable(list)
+			.map(List::stream)
+			.orElseGet(Stream::empty)
+			.forEach(System.out::println);
+}
+```
 
 ## TWR关闭资源
 
