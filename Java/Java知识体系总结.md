@@ -224,7 +224,7 @@ class EventStorage {
 
 ##### 两个线程交替打印0~100的奇偶数
 
-###### 用synchronized关键字实现
+###### synchronized关键字实现
 
 ```java
 public class WaitNotifyPrintOddEvenSyn {
@@ -266,7 +266,7 @@ public class WaitNotifyPrintOddEvenSyn {
 }
 ```
 
-###### 用wait和notify方法实现
+###### wait和notify方法实现
 
 ```java
 public class WaitNotifyPrintOddEveWait {
@@ -314,12 +314,14 @@ public class WaitNotifyPrintOddEveWait {
 
 ##### 2、sleep和wait方法的区别？
 
-- wait是Object类的方法，而sleep是Thread类的方法
-- wait方法用于线程间通信，sleep方法用于短时间暂停当前线程
-- wait方法需要在synchronized同步代码块中执行，而sleep方法不需要
-- wait方法会让出对象锁，而sleep方法不会释放对象锁
-- sleep方法可以通过interrupt方法中断，而wait方法不可以
-- sleep方法需要等到睡眠时间自动苏醒，而wait方法可以通过notify或notifyAll方法随时唤醒
+| wait方法                              | sleep方法                 |
+| ------------------------------------- | ------------------------- |
+| Object类的方法                        | Thread类的方法            |
+| 需要在synchronized同步代码块中执行    | 不需要                    |
+| 释放对象锁                            | 不释放                    |
+| 不可以                                | 可以通过interrupt方法中断 |
+| 可以通过notify或notifyAll方法随时唤醒 | 等到睡眠时间到苏醒        |
+| 用于线程间通信                        | 用于短时间暂停当前线程    |
 
 ### 异常处理
 
@@ -1430,9 +1432,9 @@ class ThreadSafeFormatter {
 
 ##### newScheduledThreadPool
 
-#### 操作子线程
+#### 任务的管理
 
-##### 暂停/恢复子线程执行
+##### 暂停/恢复任务执行
 
 ```java
 public class PauseableThreadPool extends ThreadPoolExecutor {
@@ -1504,9 +1506,9 @@ public class PauseableThreadPool extends ThreadPoolExecutor {
 }
 ```
 
-##### 取消子线程执行
+##### 取消任务
 
-##### 获取子线程执行结果
+##### 获取任务执行结果
 
 ```java
 // 批量提交任务，并获取子线程的执行结果
@@ -1544,7 +1546,7 @@ public class MultiFutures {
 }
 ```
 
-##### 获取子线程执行时抛出的异常
+##### 任务执行时的异常处理
 
 ```java
 // 抛出异常时机是在执行get方法
@@ -1865,20 +1867,78 @@ public class ConditionDemo {
 
 通过方法引用替代Lambda表达式
 
-|      | 语法             | Lambda表达式写法          | 双冒号::写法     |
-| ---- | ---------------- | ------------------------- | ---------------- |
-|      | 对象名::成员方法 | str -> str.toUpperCase()  | str::toUpperCase |
-|      | 类名::静态方法   | n -> Math.abs(n)          | Math::abs        |
-|      | 类名::构造方法   | name -> new Person(name)  | Person::new      |
-|      | 数组::构造方法   | length -> new int[length] | int[]::new       |
+| 语法             | Lambda表达式写法          | 双冒号::写法     |
+| ---------------- | ------------------------- | ---------------- |
+| 对象名::成员方法 | str -> str.toUpperCase()  | str::toUpperCase |
+| 类名::静态方法   | n -> Math.abs(n)          | Math::abs        |
+| 类名::构造方法   | name -> new Person(name)  | Person::new      |
+| 数组::构造方法   | length -> new int[length] | int[]::new       |
 
 ## 流式编程
 
-集合是面向存储，流是面向对象
+- 集合是面向存储，流是面向对象
+
+- 支持链式调用
+
+### 流的创建
+
+- 由数值直接构建流
+- 由数组构建流
+- 通过函数生成流（无限流）
+- 通过文件生成流
+
+```java
+/**
+ * 流的四种构建形式
+ */
+public class StreamConstructor {
+
+    /**
+     * 由数值直接构建流
+     */
+    @Test
+    public void streamFromValue() {
+        Stream stream = Stream.of(1, 2, 3, 4, 5);
+        stream.forEach(System.out::println);
+    }
+
+    /**
+     * 通过数组构建流
+     */
+    @Test
+    public void streamFromArray() {
+        int[] numbers = {1, 2, 3, 4, 5};
+        IntStream stream = Arrays.stream(numbers);
+        stream.forEach(System.out::println);
+    }
+
+    /**
+     * 通过文件生成流
+     * @throws IOException
+     */
+    @Test
+    public void streamFromFile() throws IOException {
+        // TODO 此处替换为本地文件的地址全路径
+        String filePath = "";
+        Stream<String> stream = Files.lines(
+                Paths.get(filePath));
+        stream.forEach(System.out::println);
+    }
+
+    /**
+     * 通过函数生成流（无限流）
+     */
+    @Test
+    public void streamFromFunction() {
+//        Stream stream = Stream.iterate(0, n -> n + 2);
+        Stream stream = Stream.generate(Math::random);
+        stream.limit(100)
+                .forEach(System.out::println);
+    }
+}
+```
 
 ### 流的组成
-
-支持链式调用
 
 #### 数据源
 
@@ -1907,7 +1967,17 @@ public class ConditionDemo {
 | 短路操作   | findFirst、findAny            | 查找 |
 |            | anyMatch、allMatch、noneMatch | 匹配 |
 
-### 流的创建
+### 收集器
+
+常见预定义收集器
+
+| 收集器                                                       |      |
+| ------------------------------------------------------------ | ---- |
+| Collectors.toList()                                          | 集合 |
+| Collectors.groupingBy(Function<? super T, ? extends K> classifier) | 分组 |
+| Collectors.partitioningBy(Predicate<? super T> predicate)    | 分区 |
+
+### 比较器
 
 ## Optional的使用
 
