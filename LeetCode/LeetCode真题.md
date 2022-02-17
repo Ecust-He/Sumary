@@ -2547,10 +2547,115 @@ public int[] twoSum(int[] numbers, int target) {
 ## 175  Combine Two Tables
 
 ```mysql
-# Write your MySQL query statement below
 SELECT p.FirstName, p.LastName, a.City, a.State FROM Person p LEFT JOIN Address a
 ON p.PersonId = a.PersonId;
 ```
+
+## 176  Second Highest Salary
+
+```mysql
+SELECT max(Salary) As SecondHighestSalary FROM Employee where Salary < (SELECT max(Salary) AS highestSalary FROM Employee);
+
+SELECT max(Salary) As SecondHighestSalary FROM Employee where Salary not in (SELECT max(Salary) AS highestSalary FROM Employee);
+
+SELECT (SELECT DISTINCT Salary FROM Employee ORDER BY Salary DESC LIMIT 1,1) AS SecondHighestSalary;
+```
+
+## 177  Nth Highest Salary
+
+```mysql
+CREATE FUNCTION getNthHighestSalary(N INT) RETURNS INT
+BEGIN
+DECLARE M INT;
+SET M=N-1;
+  RETURN (
+      # Write your MySQL query statement below.
+      SELECT IFNULL((SELECT DISTINCT Salary FROM Employee ORDER BY Salary DESC LIMIT M ,1), NULL)
+  );
+END
+```
+
+## 178  Rank Scores
+
+```sql
+# 通过count函数
+select
+    Score,(
+           select 
+                count(distinct(score))
+            from 
+                Scores
+            where
+                score >= s1.score
+            ) as 'rank'
+from
+    Scores as s1
+order by 
+    Score desc
+```
+
+## 180  Consecutive Numbers
+
+```mysql
+SELECT DISTINCT num AS ConsecutiveNums from Logs AS l1 WHERE num = (SELECT num from Logs where id = l1.id + 1) and num = (SELECT num from Logs where id = l1.id + 2)
+
+SELECT DISTINCT l1.num AS ConsecutiveNums from Logs AS l1, Logs AS l2, Logs AS l3 WHERE l1.id + 1 = l2.id and l1.num = l2.num and l1.id + 2 = l3.id and l1.num = l3.num
+```
+
+## 181   Employees Earning More Than Their Managers
+
+```mysql
+SELECT E1.name as Employee FROM Employee AS E1, Employee AS E2 WHERE E1.managerId = E2.id AND E1.salary > E2.salary;
+```
+
+## 182  Duplicate Emails
+
+```mysql
+select distinct p1.email as Email from Person AS p1 where (select count(id) from Person where email = p1.email) >= 2;
+
+select email AS Email from Person group by email having count(*) > 1;
+```
+
+## 183  Customers Who Never Order
+
+```mysql
+select name AS Customers from Customers where id not in (select o.customerId from Orders AS o left Join Customers AS c ON c.id = o.customerId);
+```
+
+## 184  Department Highest Salary
+
+```mysql
+select d2.name AS Department, e1.name AS Employee, e1.salary AS Salary from (select d.id, max(e.salary) AS maxSalary from Employee AS e left join Department AS d ON e.departmentId = d.id group by d.id) AS d1, Employee AS e1, Department AS d2 
+where d1.id = e1.departmentId and d1.maxSalary = e1.salary and d1.id = d2.id
+
+select d2.name AS Department, e1.name AS Employee, e1.salary AS Salary from Employee AS e1 
+inner join (select d.id, max(e.salary) AS maxSalary from Employee AS e left join Department AS d ON e.departmentId = d.id group by d.id) AS d1
+inner join Department AS d2 
+on d1.id = e1.departmentId and d1.maxSalary = e1.salary and d1.id = d2.id
+```
+
+## 185  Department Top Three Salaries
+
+```mysql
+
+```
+
+## 196  Delete Duplicate Emails
+
+```mysql
+Delete p1.* from Person as p1,Person as p2 where p1.Email=p2.Email and p1.Id>p2.Id
+
+delete from Person where id not in(select minId from (select min(id) AS minId, email from Person group by email) AS p)
+```
+
+## 197  Rising Temperature
+
+```mysql
+SELECT w1.Id FROM weather w1,weather w2 WHERE TO_DAYS(w1.Date)=TO_DAYS(w2.Date)+1
+AND w1.Temperature>w2.Temperature
+```
+
+
 
 ## 206  ~~Reverse Linked List~~
 
@@ -3402,13 +3507,23 @@ public String reverseWords(String s) {
 
 ### Go
 
-## 595  Array Partition I
+## 595  Big Countries
 
-### Java
+```mysql
 
-### Python
+```
 
-### Go
+## 596  ~~Classes More Than 5 Students~~
+
+```mysql
+select class from Courses group by class having count(*) >= 5;
+```
+
+## 601  Human Traffic of Stadium
+
+```mysql
+
+```
 
 ## 617  Merge Two Binary Trees
 
@@ -3417,6 +3532,26 @@ public String reverseWords(String s) {
 ### Python
 
 ### Go
+
+## 620  Not Boring Movies
+
+```mysql
+select * from Cinema where id %2 = 1 and description != 'boring' order by rating desc;
+```
+
+## 627  Swap Salary
+
+```mysql
+UPDATE salary 
+SET sex = (
+    CASE sex
+    WHEN 'm' THEN 'f'
+    ELSE 'm'
+    END
+);
+```
+
+
 
 ## 637  ~~Average of Levels in Binary Tree~~
 
