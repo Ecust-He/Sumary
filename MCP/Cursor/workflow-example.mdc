@@ -1,0 +1,1550 @@
+# Resource Dev Agent 工作流
+
+## 概述
+
+**Agent 名称**: Resource Dev Agent
+
+**用途**: 自动化完成 Resource 资源类的后端接口开发全流程
+
+**适用场景**: DDD 架构的 Java 后端项目 
+
+**核心价值**: 
+- 🤖 标准化开发流程
+- 📝 自动生成文档和代码
+- ✅ 确保代码质量和一致性
+- 🚀 提效 50% 以上
+
+---
+
+## 📄 文档输出规范（重要！）
+
+**本 Agent 仅输出以下文档到 docs/ 目录**：
+
+### 必须输出（2个）
+1. **需求分析文档** - `[功能名]-analysis.md`
+   - 包含功能模块、业务实体、功能需求清单、业务规则等
+   
+2. **接口设计文档** - `[功能名]-api.md`
+   - 包含接口定义、业务逻辑实现、请求响应示例等
+
+### 禁止输出
+❌ **不要生成以下文档**：
+- 数据准备清单文档（`*-data-preparation.md`）
+- 实现汇总文档（`*-implementation.md`）
+- 总结文档（`*-summary.md`）
+- 更新日志文档（`*-update-log.md`）
+- 其他总结性、汇总性文档
+
+### 原因说明
+- 数据准备、实现汇总等信息已包含在接口设计文档的"业务逻辑实现"章节中
+- 避免文档冗余，降低维护成本
+- 开发人员只需参考需求分析和接口设计文档即可完成开发
+
+### 文档输出汇总表
+
+| Step | 步骤名称 | 文档输出 | 输出路径 | 说明 |
+|------|---------|---------|---------|------|
+| 1 | iCenter 需求文档分析 | ✅ 需求分析文档 | `docs/[功能名]-analysis.md` | 必须输出 |
+| 2 | 接口文档设计 | ✅ 接口设计文档 | `docs/[功能名]-api.md` | 必须输出 |
+| 3 | 接口数据准备 | ❌ 无文档输出 | - | 内部确认，信息已在 Step 2 文档中 |
+| 4 | 后端接口类开发 | ❌ 无文档输出 | - | 仅生成代码和配置文件 |
+| 5 | 单元测试用例生成 | ❌ 无文档输出 | - | 仅生成测试代码 |
+
+**总计**：全流程仅输出 **2 个 Markdown 文档** 到 docs/ 目录。
+
+---
+
+## Agent 工作流程
+
+### 🎯 执行模式
+
+**本 Agent 采用交互式执行模式**：每个 Step 都需要用户确认后才执行下一步。
+
+**执行原则**：
+
+1. ✅ **分步确认** - Agent 完成每个 Step 后，等待用户审核和确认
+2. ✅ **质量优先** - 确保每一步的输出符合验收标准后再继续
+3. ✅ **可回退** - 如发现问题，可以回退到上一步重新执行
+4. ✅ **可调整** - 用户可以根据实际情况调整 Agent 的输出
+
+---
+
+### 🚀 标准执行流程
+
+#### 完整流程（5 步交互式执行）
+
+```
+┌────────────────────────────────────────────────────────────┐
+│ 用户输入 iCenter URL                                        │
+└────────────────────────────────────────────────────────────┘
+                          ↓
+┌────────────────────────────────────────────────────────────┐
+│ Step 1: iCenter 需求文档分析                                 │
+│ Agent 输出: docs/[功能名]-analysis.md                       │
+└────────────────────────────────────────────────────────────┘
+                          ↓
+┌────────────────────────────────────────────────────────────┐
+│ 🔍 用户确认检查点：                                          │
+│ □ iCenter 内容是否转换完整？                                  │
+│ □ 需求分析是否准确？                                         │
+│ □ 功能清单是否完整？                                         │
+│ □ 业务规则是否梳理清楚？                                      │
+│                                                            │
+│ ✅ 确认通过 → 继续执行 Step 2                                │
+│ ❌ 需要修改 → 调整后重新执行 Step 1                           │
+└────────────────────────────────────────────────────────────┘
+                          ↓
+┌────────────────────────────────────────────────────────────┐
+│ Step 2: 接口文档设计和业务逻辑定义                            │
+│ Agent 输出: docs/[功能名]-api.md                            │
+└────────────────────────────────────────────────────────────┘
+                          ↓
+┌────────────────────────────────────────────────────────────┐
+│ 🔍 用户确认检查点：                                          │
+│ □ 接口 URL 是否符合规范？                                     │
+│ □ 请求/响应定义是否完整？                                     │
+│ □ 业务逻辑说明是否清晰？                                      │
+│ □ 数据模型是否正确？                                         │
+│                                                            │
+│ ✅ 确认通过 → 继续执行 Step 3                                │
+│ ❌ 需要修改 → 调整后重新执行 Step 2                           │
+└────────────────────────────────────────────────────────────┘
+                          ↓
+┌────────────────────────────────────────────────────────────┐
+│ Step 3: 接口数据准备（内部确认，无文档输出）                  │
+│ Agent 输出: 口头确认资源依赖                                 │
+└────────────────────────────────────────────────────────────┘
+                          ↓
+┌────────────────────────────────────────────────────────────┐
+│ 🔍 用户确认检查点：                                          │
+│ □ 数据库表依赖是否完整？                                      │
+│ □ 文件依赖是否准确？                                         │
+│ □ 服务依赖是否识别完整？                                      │
+│ □ 准备工作清单是否可行？                                      │
+│                                                            │
+│ ✅ 确认通过 → 继续执行 Step 4                                │
+│ ❌ 需要修改 → 调整后重新执行 Step 3                           │
+└────────────────────────────────────────────────────────────┘
+                          ↓
+┌────────────────────────────────────────────────────────────┐
+│ Step 4: 后端接口类开发                                        │
+│ Agent 输出: Java 代码 + 配置文件更新（无文档输出）            │
+└────────────────────────────────────────────────────────────┘
+                          ↓
+┌────────────────────────────────────────────────────────────┐
+│ 🔍 用户确认检查点：                                          │
+│ □ 代码是否遵循 DDD 架构？                                     │
+│ □ 业务逻辑实现是否正确？                                      │
+│ □ 异常处理是否完善？                                         │
+│ □ 代码是否可编译通过？                                       │
+│                                                            │
+│ ✅ 确认通过 → 继续执行 Step 5                                │
+│ ❌ 需要修改 → 调整后重新执行 Step 4                           │
+└────────────────────────────────────────────────────────────┘
+                          ↓
+┌────────────────────────────────────────────────────────────┐
+│ Step 5: 单元测试用例生成                                      │
+│ Agent 输出: ResourceTest.java（无文档输出）                  │
+└────────────────────────────────────────────────────────────┘
+                          ↓
+┌────────────────────────────────────────────────────────────┐
+│ 🔍 用户确认检查点：                                          │
+│ □ 测试用例是否覆盖所有场景？                                  │
+│ □ 测试数据是否合理？                                         │
+│ □ 所有测试是否通过？                                         │
+│ □ 测试场景清单是否完整？                                      │
+│                                                            │
+│ ✅ 确认通过 → 开发完成！                                     │
+│ ❌ 需要修改 → 调整后重新执行 Step 5                           │
+└────────────────────────────────────────────────────────────┘
+                          ↓
+                    开发完成 ✅
+```
+
+---
+
+## Step 1: iCenter 需求文档分析
+
+### 🎯 目标
+将 iCenter 页面转换为 Markdown 格式，并分析需求内容，提取关键信息为接口设计做准备。
+
+### 📥 输入
+- **iCenter URL** - 需求文档的 iCenter 链接
+- **iCenter 账号** - 用于访问（可选，使用默认配置）
+
+### 🤖 Agent 处理流程
+
+#### 1.1 iCenter 页面转换
+```prompt
+【iCenter URL】
+[用户提供的 iCenter 页面链接]
+
+使用 MCP icenterToMd 工具，将 iCenter 页面转换为 Markdown 格式：
+- 转换并保存到项目 docs/ 目录
+- 保留原始格式和结构
+- 确保图片、表格等元素正确转换
+```
+
+**执行操作**：
+```
+使用工具：mcp_icenterToMd_convert_and_save_icenter_to_markdown
+参数：url = [iCenter URL]
+输出路径：docs/[需求名称]-requirement.md
+```
+
+#### 1.2 需求内容分析
+```prompt
+@[需求名称]-requirement.md
+
+分析需求文档，提取关键信息：
+
+【分析维度】
+1. 功能模块
+   - 功能模块名称是什么？
+   - 属于哪个子系统？
+   - 功能边界是什么？
+
+2. 业务实体
+   - 涉及哪些业务实体（表、对象）？
+   - 实体有哪些关键字段？
+   - 实体之间的关系是什么？
+
+3. 功能需求
+   - 需要实现哪些功能？
+   - 每个功能的操作类型是什么（查询、新增、修改、删除、导入、导出）？
+   - 功能的触发条件和流程是什么？
+
+4. 业务规则
+   - 有哪些校验规则？
+   - 有哪些约束条件？
+   - 有哪些计算逻辑？
+   - 有哪些状态流转？
+
+5. 技术要求
+   - 是否涉及文件操作？
+   - 是否需要调用第三方服务？
+   - 性能要求是什么？
+   - 并发要求是什么？
+
+【输出格式】
+# [需求名称] 需求分析
+
+## 1. 功能模块
+- 模块名称：[名称]
+- 所属子系统：[子系统]
+- 功能边界：[描述]
+
+## 2. 业务实体
+| 实体名称 | 关键字段 | 字段说明 | 关系 |
+|---------|---------|---------|------|
+| ... | ... | ... | ... |
+
+## 3. 功能需求清单
+| 功能名称 | 操作类型 | 触发条件 | 业务流程 | 优先级 |
+|---------|---------|---------|---------|--------|
+| ... | ... | ... | ... | ... |
+
+## 4. 业务规则
+### 校验规则
+1. [规则描述]
+2. [规则描述]
+
+### 约束条件
+1. [约束描述]
+2. [约束描述]
+
+### 计算逻辑
+1. [逻辑描述]
+2. [逻辑描述]
+
+## 5. 技术要求
+- 文件操作：[是/否，说明]
+- 第三方服务：[列出服务清单]
+- 性能要求：[说明]
+- 并发要求：[说明]
+
+## 6. 接口设计建议
+基于以上分析，建议设计以下接口：
+1. GET /[resource]/list - 列表查询
+2. POST /[resource]/create - 创建
+...
+
+生成完整的需求分析文档。
+```
+
+### 📤 输出
+- **需求分析文档** - `docs/[功能名]-analysis.md`（结构化分析结果）
+  - 包含：功能模块、业务实体、功能需求清单、业务规则、技术要求、接口设计建议
+
+**注意**：
+- ✅ iCenter Markdown 用于临时分析，不保存到 docs 目录（或保存为 `[功能名]-requirement.md` 仅作参考）
+- ❌ 不生成其他总结性、汇总性文档
+
+### ✅ 验收标准
+- [ ] iCenter 页面成功转换为 Markdown
+- [ ] 需求分析文档结构清晰
+- [ ] 功能模块和业务实体提取完整
+- [ ] 功能需求清单明确
+- [ ] 业务规则梳理清楚
+- [ ] 接口设计建议合理
+- [ ] **仅输出 1 个必要文档到 docs/ 目录**
+
+---
+
+## Step 2: 接口文档设计和业务逻辑定义
+
+### 🎯 目标
+基于需求分析结果，生成规范、完整的接口设计文档，**包含详细的业务逻辑实现说明**，作为后续开发的直接指导。
+
+### 📥 输入
+- **需求分析文档** - `@[需求名称]-analysis.md`（从 Step 1 生成）
+- **参考文档** - `@load-imbalance-detection-api.md`（接口文档格式参考）
+
+### 🤖 Agent 处理流程
+
+#### 2.1 接口清单生成
+```prompt
+@[需求名称]-analysis.md
+
+基于需求分析文档，生成接口清单：
+
+功能模块：[从需求分析中提取]
+Base URL: /api/[service-name]/v1/[resource]
+
+请设计接口清单，标准接口包括：
+1. GET /list - 获取列表（参数：分页、筛选条件）
+2. GET /{id} - 获取详情（参数：id）
+3. POST /create - 创建（Body: 实体数据）
+4. POST /update - 更新（Body: id + 更新数据）
+5. POST /delete - 删除（Body: id 或条件）
+
+如果需要文件操作，额外包括：
+6. POST /import/check - 文件导入并核查（FormData: file + 参数）
+7. POST /import - 导入数据入库（JSON: 数据列表）
+8. POST /export - 导出数据（返回 blob）
+9. GET /template/download - 下载模板文件（返回 blob）
+
+输出接口清单表格。
+```
+
+#### 2.2 接口文档生成
+```prompt
+@load-imbalance-detection-api.md @[需求名称]-analysis.md
+
+参考接口文档格式，为以下接口生成完整的 Markdown 文档：
+
+【接口清单】
+[从步骤 2.1 输出的接口清单]
+
+【业务实体字段】
+[从需求分析文档中提取的字段清单]
+
+生成包括：
+- 目录和概述
+- 每个接口的详细说明：
+  * 接口描述
+  * 业务逻辑实现（文件路径、查询逻辑等）
+  * 请求信息（方法、URL、Content-Type）
+  * 请求参数（Query/Body/FormData）
+  * 响应信息（状态码、响应体）
+  * 响应字段说明表格
+  * curl 调用示例
+- 数据模型定义
+- 通用错误码
+
+格式严格遵循参考文档的 Markdown 风格。
+```
+
+#### 2.3 业务逻辑详细补充
+```prompt
+@[功能名]-api.md @[需求名称]-analysis.md @[参考类].java
+
+为接口文档中的每个接口补充详细的业务逻辑实现说明：
+
+### 标准 CRUD 接口逻辑 ###
+
+【GET /list - 获取列表】
+1. 参数校验
+   - 必填参数：[列出必填参数]
+   - 可选参数：[列出可选参数]
+2. 数据查询
+   - 查询表：term_[表名]
+   - WHERE 条件：[列出查询条件]
+   - 排序规则：[默认排序字段和方向]
+   - 分页处理：[是否需要分页]
+3. 数据转换
+   - DTO 映射：[列出字段映射关系]
+   - 关联数据：[是否需要关联查询其他表]
+4. 响应组装
+   - 返回字段：[列出响应字段]
+
+【POST /create - 创建】
+1. 参数校验
+   - 必填字段：[列出必填字段]
+   - 格式校验：[列出需要校验的字段格式]
+   - 业务规则：[列出业务校验规则]
+2. 唯一性检查
+   - 检查字段：[列出唯一字段]
+   - 重复提示：[定义错误提示信息]
+3. 数据插入
+   - 插入表：term_[表名]
+   - 自动字段：id（自增）, create_time, update_time
+4. 响应返回
+   - 返回新记录的 id 或完整实体
+
+【POST /update - 更新】
+1. 参数校验（同创建）
+2. 存在性检查（根据 id 或唯一键）
+3. 数据更新（UPDATE 语句，更新 update_time）
+4. 响应返回（影响行数或更新后的实体）
+
+【POST /delete - 删除】
+1. 参数校验（id 或删除条件）
+2. 存在性检查
+3. 关联检查（是否有其他数据依赖）
+4. 数据删除（DELETE 或软删除）
+5. 响应返回（影响行数）
+
+### 文件操作接口逻辑 ###
+
+【POST /import/check - 文件导入核查】
+1. 文件格式校验
+   - 文件类型：必须是 .xlsx 或 .csv
+   - 文件大小：限制 [如 50MB]
+   - 表头行：第 1 行为字段名
+   - 说明行：第 2 行为字段说明（可选）
+   - 数据行：从第 3 行开始
+   - 必需列：[列出必需的列名]
+2. 数据读取
+   - 使用 Apache POI 读取 Excel
+   - 逐行解析数据
+3. 数据核查规则
+   - 必填字段：[字段] 不能为空，提示"[字段]不能为空"
+   - 格式校验：[字段] 格式必须是 [格式规则]，提示"[字段]格式不正确"
+   - 唯一性：[字段组合] 不能重复，提示"[字段]重复"
+   - 存在性：[字段] 必须在 [关联表] 中存在，提示"[字段]不存在"
+4. 核查结果生成
+   - 成功列表：List<[实体]> 核查通过的数据
+   - 失败列表：包含失败原因的数据（用于生成结果文件）
+   - 统计信息：总条数、成功条数、失败条数
+   - 结果文件：生成包含核查结果列的 Excel 文件
+5. 自动入库规则
+   - 如果全部成功：自动调用 import 接口入库
+   - 如果有失败：不入库，返回核查结果供用户下载
+
+【POST /import - 数据导入入库】
+1. 参数校验（核查通过的数据列表）
+2. 数据清理
+   - 删除相同条件的旧数据（如相同 mode 和 type）
+   - 事务控制：删除和插入在同一事务中
+3. 批量插入
+   - 批次大小：[如 1000 条/批]
+   - 使用 JDBC batch insert
+4. 响应返回（插入成功的行数）
+
+【POST /export - 数据导出】
+1. 参数校验（导出条件，如 mode, type）
+2. 数据查询
+   - 查询表：term_[表名]
+   - WHERE 条件：[导出过滤条件]
+   - 字段映射：数据库字段 -> Excel 列
+3. Excel 生成
+   - 表头行：中文列名
+   - 说明行：字段说明（可选）
+   - 数据行：查询结果
+   - 样式：表头加粗、边框等
+4. 文件名生成
+   - 格式：[业务名]_[日期时间].xlsx
+   - 示例：blacklist_cells_20250107_143022.xlsx
+5. 响应返回
+   - Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+   - Content-Disposition: attachment; filename="..."
+   - 文件流
+
+### 特殊业务逻辑 ###
+如果接口包含特殊业务逻辑，补充说明：
+1. 数据转换逻辑（如 CGI 格式转换）
+2. 关联查询逻辑（调用其他服务或查询其他表）
+3. 计算逻辑（如统计、聚合）
+4. 状态机逻辑（如工作流状态变更）
+5. 权限控制逻辑（如数据权限过滤）
+
+参考类似功能的实现：@[参考类].java
+
+在接口文档的"业务逻辑实现"章节中补充上述详细说明。
+```
+
+### 📤 输出
+- **接口文档** - `docs/[功能名]-api.md`
+  - 包含所有接口的详细定义
+  - **详细的业务逻辑实现说明**（包含数据库表、文件路径、服务依赖等所有实现细节）
+  - 请求/响应示例
+  - 数据模型说明
+  - curl 调用示例
+
+**注意**：
+- ✅ 接口文档的"业务逻辑实现"章节应包含所有实现细节（数据库表、文件依赖、服务依赖等）
+- ❌ 不单独生成数据准备清单文档
+
+### ✅ 验收标准
+- [ ] 接口 URL 遵循 RESTful 规范
+- [ ] 每个接口包含完整的请求/响应定义
+- [ ] **每个接口都有详细的业务逻辑实现说明**
+- [ ] **业务逻辑包含校验规则、数据处理流程、异常处理**
+- [ ] **业务逻辑包含数据库表、文件路径、服务依赖等所有实现细节**
+- [ ] 包含 curl 示例可直接测试
+- [ ] 数据模型定义清晰
+- [ ] 格式符合团队规范
+- [ ] **仅输出 1 个接口设计文档到 docs/ 目录**
+
+---
+
+## Step 3: 接口数据准备
+
+### 🎯 目标
+**内部准备步骤，不生成单独文档**。确认接口实现所需的资源依赖（数据库表、配置文件、服务依赖等），这些信息已包含在 Step 2 的接口设计文档中。
+
+### 📥 输入
+- **接口文档** - `@[功能名]-api.md`（从 Step 2 生成）
+- **项目结构** - 数据库表清单、配置文件目录、服务依赖列表
+
+**注意**：此步骤为内部分析步骤，用于确认开发所需资源是否齐备，**不输出单独的数据准备文档**。
+
+### 🤖 Agent 处理流程
+
+#### 3.1 数据库表结构分析
+```prompt
+@[功能名]-api.md
+
+分析接口文档，梳理接口实现需要的数据库表信息：
+
+【分析维度】
+1. 查询接口（GET /list, GET /{id}）
+   - 需要查询哪些表？
+   - 查询条件字段有哪些？
+   - 需要关联查询其他表吗？
+   - 响应字段从哪些表字段映射？
+
+2. 写入接口（POST /create, POST /update, POST /delete）
+   - 需要写入哪些表？
+   - 写入字段有哪些？
+   - 是否需要检查其他表的关联数据？
+   - 是否需要更新其他表？
+
+3. 文件操作接口（POST /import, POST /export）
+   - 导入数据写入哪些表？
+   - 导出数据从哪些表读取？
+   - 是否需要校验其他表的数据？
+
+【输出格式】
+表名：term_[表名]
+用途：[查询/插入/更新/删除]
+字段清单：
+- 查询字段：[列出查询条件字段]
+- 返回字段：[列出响应字段]
+- 写入字段：[列出插入/更新字段]
+关联表：[如果有关联查询，列出关联表名和关联字段]
+注意事项：[特殊说明，如需要建索引、分区表等]
+
+【示例】
+表名：term_cell_nr
+用途：查询、插入、更新、删除
+字段清单：
+- 查询字段：mode, city, district, cell_name, status
+- 返回字段：cell_id, cell_name, cgi, mode, city, district, longitude, latitude, status, create_time, update_time
+- 写入字段：cell_name, cgi, mode, city, district, longitude, latitude, status
+关联表：term_enodeb（基站表，关联字段 enodeb_id）
+注意事项：需要在 mode, city, district 字段上建索引以优化查询性能
+
+输出所有涉及的数据库表的详细信息。
+```
+
+#### 3.2 配置文件和资源文件分析
+```prompt
+@[功能名]-api.md
+
+分析接口文档，梳理接口实现需要的配置文件和资源文件：
+
+【分析维度】
+1. 配置文件
+   - 需要读取哪些配置文件？（路径、格式）
+   - 需要写入哪些配置文件？（路径、格式）
+   - 配置文件的读写权限要求？
+
+2. 模板文件
+   - 是否需要 Excel 导入模板？（字段、格式）
+   - 是否需要报告模板？（格式、字段）
+   - 模板文件存放位置？
+
+3. 临时文件
+   - 是否需要生成临时文件？（核查结果、导出文件等）
+   - 临时文件存放目录？
+   - 文件清理策略？
+
+【输出格式】
+文件类型：[配置文件/模板文件/临时文件]
+文件路径：[绝对路径或相对路径]
+操作类型：[读取/写入/读写]
+文件格式：[JSON/XML/CSV/Excel/PDF 等]
+文件内容说明：[描述文件包含的信息]
+示例数据：[提供文件内容示例]
+
+【示例】
+文件类型：配置文件
+文件路径：/home/zenap/opdata/noe/capacity-expert/copilot-noe-manager/config/alg_05_checkrule_preconfig.json
+操作类型：读取
+文件格式：JSON
+文件内容说明：NR 负荷不均衡检测配置，包括统计规则、忙时配置、KPI 门限等
+示例数据：{"version": "V1.0", "UnbalanceCheckParams": {...}}
+
+文件类型：模板文件
+文件路径：/home/zenap/opdata/noe/capacity-expert/copilot-noe-manager/template/blacklist_cell_template.xlsx
+操作类型：读取
+文件格式：Excel
+文件内容说明：黑名单小区导入模板，包含表头行、说明行
+示例数据：第1行-表头：type, mode, cgi, scene...；第2行-说明：类型, 制式, 小区标识, 场景...
+
+文件类型：临时文件
+文件路径：/tmp/blacklist_check_result_{timestamp}.xlsx
+操作类型：写入
+文件格式：Excel
+文件内容说明：黑名单小区核查结果文件，包含原始数据 + 核查结果列
+示例数据：原始列 + result 列（显示"通过"或错误原因）
+
+输出所有涉及的文件信息。
+```
+
+#### 3.3 第三方服务依赖分析
+```prompt
+@[功能名]-api.md
+
+分析接口文档，梳理接口实现需要调用的第三方服务或外部依赖：
+
+【分析维度】
+1. 内部服务
+   - 需要调用哪些内部微服务？
+   - 调用的接口方法是什么？
+   - 传递哪些参数？
+   - 返回什么数据？
+
+2. 外部服务
+   - 需要调用哪些外部 API？
+   - API 认证方式？
+   - 超时和重试策略？
+
+3. 公共组件
+   - 需要使用哪些工具类？
+   - 需要使用哪些公共服务类？
+
+【输出格式】
+服务类型：[内部服务/外部 API/公共组件]
+服务名称：[服务类名或 API 名称]
+调用方法：[方法名/接口 URL]
+调用时机：[在哪个接口的哪个步骤调用]
+输入参数：[列出参数]
+返回数据：[描述返回值]
+异常处理：[失败时如何处理]
+依赖注入：[如何注入该服务]
+
+【示例】
+服务类型：内部服务
+服务名称：CmCacheService
+调用方法：queryCell(List<String> cgiList)
+调用时机：POST /import/check 接口，数据核查阶段
+输入参数：List<String> cgiList - 格式化后的 CGI 列表，如 ["NR,460-00,34567,1", ...]
+返回数据：List<CellData> - 小区数据列表，包含 cgi, cell_name, enodeb_id 等字段
+异常处理：查询失败时记录日志，返回空列表，继续核查其他规则
+依赖注入：在 Service 类中使用 @Inject 注入
+
+服务类型：公共组件
+服务名称：ExcelUtil
+调用方法：readExcel(InputStream is), writeExcel(List<Map> data)
+调用时机：POST /import/check 读取文件；POST /export 生成文件
+输入参数：InputStream 文件流 / List<Map> 数据
+返回数据：List<Map> Excel 行数据 / byte[] Excel 文件字节流
+异常处理：文件格式错误抛出 CapacityCommonException
+依赖注入：静态工具类，直接调用
+
+服务类型：公共组件
+服务名称：OperationLogService
+调用方法：log(HttpServletRequest request, String operation, String detail)
+调用时机：所有写操作接口（create/update/delete/import）执行成功后
+输入参数：request 请求对象，operation 操作类型，detail 操作详情
+返回数据：void
+异常处理：日志记录失败不影响主流程，只记录 error 日志
+依赖注入：在 UseCase 类中使用 @Inject 注入
+
+输出所有涉及的服务依赖信息。
+```
+
+#### 3.4 数据准备清单汇总
+```prompt
+根据上述分析，生成接口数据准备清单文档：
+
+【文档结构】
+# [功能名]接口数据准备清单
+
+## 1. 数据库表依赖
+| 表名 | 用途 | 查询字段 | 写入字段 | 关联表 | 注意事项 |
+|------|------|---------|---------|--------|---------|
+| ... | ... | ... | ... | ... | ... |
+
+## 2. 配置文件依赖
+| 文件路径 | 操作 | 格式 | 说明 | 示例 |
+|---------|------|------|------|------|
+| ... | ... | ... | ... | ... |
+
+## 3. 模板文件依赖
+| 文件路径 | 用途 | 格式 | 说明 | 示例 |
+|---------|------|------|------|------|
+| ... | ... | ... | ... | ... |
+
+## 4. 临时文件需求
+| 文件路径 | 用途 | 格式 | 清理策略 | 说明 |
+|---------|------|------|---------|------|
+| ... | ... | ... | ... | ... |
+
+## 5. 服务依赖
+| 服务名 | 方法 | 用途 | 输入 | 输出 | 注入方式 |
+|-------|------|------|------|------|---------|
+| ... | ... | ... | ... | ... | ... |
+
+## 6. 准备工作检查清单
+- [ ] 数据库表是否存在且字段完整
+- [ ] 数据库表是否有必要的索引
+- [ ] 配置文件是否存在且可读写
+- [ ] 模板文件是否存在且格式正确
+- [ ] 临时文件目录是否有写权限
+- [ ] 依赖服务是否可用
+- [ ] 工具类和公共组件是否可用
+
+确认所有资源依赖可用，为 Step 4 做好准备。
+```
+
+### 📤 输出
+- **无文档输出** - 此步骤仅进行内部确认，不生成独立文档
+- **资源清单**（口头确认或在接口文档中已体现）：
+  - 数据库表依赖清单
+  - 文件依赖清单（配置、模板、临时）
+  - 服务依赖清单
+
+**注意**：
+- ❌ **不生成** `*-data-preparation.md` 文档
+- ✅ 数据准备信息已包含在 Step 2 的接口设计文档的"业务逻辑实现"章节中
+
+### ✅ 验收标准
+- [ ] 所有涉及的数据库表已确认
+- [ ] 所有配置文件路径正确
+- [ ] 所有服务依赖已识别
+- [ ] 依赖注入方式明确
+- [ ] **确认不生成单独的数据准备文档**
+
+---
+
+## Step 4: 后端接口类开发
+
+### 🎯 目标
+生成符合 DDD 架构规范的后端代码，包括 Resource、UseCase、Service、Repository、DTO 等所有层次的实现。
+
+### 📥 输入
+- **接口文档（含业务逻辑）** - `@[功能名]-api.md`（从 Step 2 生成）
+- **数据准备清单** - `@[功能名]-data-preparation.md`（从 Step 3 生成）
+- **Cursor Rules** - `@resource-develop.mdc`
+- **参考代码** - 项目中类似功能的实现
+
+### 🤖 Agent 处理流程
+
+#### 4.1 后端代码生成
+
+##### 4.1.1 生成代码框架
+```prompt
+@[功能名]-api.md @[功能名]-data-preparation.md @resource-develop.mdc
+
+根据接口文档，在项目工程中新增 [业务名称] 资源类，严格遵循 DDD 架构：
+
+【目标文件】
+1. interfaces/[模块]/{功能名}Resource.java
+   - REST 接口层
+   - @Path, @GET, @POST 注解
+   - 调用 UseCase 层方法
+   
+2. application/[模块]/{功能名}UseCase.java
+   - 应用层，协调业务逻辑
+   - 调用 Service 层和记录操作日志
+   
+3. domain/[模块]/service/{功能名}Service.java
+   - 领域服务层，核心业务逻辑
+   - 调用 Repository 层
+   
+4. domain/[模块]/repository/{功能名}Repository.java
+   - 数据访问层，JDBI 接口
+   - @SqlQuery, @SqlUpdate 注解
+   
+5. domain/[模块]/dto/{功能名}DTO.java
+   - 数据传输对象
+   - Lombok 注解
+   
+6. domain/[模块]/entity/{功能名}Entity.java
+   - 领域实体对象
+   - Lombok 注解
+   
+7. domain/[模块]/constant/{功能名}Enum.java
+   - 枚举类（如果需要）
+   - 包含业务常量定义
+
+【代码要求】
+- 严格遵循 @resource-develop.mdc 中的规范和模板
+- 包含完整的注解（@Path, @GET, @POST, @Inject, @Setter 等）
+- 添加 Swagger 文档注解（@Operation, @Tag）
+- 包含日志记录（log.info）
+- 参数校验注解（@NotNull, @QueryParam, @PathParam）
+- 业务逻辑方法暂时用 TODO 注释标记
+
+【DTO/Entity/Enum 类编码规范】
+
+**DTO 和 Entity 类**：
+1. **Lombok 注解使用**：
+   ```java
+   @Data                // 自动生成 getter/setter/toString/equals/hashCode
+   @Builder             // 支持 Builder 模式构建对象
+   @NoArgsConstructor   // 无参构造器
+   @AllArgsConstructor  // 全参构造器
+   public class XXXDto {
+       private String field1;
+       private Integer field2;
+   }
+```
+
+2. **包引入规范**：
+   - 所有 import 语句放在文件顶部
+   - 按包名字母顺序排列
+   - 第三方包和项目包之间空一行
+   ```java
+   package com.zte.xxx;
+   
+   import lombok.AllArgsConstructor;
+   import lombok.Builder;
+   import lombok.Data;
+   import lombok.NoArgsConstructor;
+   
+   import java.util.Date;
+   import java.util.List;
+   
+   // 类定义
+   ```
+
+3. **字段注释**：
+   - 每个字段添加 JavaDoc 注释
+   - 注释说明字段用途、取值范围、示例等
+   ```java
+   /**
+    * 网络制式：NR 或 LTE
+    */
+   private String mode;
+   ```
+
+**Enum 枚举类**：
+1. **不使用 Lombok**（枚举类特殊性）
+2. **手动编写构造器和 Getter**：
+   ```java
+   public enum BaselineType {
+       NR_TYPE("NR", "类型1", "Type1"),
+       LTE_TYPE("LTE", "类型2", "Type2");
+       
+       private final String mode;
+       private final String nameCn;
+       private final String nameEn;
+       
+       // 构造器
+       BaselineType(String mode, String nameCn, String nameEn) {
+           this.mode = mode;
+           this.nameCn = nameCn;
+           this.nameEn = nameEn;
+       }
+       
+       // Getter 方法
+       public String getMode() { return mode; }
+       public String getNameCn() { return nameCn; }
+       public String getNameEn() { return nameEn; }
+       
+       // 工具方法（根据业务需要）
+       public static BaselineType getByMode(String mode) { ... }
+   }
+   ```
+
+3. **包引入规范**：
+   - 所有 import 放在顶部
+   - 枚举类通常只需要 java.util 包
+
+**常量类**：
+1. **不使用 Lombok**
+2. **私有构造器防止实例化**：
+   ```java
+   public class XXXConstants {
+       public static final String CONST_1 = "value1";
+       public static final int CONST_2 = 100;
+       
+       private XXXConstants() {
+           // 私有构造函数，防止实例化
+       }
+   }
+   ```
+
+生成所有类的完整代码。
+```
+
+##### 4.1.2 实现业务逻辑
+​```prompt
+@[功能名]-api.md @[功能名]-data-preparation.md @[参考类].java
+
+实现 [类名].[方法名] 方法，参考 @[参考类].java 的 [参考方法]：
+
+【业务需求】
+[从接口文档的"业务逻辑实现"章节复制]
+
+【实现要求】
+1. 方法签名
+   - 参数列表：[列出参数]
+   - 返回类型：[返回类型]
+   - 异常声明：throws CapacityCommonException
+
+2. 实现步骤
+   [从接口文档复制详细的实现逻辑]
+
+3. 代码质量
+   - 方法总行数不超过50行（不包括注释和空行），方法尽可能短
+   - 方法复杂度控制（圈复杂度 < 15）
+   - 提取公共方法，避免代码重复
+   - 完善异常处理（try-catch，抛出业务异常）
+   - 详细日志记录（关键步骤、异常信息）
+   - 空值检查（NpeUtil.selfCheckNpe）
+   - **日志和异常信息使用英文**（重要！）：
+     * 日志信息（log.info, log.error, log.warn）使用英文
+     * 异常消息（throw new Exception("message")）使用英文
+     * 业务提示信息使用国际化配置（i18n）
+     * 变量名使用驼峰命名（英文）
+
+【日志和异常规范示例】
+
+**✅ 正确示例**：
+​```java
+// 日志使用英文
+log.info("Upload baseline file, mode: {}, type: {}, fileName: {}", mode, type, fileName);
+log.error("Failed to create directory: {}", dirPath);
+log.warn("Baseline file not found, mode: {}, type: {}", mode, type);
+
+// 异常消息使用英文
+throw new CapacityCommonException("File format must be xlsx or zip");
+throw new CapacityCommonException("Invalid baseline type");
+throw new IOException("Failed to create directory");
+
+// 业务提示使用国际化（返回给前端的消息）
+String errorMsg = I18nUtil.getMessage("baseline.file.not.found");
+return new ErrorResponse(errorMsg);
+```
+
+**❌ 错误示例**：
+```java
+// 不要在日志中使用中文
+log.info("上传基线文件，mode: {}", mode);  // ❌
+log.error("文件上传失败", e);              // ❌
+
+// 不要在异常消息中使用中文
+throw new CapacityCommonException("文件格式必须是 xlsx 或 zip");  // ❌
+throw new IOException("创建目录失败");                           // ❌
+```
+
+**💡 国际化消息示例**：
+```java
+// 对于需要返回给前端的业务提示，使用国际化配置
+// i18n 配置文件中定义：
+// zh-CN: "baseline.file.not.found": "基线文件不存在"
+// en-US: "baseline.file.not.found": "Baseline file not found"
+
+// 代码中使用
+String message = I18nUtil.getMessage("baseline.file.not.found");
+throw new CapacityCommonException(message);
+```
+
+4. 操作日志记录（重要！）
+   - **记录时机**：对于修改类等重大操作需要记录操作日志
+   - **适用场景**：
+     * 文件导入（POST /import）
+     * 文件上传（POST /upload）
+     * 数据删除（POST /delete）
+     * 重要数据修改（POST /update）
+     * 批量数据操作
+   - **实现方式**：
+     * 优先参考工程中现有的操作日志实现
+     * 搜索关键字：OperationLogService, operationLog, logOperation
+     * 查找类似功能的日志记录方式
+   - **记录位置**：在 UseCase 层记录操作日志（操作成功后）
+   - **记录内容**：
+     * 操作类型：如"上传基线文件"、"删除黑名单小区"
+     * 操作详情：如"mode=LTE, type=baseline_lbopen, fileName=xxx"
+     * 操作用户：从 HttpServletRequest 获取
+     * 操作时间：当前时间
+   - **异常处理**：日志记录失败不应影响主业务流程
+   - **如果工程中不存在操作日志实现**：
+     * 在代码中添加 TODO 注释：`// TODO: 记录操作日志`
+     * 在文档中记录待实现事项
+
+【操作日志实现示例】
+​```java
+// UseCase 层方法
+public void uploadBaselineFile(HttpServletRequest request, String mode, String type,
+                                InputStream inputStream, String originalFileName) {
+    log.info("上传基线文件，mode: {}, type: {}, fileName: {}", mode, type, originalFileName);
+    
+    // 执行业务逻辑
+    baselineTemplateService.uploadBaselineFile(mode, type, inputStream, originalFileName);
+    
+    // 记录操作日志（如果工程中有 OperationLogService）
+    if (operationLogService != null) {
+        String operation = "上传基线文件";
+        String detail = String.format("mode=%s, type=%s, fileName=%s", mode, type, originalFileName);
+        operationLogService.log(request, operation, detail);
+    } else {
+        // TODO: 记录操作日志（待实现 OperationLogService）
+    }
+}
+```
+
+【参考工程实现】
+查找工程中现有的操作日志实现：
+​```bash
+# 搜索操作日志相关代码
+grep -r "OperationLogService" src/
+grep -r "operationLog" src/
+grep -r "logOperation" src/
+```
+
+如果找到现有实现，参考其代码风格和调用方式。
+
+5. 参考实现
+   参考 @[参考类].java 的实现风格和代码结构
+
+生成完整的方法实现代码。
+```
+
+##### 4.1.3 代码优化
+​```prompt
+检查并优化以下代码：
+
+【代码】
+[贴入生成的代码]
+
+【优化要点】
+1. 方法是否过长（> 50 行）？如果是，提取子方法
+2. 是否有重复代码？如果有，提取公共方法
+3. 异常处理是否完整？是否有漏掉的边界情况？
+4. 日志记录是否充分？关键步骤是否有日志？
+5. 变量命名是否清晰？是否符合规范？
+6. 注释是否必要？复杂逻辑是否有说明？
+
+输出优化后的代码。
+```
+
+#### 4.2 接口配置和注册
+
+##### 4.2.1 接口 URL 注册配置
+```prompt
+@[功能名]Resource.java
+
+新增的 Resource 资源类接口需要在 conf 目录下的"[工程名]-url-operation.json"文件中配置：
+
+【分析接口】
+遍历 Resource 类中的所有接口方法，提取：
+1. 接口路径：@Path 注解的完整路径
+2. 请求方法：@GET 或 @POST
+3. 操作码：
+   - 优先查找 `conf/[工程名]-operationtree.json` 中 operation_list 下的 nodeid
+   - 如果 operationtree.json 文件不存在，参考 `conf/[工程名]-url-operation.json` 中现有配置的 operation 值
+   - 通常使用 "operation.noe.view"（查询类）或 "operation.noe.modify"（修改类）
+
+【配置格式】
+在 `conf/[工程名]-url-operation.json` 中添加 JSON 数组元素：
+
+​```json
+{
+  "url": "/api/[service-name]/v1/[resource]/[operation]",
+  "method": "GET|POST",
+  "operation": "[操作码ID]"
+}
+```
+
+【操作码选择建议】
+- GET 查询类接口 → "operation.noe.view"
+- POST 创建/修改/删除类接口 → "operation.noe.modify"
+- 如有特殊权限要求，从 operationtree.json 中选择对应的 nodeid
+
+【完整示例】
+```json
+[
+  {
+    "url": "/api/copilot-noe-manager/v1/blacklistcell/list",
+    "method": "GET",
+    "operation": "operation.noe.view"
+  },
+  {
+    "url": "/api/copilot-noe-manager/v1/blacklistcell/import/check",
+    "method": "POST",
+    "operation": "operation.noe.modify"
+  },
+  {
+    "url": "/api/copilot-noe-manager/v1/blacklistcell/checkresult/export",
+    "method": "GET",
+    "operation": "operation.noe.view"
+  },
+  {
+    "url": "/api/copilot-noe-manager/v1/blacklistcell/import",
+    "method": "POST",
+    "operation": "operation.noe.modify"
+  },
+  {
+    "url": "/api/copilot-noe-manager/v1/blacklistcell/export",
+    "method": "POST",
+    "operation": "operation.noe.view"
+  },
+  {
+    "url": "/api/copilot-noe-manager/v1/blacklistcell/delete",
+    "method": "POST",
+    "operation": "operation.noe.modify"
+  }
+]
+```
+
+输出需要添加到 `conf/[工程名]-url-operation.json` 的完整 JSON 配置。
+```
+
+##### 4.2.2 请求体大小限制配置
+​```prompt
+@[功能名]Resource.java @[功能名]-api.md
+
+分析接口是否需要配置请求体大小限制：
+
+【分析维度】
+1. 识别文件上传接口
+   - 方法类型：POST
+   - 参数类型：包含 FormData 或 MultipartFormData
+   - 用途：文件导入、文件上传等
+
+2. 识别大数据量接口
+   - 方法类型：POST
+   - 参数类型：包含大型 JSON Body
+   - 用途：批量导入、大数据量创建等
+
+3. 评估请求体大小
+   - 文件上传接口：根据文件大小限制（如 50MB Excel）
+   - 批量数据接口：根据数据条数和单条大小估算
+   - 如果可能超过 2MB，需要配置
+
+【配置位置】
+server.yml 文件的 contentLengthLimitConfig 配置项
+
+【配置格式】
+​```yaml
+# Content-Length 限制配置
+contentLengthLimitConfig:
+  limits:
+    - api: /api/[service-name]/v1/[resource]/[operation]
+      limit: [字节数]  # 单位：字节
+```
+
+【常用大小】
+- 2MB = 2097152 字节
+- 10MB = 10485760 字节
+- 20MB = 20971520 字节
+- 50MB = 52428800 字节
+
+【示例】
+```yaml
+contentLengthLimitConfig:
+  limits:
+    - api: /api/copilot-noe-manager/v1/blacklistcell/import/check
+      limit: 52428800  # 50MB，支持导入大型 Excel 文件
+    - api: /api/copilot-noe-manager/v1/blacklistcell/import
+      limit: 10485760  # 10MB，支持批量导入数据
+```
+
+### 📤 输出
+- **后端代码**
+  - `{功能名}Resource.java` - REST 接口层
+  - `{功能名}UseCase.java` - 应用层
+  - `{功能名}Service.java` - 领域服务层
+  - `{功能名}Repository.java` - 数据访问层（如需要）
+  - `{功能名}DTO.java` - 数据传输对象
+  - `{功能名}Entity.java` - 领域实体（如需要）
+  - `{功能名}Enum.java` / `{功能名}Constants.java` - 枚举/常量类（如需要）
+- **配置更新**
+  - URL 注册配置：`conf/[工程名]-url-operation.json`
+  - 请求体大小限制：`conf/server.yml`（如需要）
+  - 国际化配置：`src/main/resources/i18n/*.json`（如需要）
+
+**注意**：
+- ❌ **不生成** `*-implementation.md` 或其他总结性文档
+- ✅ 代码即文档，通过注释说明业务逻辑
+
+### ✅ 验收标准
+- [ ] 后端代码遵循 DDD 架构
+- [ ] 类命名、包结构符合规范
+- [ ] 业务逻辑实现正确、完整
+- [ ] 异常处理和日志记录完善
+- [ ] 代码复杂度合理（圈复杂度 < 15）
+- [ ] 方法行数合理（≤ 50 行）
+- [ ] 依赖注入正确
+- [ ] 代码可编译通过
+- [ ] **所有包引入放在文件顶部**
+- [ ] **DTO/Entity 使用 Lombok 注解**
+- [ ] **Enum/Constants 手动编写构造器和 Getter**
+- [ ] **日志信息使用英文**（log.info, log.error, log.warn）
+- [ ] **异常消息使用英文**（throw new Exception）
+- [ ] **接口 URL 注册配置已生成**
+- [ ] **请求体大小限制配置已评估**（如需要）
+- [ ] **修改类操作已添加操作日志（或 TODO 标记）**
+- [ ] **不生成实现汇总文档**
+
+---
+
+## Step 5: 单元测试用例生成
+
+### 🎯 目标
+自动生成后端单元测试用例，确保代码质量和功能正确性。
+
+### 📥 输入
+- **接口代码** - 后端 Resource/UseCase/Service/Repository（从 Step 4 生成）
+- **接口文档** - `@[功能名]-api.md`（测试场景参考）
+
+### 🤖 Agent 处理流程
+
+#### 5.1 后端单元测试生成
+
+##### 5.1.1 生成测试类框架
+```prompt
+@[功能名]Resource.java @[功能名]UseCase.java @[功能名]Service.java
+
+为后端代码生成端到端单元测试用例，参考工程中现有的测试用例：
+
+【测试类】
+1. {功能名}ResourceTest.java
+   - 测试 REST 接口层（端到端测试）
+   - **优先使用真实数据**，直接测试完整链路
+   - 复杂外部依赖可使用 Mock
+   - 验证 HTTP 请求和响应
+
+【测试框架】
+- JUnit 4
+- **优先采用事先构造数据替换** - 真实数据优先，复杂场景可用 Mockito
+- H2 内存数据库（数据层测试）
+- Dropwizard Testing（REST 接口测试）
+
+【测试配置】
+1. 数据库初始化
+   - 使用 H2 内存数据库
+   - 执行建表 SQL（从 Step 3 数据准备清单）
+   - 准备测试数据
+
+2. 依赖数据准备（优先级顺序）
+   - **优先方式**：直接在数据库中构造测试数据（推荐）
+   - **备用方式**：对于外部依赖服务（如 CmCacheService），如果无法构造数据，可使用 Mockito Mock
+   - 配置文件依赖：准备测试配置文件
+
+3. 测试数据清理（重要！）
+   - **@Before setUp()**: 测试执行前清理测试目录/数据，创建干净的测试环境
+   - **@After tearDown()**: 测试执行后清理测试目录/数据，避免残留文件
+   - **清理范围**：
+     * 测试用的临时文件和目录
+     * 测试用的数据库数据
+     * 测试用的缓存数据
+   - **清理实现**：
+     * 递归删除测试目录及其所有子文件
+     * 删除测试数据库中的测试数据
+     * 重置测试相关的配置
+   - **目的**：确保每个测试用例独立，互不影响，避免用例之间的数据污染
+
+【测试数据隔离示例】
+
+​```java
+public class BaselineTemplateResourceTest {
+    
+    private static final String TEST_BASE_DIR = "/tmp/test/baseline";
+    private static final String TEST_MODE = "TEST_NR";
+    private static final String TEST_TYPE = "TEST_TYPE";
+    
+    private BaselineTemplateResource resource;
+    private BaselineTemplateUseCase useCase;
+    private BaselineTemplateService service;
+    private BaselineTemplateRepository repository;
+    
+    @Before
+    public void setUp() throws Exception {
+        // 1. 清理测试目录（测试前清理，确保干净的环境）
+        cleanTestDirectory();
+        
+        // 2. 创建测试目录
+        File testDir = new File(TEST_BASE_DIR);
+        if (!testDir.exists()) {
+            testDir.mkdirs();
+        }
+        
+        // 3. 清理测试数据库数据
+        cleanTestDatabaseData();
+        
+        // 4. 初始化测试数据库
+        initTestDatabase();
+        
+        // 5. 初始化被测对象
+        repository = mock(BaselineTemplateRepository.class);
+        service = new BaselineTemplateService(repository);
+        useCase = new BaselineTemplateUseCase(service);
+        resource = new BaselineTemplateResource(useCase);
+    }
+    
+    @After
+    public void tearDown() throws Exception {
+        // 1. 清理测试目录（测试后清理，避免残留文件）
+        cleanTestDirectory();
+        
+        // 2. 清理测试数据库数据
+        cleanTestDatabaseData();
+        
+        // 3. 重置 Mock 对象
+        reset(repository);
+    }
+    
+    /**
+     * 清理测试目录及其所有子文件
+     */
+    private void cleanTestDirectory() {
+        File testDir = new File(TEST_BASE_DIR);
+        if (testDir.exists()) {
+            deleteDirectory(testDir);
+        }
+    }
+    
+    /**
+     * 递归删除目录及其所有内容
+     */
+    private void deleteDirectory(File directory) {
+        if (directory.isDirectory()) {
+            File[] files = directory.listFiles();
+            if (files != null) {
+                for (File file : files) {
+                    deleteDirectory(file);
+                }
+            }
+        }
+        directory.delete();
+    }
+    
+    /**
+     * 清理测试数据库数据
+     */
+    private void cleanTestDatabaseData() {
+        // 删除测试数据（根据测试标识清理）
+        jdbi.useHandle(handle -> {
+            handle.execute("DELETE FROM term_baseline_template WHERE mode = ?", TEST_MODE);
+            handle.execute("DELETE FROM term_baseline_file WHERE type = ?", TEST_TYPE);
+        });
+    }
+    
+    /**
+     * 初始化测试数据库
+     */
+    private void initTestDatabase() {
+        // 创建测试表（如果需要）
+        jdbi.useHandle(handle -> {
+            handle.execute("CREATE TABLE IF NOT EXISTS term_baseline_template (...)");
+        });
+    }
+    
+    @Test
+    public void Given_validFile_When_uploadBaseline_Then_fileUploadedSuccessfully() 
+            throws Exception {
+        // Arrange: 准备测试数据
+        String mode = TEST_MODE;
+        String type = TEST_TYPE;
+        String fileName = "baseline_test.xlsx";
+        InputStream inputStream = getClass().getResourceAsStream("/test-baseline.xlsx");
+        
+        // Act: 执行操作
+        Response response = resource.uploadBaselineFile(mode, type, inputStream, fileName);
+        
+        // Assert: 验证结果
+        assertEquals(200, response.getStatus());
+        
+        // 验证文件已保存到磁盘
+        File uploadedFile = new File(TEST_BASE_DIR + "/" + mode + "/" + type + "/" + fileName);
+        assertTrue("文件应该存在", uploadedFile.exists());
+        
+        // 验证数据库记录已创建
+        jdbi.withHandle(handle -> {
+            Integer count = handle.createQuery(
+                "SELECT COUNT(*) FROM term_baseline_file WHERE mode = ? AND type = ?"
+            )
+            .bind(0, mode)
+            .bind(1, type)
+            .mapTo(Integer.class)
+            .one();
+            assertEquals("数据库应该有1条记录", Integer.valueOf(1), count);
+            return null;
+        });
+    }
+    
+    @Test
+    public void Given_databaseHasData_When_deleteBaseline_Then_fileAndRecordDeleted() 
+            throws Exception {
+        // Arrange: 准备测试数据
+        String mode = TEST_MODE;
+        String type = TEST_TYPE;
+        
+        // 1. 创建测试文件
+        File testFile = new File(TEST_BASE_DIR + "/" + mode + "/" + type + "/baseline.xlsx");
+        testFile.getParentFile().mkdirs();
+        testFile.createNewFile();
+        
+        // 2. 插入测试数据到数据库
+        jdbi.useHandle(handle -> {
+            handle.execute(
+                "INSERT INTO term_baseline_file (mode, type, file_path) VALUES (?, ?, ?)",
+                mode, type, testFile.getAbsolutePath()
+            );
+        });
+        
+        // Act: 执行删除操作
+        Response response = resource.deleteBaselineFile(mode, type);
+        
+        // Assert: 验证结果
+        assertEquals(200, response.getStatus());
+        
+        // 验证文件已删除
+        assertFalse("文件应该被删除", testFile.exists());
+        
+        // 验证数据库记录已删除
+        jdbi.withHandle(handle -> {
+            Integer count = handle.createQuery(
+                "SELECT COUNT(*) FROM term_baseline_file WHERE mode = ? AND type = ?"
+            )
+            .bind(0, mode)
+            .bind(1, type)
+            .mapTo(Integer.class)
+            .one();
+            assertEquals("数据库应该没有记录", Integer.valueOf(0), count);
+            return null;
+        });
+    }
+}
+```
+
+**关键要点**：
+1. **@Before setUp()**: 
+   - 先清理测试目录和数据（确保干净的初始状态）
+   - 再创建测试环境和准备测试数据
+   
+2. **@After tearDown()**: 
+   - 清理所有测试产生的文件和目录
+   - 清理所有测试数据库数据
+   - 重置所有 Mock 对象
+   
+3. **使用测试专用标识**:
+   - 使用 `TEST_MODE`, `TEST_TYPE` 等测试专用标识
+   - 便于精确清理，不影响其他数据
+   
+4. **完整的清理逻辑**:
+   - 递归删除目录及所有子文件
+   - 基于测试标识删除数据库数据
+   - 确保每个测试用例都是独立的
+
+5. **测试用例中的验证**:
+   - 既验证业务逻辑（返回值、状态码）
+   - 也验证副作用（文件存在性、数据库记录）
+
+##### 5.1.2 生成测试类框架代码。
+
+```
+
+##### 5.1.2 生成测试用例
+​```prompt
+@[功能名]-api.md @[功能名]Resource.java
+
+为每个接口生成测试用例，遵循以下规范：
+
+【测试方法命名规范】
+测试方法名应该清楚描述测试场景，使用以下格式：
+Given_{前置条件}_When_{执行操作}_Then_{预期结果}
+
+【测试用例设计】
+根据接口文档，为每个接口设计测试用例：
+
+1. GET /list - 获取列表
+   - Given_数据库中存在数据_When_查询列表_Then_返回数据列表
+   - Given_数据库中无数据_When_查询列表_Then_返回空列表
+   - Given_输入筛选条件_When_查询列表_Then_返回符合条件的数据
+   - Given_缺少必填参数mode_When_查询列表_Then_抛出参数异常
+
+2. POST /import/check - 文件导入核查
+   - Given_上传合法Excel文件_When_执行核查_Then_全部通过并自动入库
+   - Given_上传的数据部分不合法_When_执行核查_Then_返回核查结果不入库
+   - Given_上传的文件格式不正确_When_执行核查_Then_抛出文件格式异常
+   - Given_上传的文件缺少必需列_When_执行核查_Then_抛出表头异常
+
+3. POST /import - 数据导入
+   - Given_传入合法数据列表_When_执行导入_Then_数据成功插入数据库
+   - Given_数据库已存在相同mode数据_When_执行导入_Then_先删除后插入
+
+4. POST /export - 数据导出
+   - Given_数据库中有数据_When_执行导出_Then_生成Excel文件
+   - Given_数据库中无数据_When_执行导出_Then_生成空Excel文件
+
+5. POST /delete - 删除
+   - Given_数据库中存在数据_When_执行删除_Then_删除成功返回影响行数
+   - Given_数据库中不存在数据_When_执行删除_Then_返回影响行数为0
+
+【标准测试用例格式】
+每个测试用例包含：
+| 测试场景 | 用例编号 | 用例名称 | 预置条件数据 | 参数数据 | then数据 |
+|---------|---------|---------|------------|---------|----------|
+| [场景描述] | [编号] | Given_xxx_When_xxx_Then_xxx | [预置数据] | [输入参数] | [预期结果] |
+
+【测试覆盖率要求】
+- **单元测试覆盖率**: 核心业务逻辑 100%
+- **边界条件测试**: 包含正常场景和异常场景
+- **空值处理测试**: 验证 null 值和空字符串处理
+- **业务规则验证**: 确保所有业务规则都有对应测试
+- **断言准确**: 确保断言验证完整且准确，核心业务逻辑的输出结果都有验证准则
+
+【测试数据管理】
+- 使用有意义的测试数据，避免 magic number
+- 测试数据要具有代表性和可读性
+- 避免测试之间的数据依赖
+- **优先使用真实数据**：测试数据优先在数据库中构造，复杂外部依赖可使用 Mock
+
+【测试组织】
+- 遵循 AAA 模式（Arrange-Act-Assert）
+- Arrange：准备测试数据和环境
+- Act：执行被测试方法
+- Assert：验证结果和状态
+
+生成所有测试用例的完整代码。
+```
+
+### 📤 输出
+- **后端测试代码** - `src/test/java/.../[功能名]ResourceTest.java`
+
+**注意**：
+- ❌ **不生成**测试场景清单文档、测试总结文档等
+- ✅ 测试代码即文档，通过测试方法名和注释说明测试场景
+
+### ✅ 验收标准
+- [ ] 后端测试覆盖所有接口
+- [ ] 测试方法命名遵循 Given_When_Then 格式
+- [ ] 测试覆盖正向、异常、边界场景
+- [ ] **测试数据优先使用构造数据**（复杂外部依赖可使用 Mock）
+- [ ] 所有测试用例通过
+- [ ] **测试数据清理完整**（@Before 和 @After 都有清理逻辑）
+- [ ] **测试用例之间数据互不影响**（每个用例都有独立的测试环境）
+- [ ] **测试目录/文件在执行前后都被清理**（避免残留文件影响后续测试）
+- [ ] 核心业务逻辑覆盖率 至少85%
+- [ ] 断言验证准确完整
+- [ ] 测试用例遵循 AAA 模式
+- [ ] **不生成测试场景清单或总结文档**
