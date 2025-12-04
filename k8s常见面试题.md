@@ -6,6 +6,25 @@
   读取etcd中cr的信息，进行调谐，将实际信息写入etcd,努力将期望状态变成实际状态
 4）scheduler：读取etcd中信息，按照一定的调度算法将pod调度到指定节点
 
+
+# 容器网络
+网络插件 network.knitter.io，负责容器与容器之间的网络通信。
+主要功能：负责动态分配唯一的IP地址，负责pod之间跨节点通信等
+
+网络平面   网卡      哪层网络协议
+lan       eth1      layer3   
+net_api   eth0      layer3
+动态分配ipv4和ipv6
+
+七层网络协议
+L7  应用层      如：HTTP/FTP
+L6  表示层      数据转换
+L5  会话层      建立、管理和终止会话
+L4  传输层      数据传输控制，如：TCP/UDP
+L3  网络层      ip地址寻址和路由选择，如：IPV4和IpV6
+L2 数据链路层   Mac地址寻址，如以太网
+L1 物理层       电缆、光纤
+
 # k8s调度原理
 如何将pod调度到指定node上
 ## 调度原理
@@ -127,6 +146,50 @@ affinity:
 ```
 podA -> node1
 podB -> 除node1外其他节点
+
+# 服务发现
+传统方式：端口映射方式
+问题痛点：暴露太多端口
+
+## Service 
+为一组pod提供统一的对外访问的入口，实现负载均衡
+通过在service的spec.Selector下配置标签，将service和一组pod进行绑定
+
+### NodePort方式
+type: NodePort, 通常比较大30080
+
+### LoaderBalance方式
+动态分配ExternalIp（局域网的虚拟Ip）
+
+## Ingress
+技术选型：Ingress Controller Traefik
+为一组service提供一个统一的对外访问的endpoint
+
+# 工作负载
+管理一组pod
+## Deployment
+控制pod的副本数replicas
+
+## StatefulSet
+replicas 2
+1、保证有序性 
+启动顺序：pod-0、pod-1
+启动顺序：pod-1、pod-0
+2、保证有状态性
+id不变  
+3、稳定的服务发现
+pod-0  对指定pod进行访问
+
+## DaemonSet
+在每个节点上运行一个pod,作为守护进程
+
+## Job
+一次性的任务
+
+## CronJob
+周期性的任务
+
+
 
 
 
