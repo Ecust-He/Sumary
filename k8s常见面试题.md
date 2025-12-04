@@ -16,6 +16,9 @@
 3、从待调度的pod队列中取出一个pod，先对node进行过滤（predict算法，比如端口占用、cpu、memory、污点、节点亲和性等），然后对node进行打分（priority算法，比如:cpu、memory剩余量等），评选出最优的node，将node与pod进行绑定
   LOOP
 ## 调度方式
+### nodeNode方式调度
+很少使用，一般通过标签进行匹配
+
 ### nodeSelector方式调度
 ```yaml
 nodeSelector:
@@ -124,6 +127,7 @@ affinity:
 ```
 podA -> node1
 podB -> 除node1外其他节点
+
 
 
 
