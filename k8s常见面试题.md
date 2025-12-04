@@ -25,6 +25,7 @@ nodeSelector:
 匹配节点的标签
 ```bash
 kubectl label node node1 app=test
+kubectl label node node1 app-
 ```
 ### taints和tolerations方式调度
 taints作用在node上，tolerations作用在pod上
@@ -33,7 +34,7 @@ taints作用在node上，tolerations作用在pod上
 ##### taints
 taints类型
 1、NoScheduler: 待运行的pod不会调度到该node上
-2、PreferNoScheduler:
+2、PreferNoScheduler：尽量不要调度该node,如果找不到合适的node，还是会调度到该node上
 3、NoExecute: 已经运行在该node上pod会被驱逐（可以在pod上配置容忍时间）
 taints数据格式   key:value:type（value可以为空）
 ```bash
@@ -49,13 +50,80 @@ operator枚举值：Exist|Equal
 tolerations:
   - key: app
     value: test
-    operator: "Equal"
+    operator: Equal
     effective: Noschedule
 ```
 备注：
-1、想要驱逐pod，需要在node上添加NoExecute污点
-2、
+1、NoExecute污点类型使用场景：想要驱逐pod，需要在node上添加NoExecute污点
 
+### Affinity调度
+#### node亲和调度
+##### node硬亲和
+```yaml
+affinity:
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: app
+              operator: In
+              values:
+              - test
+```
+operator运算符枚举值：In、NotIn、Exists、NotExists
+
+需要强制满足以下规则，pod才会调度到该node上；已经运行在该node上的pod则忽略
+语法更具表达力，可以进行组合，满足各种使用场景，比如：可以将pod调度到有某个标签，又没有某个标签的节点
+
+##### node软亲和
+```yaml
+affinity:
+  nodeAffinity:
+    preferedDuringSchedulingIgnoredDuringExecution:
+    - weight:80
+      preference:
+        - matchExpressions:
+            - key: app
+              operator: In
+              values:
+              - test
+```
+优先选择策略：用户可以配置**权重优先级**
+
+#### pod亲和调度
+##### pod硬亲和
+```yaml
+affinity:
+  podAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+    - topologykey: kubernetes.io/hostname
+      labelSelector:
+        - matchExpressions:
+            - key: app
+              operator: In
+              values:
+              - test
+```
+使用场景，比如：podA调度到node1，此时想要将podB调度到与podA同一个节点，此时可以通过pod亲和性，达到的效果是podA运行在哪个节点，podB也会运行在该节点上
+podA -> node1
+podA -> PodB
+
+#### pod反亲和调度
+和不要满足pod的调度到同一个node
+```yaml
+affinity:
+  podAntiAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+    - topologykey: kubernetes.io/hostname
+      labelSelector:
+        - matchExpressions:
+            - key: app
+              operator: In
+              values:
+              - test
+```
+podA -> node1
+podB -> 除node1外其他节点
 
 
 
