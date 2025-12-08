@@ -38,8 +38,47 @@ G会被阻塞，与此同时执行该G的M也会解绑P,与G一起进入阻塞�
 3、select：应对多路输入输出，协调多个goroutine进行操作
 
 # 并发模型
-## 创建型
+## 创建模式
 
-## 退出型
+
+## 退出模式
+解决各种情况下goroutine优雅退出问题，需要思考以下场景：
+1、**主动通知** OR **被动等待**
+2、等待时需要考虑超时时间以及超时取消操作
+
+### 分离模式
+goroutine在启动后，与创建它的goroutine彻底分离，其生命周期与其执行函数有关，函数返回goroutine退出
+
+### join模式（被动等待）
+#### 等待一个goroutine退出
+获取goroutine的退出状态
+
+#### 等待多个goroutine退出
+使用sync.WaitGroup
+
+### notify-and-wait模式（主动通知）
+#### 通知并等待一个goroutine退出
+双向数据通道
+等待一个for select方式运行的goroutine
+
+#### 通知并等待多个goroutine退出
+close channel方式，所有阻塞在该channel上的goroutine都会被通知
+
+
+### 超时与取消模式
+使用Select原语 + time.Timer定时器实现超时处理逻辑
+使用Context包实现超时取消逻辑
+
+
+## 管道模式
+类似于包裹函数，通过channel连接起来的一条数据处理流水线，数据处理环节由一组功能相同的goroutine完成
+
+管道模式的扩展模式
+### fan-in模式
+将多个channel中的数据汇聚成一个统一的输入channel
+
+
+### fan-out模式
+
 
 
