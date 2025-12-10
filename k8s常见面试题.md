@@ -6,8 +6,18 @@
   读取etcd中cr的信息，进行调谐，将实际信息写入etcd,努力将期望状态变成实际状态
 4）scheduler：读取etcd中信息，按照一定的调度算法将pod调度到指定节点
 
+# k8s网络
+## 网络基础
+### 以太网L2交换
+场景A -> B：通过ARP广播方式询问ip地址对应的mac地址
+本地保存ARP表
+### IP L3转发
+场景A -> C（www.baidu.com）:ip路由表，下一跳ip地址（默认网关）
+出口路由器：NAT
 
-# 容器网络
+veth pair device:虚拟网卡对，将容器内接口与主机上接口相连
+
+## 容器网络
 网络插件 network.knitter.io，负责容器与容器之间的网络通信。
 主要功能：负责动态分配唯一的IP地址，负责pod之间跨节点通信等
 
@@ -24,6 +34,45 @@ L4  传输层      数据传输控制，如：TCP/UDP
 L3  网络层      ip地址寻址和路由选择，如：IPV4和IpV6
 L2 数据链路层   Mac地址寻址，如以太网
 L1 物理层       电缆、光纤
+
+### pod网络创建过程
+kubelet -> CRI Plugin -> CNI Plugin
+CNI插件：
+1）在pod内 创建网络接口eth0、创建路由表route table
+2）在宿主机上 创建虚拟网卡对、创建路由表
+
+### CNI
+##### 主要功能
+1、创建网络接口，连接pod之间网络。通过overlay、route等
+2、进行Ip地址管理，分配pod IP地址
+3、提供网络安全策略
+
+##### 工作机制
+1、通过JSON配置文件定义网络配置； /etc/cni/net.d/xxnet.conf
+2、通过调用可执行程序（CNI插件）来对网络进行配置； /opt/cni/bin/xxnet
+3、通过链式调用的方式来支持多插件的组合使用
+4、调用过程：kubelet -> CRI -> CNI -> 读取配置 -> 执行二进制插件
+
+实现一个CNI:
+支持ADD，DEL，CHECK，VERSION等操作
+实现一组参数作为输入
+
+### flannel插件
+#### vxlan（虚拟扩展局域网）
+
+#### 工作机制
+1、每个节点分配一个子网，所有pod从本地子网中分配ip
+2、pod在本节点通过bridge L2通信
+3、默认情况，跨节点通过vxlan通信。通过flannel.1这个udp隧道进行流量的转发
+4、除了vxlan，flannel也支持IPIP,Host-GW 两种后端
+
+
+
+
+
+### calico插件
+
+
 
 # k8s调度原理
 如何将pod调度到指定node上
